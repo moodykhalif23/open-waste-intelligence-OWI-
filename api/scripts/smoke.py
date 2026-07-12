@@ -168,6 +168,42 @@ def main() -> None:
         quality[1]["status"] == "rejected" and "blurry" in quality[1]["detail"],
     )
 
+    fill_meta = [
+        {"captured_at": "2026-07-11T08:00:00Z", "bin_qr": bin_data["qr_code"], "fill_tap": "low"},
+        {"captured_at": "2026-07-12T08:00:00Z", "bin_qr": bin_data["qr_code"], "fill_tap": "half"},
+        {"captured_at": "2026-07-13T08:00:00Z", "bin_qr": bin_data["qr_code"], "fill_tap": "high"},
+    ]
+    client.post(
+        "/api/v1/observations/batch",
+        headers=device_auth,
+        data={"meta": json.dumps(fill_meta)},
+        files=[
+            ("files", (f"f{i}.jpg", make_jpeg(run_seed + 10 + i), "image/jpeg")) for i in range(3)
+        ],
+    )
+    refresh = client.post("/api/v1/admin/analytics/refresh", headers=admin)
+    check("analytics refresh runs", refresh.status_code == 200 and refresh.json()["bins"] >= 1)
+
+    health = client.get("/api/v1/bins/health", headers=admin).json()
+    ours = next((r for r in health if r["bin_id"] == bin_data["id"]), None)
+    check("bin health scored", ours is not None, str(ours)[:120])
+    if ours:
+        check(
+            "fast-filling bin flagged for collection",
+            ours["overflow_risk"] in ("medium", "high") and ours["fill_pct"] >= 75,
+        )
+
+    collect = client.post(
+        "/api/v1/collections", headers=device_auth, json={"bin_id": bin_data["id"]}
+    )
+    check("collection recorded", collect.status_code == 201)
+    after = client.get("/api/v1/bins/health", headers=admin).json()
+    ours_after = next((r for r in after if r["bin_id"] == bin_data["id"]), None)
+    check(
+        "collection updates days-since-collection",
+        ours_after is not None and (ours_after["days_since_collection"] or 0) < 1,
+    )
+
     purge = client.post("/api/v1/admin/quarantine/purge", headers=admin)
     check("quarantine purge runs", purge.status_code == 200 and "purged" in purge.json())
     check(

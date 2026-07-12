@@ -279,6 +279,41 @@ button:hover {
   border-color: var(--accent);
 }
 
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.section-head h2 {
+  margin-bottom: 0;
+}
+
+/* Status badges carry a text label — color is never the only signal. */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.badge-high {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.badge-medium {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.badge-low {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 .row-actions {
   display: flex;
   gap: 8px;

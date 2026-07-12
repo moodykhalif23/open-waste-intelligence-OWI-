@@ -6,6 +6,7 @@ import { I18nProvider } from "./i18n";
 import Login from "./pages/Login";
 
 const Overview = lazy(() => import("./pages/Overview"));
+const BinHealth = lazy(() => import("./pages/BinHealth"));
 const Bins = lazy(() => import("./pages/Bins"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Users = lazy(() => import("./pages/Users"));
@@ -24,6 +25,7 @@ export default function App() {
             <Route element={<RequireAuth />}>
               <Route element={<Layout />}>
                 <Route index element={<Overview />} />
+                <Route path="collect" element={<BinHealth />} />
                 <Route path="bins" element={<Bins />} />
                 <Route path="reports" element={<Reports />} />
               <Route path="users" element={<Users />} />

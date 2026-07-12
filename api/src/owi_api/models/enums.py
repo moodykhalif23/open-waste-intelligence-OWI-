@@ -33,3 +33,9 @@ class PrivacyStatus(enum.StrEnum):
     CLEAN = "clean"
     BLURRED = "blurred"
     QUARANTINED = "quarantined"
+
+
+class OverflowRisk(enum.StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"

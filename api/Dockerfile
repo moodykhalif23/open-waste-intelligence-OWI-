@@ -8,15 +8,15 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
+# Model weights are part of the image (the privacy gate must never depend on a
+# runtime download) — fetched before source so code edits don't re-download.
+COPY scripts scripts
+RUN python3 scripts/fetch_models.py
+
 COPY src src
 COPY alembic alembic
 COPY alembic.ini ./
-COPY scripts scripts
 RUN uv sync --frozen --no-dev
-
-# Model weights are part of the image: the privacy gate must never depend on
-# a runtime download succeeding.
-RUN uv run python scripts/fetch_models.py
 
 RUN useradd --create-home owi && chown -R owi /app
 USER owi

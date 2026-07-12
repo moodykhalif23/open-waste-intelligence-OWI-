@@ -3,6 +3,7 @@
 import logging
 import time
 
+from owi_api.analytics.refresh import refresh_bin_health
 from owi_api.config import settings
 from owi_api.db import SessionLocal
 from owi_api.ingestion.storage import get_store
@@ -18,7 +19,9 @@ def run_once() -> None:
         purged = purge_expired_quarantine(
             session, get_store(settings), settings.quarantine_retention_hours
         )
+        refreshed = refresh_bin_health(session)
     logger.info("quarantine purge: %d originals deleted", purged)
+    logger.info("bin health refresh: %d bins scored", refreshed)
 
 
 def main() -> None:

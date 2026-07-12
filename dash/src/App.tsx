@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 const Overview = lazy(() => import("./pages/Overview"));
 const Bins = lazy(() => import("./pages/Bins"));
 const Reports = lazy(() => import("./pages/Reports"));
+const Users = lazy(() => import("./pages/Users"));
 
 function RequireAuth() {
   return getToken() ? <Outlet /> : <Navigate to="/login" replace />;
@@ -25,6 +26,7 @@ export default function App() {
                 <Route index element={<Overview />} />
                 <Route path="bins" element={<Bins />} />
                 <Route path="reports" element={<Reports />} />
+              <Route path="users" element={<Users />} />
               </Route>
             </Route>
           </Routes>

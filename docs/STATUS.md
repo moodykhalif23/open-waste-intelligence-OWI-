@@ -28,6 +28,7 @@
 - Overview: stat tiles + reports-per-day and fill-distribution charts (palette validated)
 - Bins: site/bin creation, registry table, printable QR sticker download
 - Reports: latest observations with authenticated photo viewer
+- Users (2026-07-13): create users, issue collector device tokens (shown once, copy-to-clipboard), revoke tokens — phone provisioning without a terminal
 
 ### Labeling pipeline (`/ml`) — Label Studio + COCO export (2026-07-13)
 - Label Studio in compose (UI at `:8080`, credentials + legacy API token in `.env`, `LABEL_STUDIO_LEGACY_API_TOKENS_ENABLED` for scripted access)
@@ -36,8 +37,9 @@
 - Verified live: 12 ingested images synced as tasks; export produces valid COCO with all 8 categories
 - **Phase 0 engineering tasks (roadmap build order 1–6) are now all delivered**
 
-### Infra
+### Infra & deployment
 - `docker-compose.yml` at repo root (Postgres+PostGIS, Redis, MinIO, Label Studio); all secrets and URLs in the single gitignored repo-root `.env`; frontends are same-origin (`/api` proxied in dev, reverse proxy in production) with zero hardcoded URLs
+- Production deploy (2026-07-13): compose `prod` profile runs the whole platform — one `api` image (model weights baked in, SHA256-verified at build; migrations auto-run on start; non-root) serving as api / worker / scheduler, plus a `web` image (both frontends built and served by Caddy, `/api` reverse-proxied, auto-TLS with domains or self-signed for LAN pilots); healthchecked dependencies; deploy guide in `docs/11-deployment.md`. Verified live: full containerized stack (8 services) passes all 25 smoke checks; Caddy serves both frontends and proxies `/api`; worker executed a real queued job; scheduler ran its purge cycle in-container
 
 ## In progress / blocked on a human
 
@@ -45,9 +47,7 @@
 
 ## Next up (rough order)
 
-1. Production deployment story: api + worker + scheduler Dockerfiles wired into compose (incl. model fetch), deploy-to-VPS doc
-2. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
-3. Dashboard: users page with "issue device token" button (provision collector phones without a terminal)
-4. Dashboard: review queue and collect-today list (arrive with Phase 1 models)
+1. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
+2. Dashboard: review queue and collect-today list (arrive with Phase 1 models)
 
 With all six Phase 0 engineering tasks delivered, the remaining Phase 0 work is operational, not code: partner kickoff, bin registry data entry, collector training, capture-rate tracking (gate G0).

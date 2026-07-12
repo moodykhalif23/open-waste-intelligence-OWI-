@@ -16,6 +16,7 @@ export default function Layout() {
           </NavLink>
           <NavLink to="/bins">{t("bins")}</NavLink>
           <NavLink to="/reports">{t("reports")}</NavLink>
+          <NavLink to="/users">{t("users")}</NavLink>
         </nav>
         <select
           aria-label={t("language")}

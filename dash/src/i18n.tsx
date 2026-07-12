@@ -46,6 +46,16 @@ const strings = {
     view: "View",
     bin: "Bin",
     noBin: "—",
+    users: "Users",
+    newUser: "Add user",
+    role: "Role",
+    passwordOptional: "Password (only for dashboard sign-in)",
+    issueToken: "Issue device token",
+    revokeTokens: "Revoke tokens",
+    tokenIssuedHint:
+      "Paste this token into the phone's Settings now — it is not shown again.",
+    copy: "Copy",
+    copied: "Copied",
   },
   sw: {
     appName: "OpenWaste Intelligence",
@@ -92,6 +102,15 @@ const strings = {
     view: "Tazama",
     bin: "Pipa",
     noBin: "—",
+    users: "Watumiaji",
+    newUser: "Ongeza mtumiaji",
+    role: "Wadhifa",
+    passwordOptional: "Nenosiri (kwa kuingia kwenye dashibodi tu)",
+    issueToken: "Toa tokeni ya kifaa",
+    revokeTokens: "Batilisha tokeni",
+    tokenIssuedHint: "Bandika tokeni hii kwenye Mipangilio ya simu sasa — haitaonyeshwa tena.",
+    copy: "Nakili",
+    copied: "Imenakiliwa",
   },
 } as const;
 

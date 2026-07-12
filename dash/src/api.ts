@@ -60,6 +60,15 @@ export interface Bin {
   bin_type: string;
 }
 
+export type Role = "admin" | "coordinator" | "collector" | "viewer";
+
+export interface User {
+  id: string;
+  name: string;
+  phone: string | null;
+  role: Role;
+}
+
 export interface Observation {
   id: string;
   captured_at: string;

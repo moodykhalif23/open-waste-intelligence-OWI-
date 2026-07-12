@@ -32,3 +32,16 @@ class ObservationResult(BaseModel):
 
 class BatchResponse(BaseModel):
     results: list[ObservationResult]
+
+
+class ObservationOut(BaseModel):
+    id: uuid.UUID
+    captured_at: datetime
+    synced_at: datetime
+    lat: float
+    lng: float
+    location_source: str
+    bin_id: uuid.UUID | None
+    collector_id: uuid.UUID | None
+    fill_tap: FillBand | None
+    privacy_status: PrivacyStatus

@@ -2,8 +2,9 @@ import json
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Response, UploadFile
 from pydantic import TypeAdapter, ValidationError
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from owi_api.config import settings
@@ -12,9 +13,18 @@ from owi_api.ingestion.privacy import HogPersonDetector, PersonDetector
 from owi_api.ingestion.service import ingest_observation
 from owi_api.ingestion.storage import ObjectStore, get_store
 from owi_api.models.enums import UserRole
+from owi_api.models.observation import Observation
 from owi_api.routers.auth import require_roles
-from owi_api.schemas.observation import BatchResponse, ObservationIn, ObservationResult
+from owi_api.schemas.observation import (
+    BatchResponse,
+    ObservationIn,
+    ObservationOut,
+    ObservationResult,
+)
 from owi_api.security import TokenClaims
+
+# Internal staff — the public api_consumer role never reaches raw observations.
+STAFF = (UserRole.ADMIN, UserRole.COORDINATOR, UserRole.COLLECTOR, UserRole.VIEWER)
 
 router = APIRouter(prefix="/api/v1/observations", tags=["observations"])
 
@@ -79,3 +89,45 @@ async def ingest_batch(
             )
         )
     return BatchResponse(results=results)
+
+
+@router.get("", response_model=list[ObservationOut])
+def list_observations(
+    claims: Annotated[TokenClaims, require_roles(*STAFF)],
+    session: Annotated[Session, Depends(get_session)],
+    limit: Annotated[int, Query(gt=0, le=1000)] = 500,
+) -> list[ObservationOut]:
+    rows = session.execute(
+        select(Observation, func.ST_Y(Observation.location), func.ST_X(Observation.location))
+        .where(Observation.org_id == claims.org_id, Observation.deleted_at.is_(None))
+        .order_by(Observation.captured_at.desc())
+        .limit(limit)
+    )
+    return [
+        ObservationOut(
+            id=obs.id,
+            captured_at=obs.captured_at,
+            synced_at=obs.synced_at,
+            lat=lat,
+            lng=lng,
+            location_source=obs.location_source.value,
+            bin_id=obs.bin_id,
+            collector_id=obs.collector_id,
+            fill_tap=obs.human_fill_tap,
+            privacy_status=obs.privacy_status,
+        )
+        for obs, lat, lng in rows
+    ]
+
+
+@router.get("/{observation_id}/image")
+def get_observation_image(
+    observation_id: uuid.UUID,
+    claims: Annotated[TokenClaims, require_roles(*STAFF)],
+    session: Annotated[Session, Depends(get_session)],
+    store: Annotated[ObjectStore, Depends(get_object_store)],
+) -> Response:
+    observation = session.get(Observation, observation_id)
+    if observation is None or observation.org_id != claims.org_id:
+        raise HTTPException(status_code=404, detail="observation not found")
+    return Response(content=store.get(observation.image_ref), media_type="image/jpeg")

@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/i18n.ts","./src/main.tsx","./src/components/qrscan.tsx","./src/lib/compress.ts","./src/lib/gps.ts","./src/lib/queue.ts","./src/lib/settings.ts","./src/lib/sync.ts"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/i18n.ts","./src/main.tsx","./src/components/collectlist.tsx","./src/components/qrscan.tsx","./src/lib/collect.ts","./src/lib/compress.ts","./src/lib/gps.ts","./src/lib/queue.ts","./src/lib/settings.ts","./src/lib/sync.ts"],"version":"5.9.3"}

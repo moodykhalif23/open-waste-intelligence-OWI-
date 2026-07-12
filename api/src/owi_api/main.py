@@ -4,7 +4,16 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from owi_api.config import settings
-from owi_api.routers import admin, auth, bins, observations, operations, sites, users
+from owi_api.routers import (
+    admin,
+    auth,
+    bins,
+    observations,
+    operations,
+    review,
+    sites,
+    users,
+)
 
 
 def create_app() -> FastAPI:
@@ -36,6 +45,7 @@ def create_app() -> FastAPI:
     app.include_router(operations.router)
     app.include_router(bins.router)
     app.include_router(observations.router)
+    app.include_router(review.router)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:

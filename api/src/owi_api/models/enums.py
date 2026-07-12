@@ -39,3 +39,16 @@ class OverflowRisk(enum.StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
+
+
+class PredictionTask(enum.StrEnum):
+    DETECT = "detect"
+    CLASSIFY = "classify"
+    FILL = "fill"
+    DUMPING = "dumping"
+
+
+class ReviewStatus(enum.StrEnum):
+    UNREVIEWED = "unreviewed"
+    CONFIRMED = "confirmed"
+    CORRECTED = "corrected"

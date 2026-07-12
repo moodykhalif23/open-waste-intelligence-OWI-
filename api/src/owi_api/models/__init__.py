@@ -1,6 +1,7 @@
 from owi_api.models.base import Base
 from owi_api.models.observation import Observation
 from owi_api.models.operations import BinHealthDaily, CollectionEvent
+from owi_api.models.prediction import MLModel, Prediction
 from owi_api.models.registry import Bin, Organization, Site, User
 
 __all__ = [
@@ -8,8 +9,10 @@ __all__ = [
     "Bin",
     "BinHealthDaily",
     "CollectionEvent",
+    "MLModel",
     "Observation",
     "Organization",
+    "Prediction",
     "Site",
     "User",
 ]

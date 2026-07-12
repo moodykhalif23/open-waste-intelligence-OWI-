@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import CollectList from "./components/CollectList";
 import QrScan from "./components/QrScan";
 import { t, type Lang, type StringKey } from "./i18n";
 import { compressImage, type QualityWarning } from "./lib/compress";
@@ -24,6 +25,7 @@ export default function App() {
   const [online, setOnline] = useState(navigator.onLine);
   const [toast, setToast] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [tab, setTab] = useState<"report" | "collect">("report");
   const startedAt = useRef<number>(0);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -127,6 +129,10 @@ export default function App() {
         </span>
       </header>
 
+      {tab === "collect" && <CollectList lang={lang} token={settings.token} />}
+
+      {tab === "report" && (
+        <>
       <input
         ref={fileInput}
         type="file"
@@ -219,8 +225,25 @@ export default function App() {
           </button>
         </section>
       )}
+        </>
+      )}
 
       {toast && <p className="toast">{toast}</p>}
+
+      <nav className="tabbar">
+        <button
+          className={tab === "report" ? "tab tab-active" : "tab"}
+          onClick={() => setTab("report")}
+        >
+          {tr("tabReport")}
+        </button>
+        <button
+          className={tab === "collect" ? "tab tab-active" : "tab"}
+          onClick={() => setTab("collect")}
+        >
+          {tr("tabCollect")}
+        </button>
+      </nav>
 
       <footer>
         <button className="linklike" onClick={() => setShowSettings((v) => !v)}>

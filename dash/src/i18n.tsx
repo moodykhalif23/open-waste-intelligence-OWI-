@@ -71,6 +71,12 @@ const strings = {
     collectTodayRec: "Collect today",
     scheduleSoonRec: "Schedule soon",
     markCollected: "Mark collected",
+    review: "Review",
+    reviewQueue: "Review queue",
+    pendingCount: "{n} pending",
+    reviewEmpty: "Nothing to review — predictions appear here once a model is active",
+    predicted: "Predicted",
+    confirm: "Confirm",
   },
   sw: {
     appName: "OpenWaste Intelligence",
@@ -141,6 +147,12 @@ const strings = {
     collectTodayRec: "Kusanya leo",
     scheduleSoonRec: "Panga hivi karibuni",
     markCollected: "Imekusanywa",
+    review: "Kagua",
+    reviewQueue: "Foleni ya ukaguzi",
+    pendingCount: "{n} zinasubiri",
+    reviewEmpty: "Hakuna cha kukagua — utabiri utaonekana hapa modeli ikianza kutumika",
+    predicted: "Utabiri",
+    confirm: "Thibitisha",
   },
 } as const;
 

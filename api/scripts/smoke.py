@@ -204,6 +204,16 @@ def main() -> None:
         ours_after is not None and (ours_after["days_since_collection"] or 0) < 1,
     )
 
+    queue = client.get("/api/v1/predictions", headers=admin)
+    check(
+        "review queue reachable (empty until a model is active)",
+        queue.status_code == 200 and queue.json()["unreviewed"] == 0,
+    )
+    check(
+        "review queue is reviewer-only",
+        client.get("/api/v1/predictions", headers=device_auth).status_code == 403,
+    )
+
     purge = client.post("/api/v1/admin/quarantine/purge", headers=admin)
     check("quarantine purge runs", purge.status_code == 200 and "purged" in purge.json())
     check(

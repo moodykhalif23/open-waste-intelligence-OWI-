@@ -47,8 +47,16 @@
 - Recomputed hourly by the scheduler, on demand via `POST /api/v1/admin/analytics/refresh`, and immediately when a collection is recorded; ranked `GET /api/v1/bins/health`
 - Dashboard "Collect today" page: ranked list with fill %, days-to-full, risk badges (label + color, never color alone), recommendation, mark-collected
 - Works from human fill taps now; model fill predictions slot into the same series when Phase 1 models land
-- Verified live in containers: fill sequence low→half→high over 3 days → bin flagged HIGH/collect-today; recording a collection resets days-since-collection (31/31 smoke checks)
+- Verified live in containers: fill sequence low→half→high over 3 days → bin flagged HIGH/collect-today; recording a collection resets days-since-collection
 - Docker fixes from the live run: model fetch layer moved before source copy (code edits no longer re-download weights); `UV_NO_SYNC` so containers never install packages at runtime
+
+### Active-learning scaffolding + driver collect list (2026-07-13)
+- Prediction data model (migration 0005): `ml_models` registry (task, version, git commit, dataset hash, metrics, active flag — full traceability) + `predictions` (payload, review_status, corrected_payload, reviewed_by)
+- Review queue: `GET /api/v1/predictions` (reviewer-only, unreviewed count + items) and `POST /api/v1/predictions/{id}/review` (confirm / correct); transition logic is a pure function with 6 unit tests — a confirmed prediction's payload and a correction both become training ground truth
+- Worker is now registry-aware: looks up active models and loops per task (no-op with a clear log until the first model activates, but the real contract is in place)
+- Dashboard **Review** page: image thumbnail + predicted value, one-tap confirm or correct-fill; empty state until a model is active
+- Field app now has a **Collect** tab (bottom tab bar): driver sees the ranked collect-today list with risk rings and marks bins collected on the spot — closes the M4 driver loop ahead of routing
+- Verified live in containers: 33/33 smoke checks (review queue reachable + reviewer-only); driver device token retrieves 9 scored bins and can mark collected; both frontends served through Caddy
 
 ## In progress / blocked on a human
 
@@ -56,7 +64,8 @@
 
 ## Next up (rough order)
 
-1. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
-2. Dashboard: review queue and collect-today list (arrive with Phase 1 models)
+1. Train the first models (T1/T2/T3) on Phase 0 data → activate in the registry → predictions flow into the review queue (needs the labeled dataset)
+2. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
+3. M1 composition views + M5 recycling value on the dashboard (arrive with the classification model)
 
 With all six Phase 0 engineering tasks delivered, the remaining Phase 0 work is operational, not code: partner kickoff, bin registry data entry, collector training, capture-rate tracking (gate G0).

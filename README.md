@@ -59,13 +59,14 @@ Read in this order if you're new:
 9. [docs/08-data-governance-ethics.md](docs/08-data-governance-ethics.md) — privacy, consent, what we will never build
 10. [docs/09-risks.md](docs/09-risks.md) — risk register with mitigations
 11. [docs/10-system-spec.md](docs/10-system-spec.md) — pinned stack, resolved ADRs, engineering standards
-12. [docs/glossary.md](docs/glossary.md) — shared vocabulary
+12. [docs/STATUS.md](docs/STATUS.md) — **build status: the single source of truth for what's done and what's next**
+13. [docs/glossary.md](docs/glossary.md) — shared vocabulary
 
 Contributors: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Status
 
-**Phase 0 — Initialization.** No code yet, by design. We are defining the problem, requirements, and pilot before writing a line of code.
+**Phase 0 — Foundation, code underway** (started 2026-07-12). Backend spine (ingestion + privacy gate + auth + bin registry), field PWA spike, and dashboard skeleton are built and verified end-to-end. Progress is tracked in exactly one place: [docs/STATUS.md](docs/STATUS.md).
 
 ## License
 

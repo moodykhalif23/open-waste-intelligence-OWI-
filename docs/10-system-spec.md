@@ -78,14 +78,9 @@ docker-compose.yml at the repo root: dev/pilot services (Postgres+PostGIS, Redis
 
 - `docker compose up` at the repo root brings up Postgres+PostGIS, Redis, MinIO.
 - `/api`: `uv sync && uv run alembic upgrade head && uv run uvicorn owi_api.main:app --reload`.
-- CI (GitHub Actions): ruff + mypy + pytest on `/api`; eslint + tsc + vitest on `/dash` and `/app` once they exist.
+- CI (GitHub Actions): ruff + mypy + pytest on `/api`; tsc + eslint + build on `/app` and `/dash`.
 - Licenses: Apache-2.0 (code) — add `LICENSE` at first public release per README's pending confirmation.
 
-## Kickoff order (matches roadmap build order, statuses live here)
+## Build progress
 
-1. ✅ Repo scaffolding (this doc, monorepo dirs, CI, tooling)
-2. ✅ Data model migration v1: org / user / site / bin / observation
-3. ⬜ Field app spike (PWA camera + offline + GPS on a collector-class phone) — validates ADR-6
-4. ✅ Ingestion service skeleton: upload, validate, dedupe, privacy gate, store, enqueue
-5. ⬜ Bin registry admin UI + QR generation flow
-6. ⬜ Label Studio deployment + COCO export pipeline
+Tracked in one place only: [STATUS.md](STATUS.md).

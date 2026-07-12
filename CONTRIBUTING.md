@@ -2,9 +2,9 @@
 
 Thanks for your interest! OWI is an open-source computer vision and analytics platform for community waste operations, developed hand-in-hand with Safi Cleaners and Recyclers (Kenya).
 
-## Current status: documentation phase
+## Current status
 
-There is **no code yet, on purpose**. We are finalizing requirements, architecture, and the pilot plan before implementation begins. Right now the most valuable contributions are:
+Code is underway — see [docs/STATUS.md](docs/STATUS.md) for what's built and what's next. Valuable contributions right now:
 
 - **Review the docs** in [docs/](docs/) — especially the [ML strategy](docs/04-ml-strategy.md), [architecture](docs/03-architecture.md), and [data governance](docs/08-data-governance-ethics.md). Open an issue for anything unclear, wrong, or missing.
 - **Domain expertise:** waste management operations, recycling economics in East Africa, vehicle routing, waste-vision ML (TACO and friends), Kenya Data Protection Act compliance.
@@ -17,18 +17,20 @@ There is **no code yet, on purpose**. We are finalizing requirements, architectu
 3. **Cheap-first.** The reference deployment is one modest server and mid-range Android phones. Dependencies that assume GPUs, paid APIs, or heavy cloud services need strong justification.
 4. **Be kind and practical.** Many stakeholders here are not software people; write for them.
 
-## How to contribute (docs phase)
+## How to contribute
 
 1. Open an issue describing the problem/gap before a large PR.
 2. For doc edits: PR with a clear summary of what changed and why.
-3. Decisions of consequence get an ADR-style note (see architecture doc for the pattern).
+3. Decisions of consequence get an ADR-style note in [docs/10-system-spec.md](docs/10-system-spec.md).
 
-## When code starts (planned conventions)
+## Code conventions
 
-- Monorepo: `/app` (field app), `/api` (FastAPI backend), `/ml` (training/eval), `/dash` (dashboard), `/docs`.
-- Python: ruff + type hints; JS/TS: eslint + prettier; Flutter: standard lints.
-- Tests required for analytics formulas (bin health, index, carbon) — these produce published numbers.
+- Monorepo: `/app` (field PWA), `/api` (FastAPI backend), `/ml` (training/eval), `/dash` (dashboard), `/docs`.
+- Python: ruff + mypy strict + full type hints; TypeScript: strict mode + eslint.
+- Comments: at most 3 lines, only for a *why* the code can't show, fully self-contained (no doc/requirement references).
+- Tests required for analytics formulas (bin health, index, carbon) and ingestion invariants — these produce published numbers.
 - Model changes must report golden-test-set metrics in the PR.
+- Secrets only in gitignored `.env` (see `.env.example`) — never in code or compose files.
 - Licenses: Apache-2.0 (code), CC-BY-4.0 (published data) — pending final confirmation.
 
 ## Community

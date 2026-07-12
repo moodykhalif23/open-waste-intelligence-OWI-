@@ -16,14 +16,9 @@ Everything else (routes, dumping, value, index, carbon, volunteers, open API) bu
 | **3 — Prove & open it**      | 11–14 | M6 index, M7 carbon, M8 volunteers + grant reports, Open Data API, public dataset snapshot, deploy-anywhere docs                          | G3: grant application submitted, external usability  |
 | **4 — Beyond (unscoped)**    | 15+    | Second-org deployment, on-device inference, opt-in fixed cameras, brand/EPR analytics, county dashboards, sensor fusion if ever justified | —                                                   |
 
-## Build order within Phase 0 (first 6 engineering tasks when code starts)
+## Build order within Phase 0
 
-1. Repo scaffolding: monorepo (`/app` field app, `/api` backend, `/ml` training, `/dash` dashboard, `/docs`), CI, licenses, this documentation moved in.
-2. Data model migration v1 (Postgres + PostGIS): org/site/bin/user/observation tables.
-3. Field app spike: Flutter vs PWA decision via a 1-week camera+offline+GPS prototype on a collector-class phone. **Decision ADR before building on.**
-4. Ingestion service: upload, validate, dedupe, privacy-gate (off-the-shelf person detector + OpenCV blur), store.
-5. Bin registry admin UI (can be crude) + QR generation/printing flow.
-6. Label Studio deployment + export-to-COCO pipeline.
+Code has started; per-task progress is tracked only in [STATUS.md](STATUS.md).
 
 ## Dependencies & critical path
 

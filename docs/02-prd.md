@@ -6,7 +6,7 @@
 | **Version** | 0.1 (draft) |
 | **Date** | 2026-07-12 |
 | **Anchor partner** | Safi Cleaners and Recyclers (CBO) |
-| **Status** | Pre-code. Approved scope for Phase 0–1 pending partner sign-off. |
+| **Status** | In build — see [STATUS.md](STATUS.md). Phase 0–1 scope pending partner sign-off. |
 
 ---
 

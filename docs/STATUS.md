@@ -41,6 +41,15 @@
 - `docker-compose.yml` at repo root (Postgres+PostGIS, Redis, MinIO, Label Studio); all secrets and URLs in the single gitignored repo-root `.env`; frontends are same-origin (`/api` proxied in dev, reverse proxy in production) with zero hardcoded URLs
 - Production deploy (2026-07-13): compose `prod` profile runs the whole platform — one `api` image (model weights baked in, SHA256-verified at build; migrations auto-run on start; non-root) serving as api / worker / scheduler, plus a `web` image (both frontends built and served by Caddy, `/api` reverse-proxied, auto-TLS with domains or self-signed for LAN pilots); healthchecked dependencies; deploy guide in `docs/11-deployment.md`. Verified live: full containerized stack (8 services) passes all 25 smoke checks; Caddy serves both frontends and proxies `/api`; worker executed a real queued job; scheduler ran its purge cycle in-container
 
+### Phase 1 start — Bin health & collect-today (M2, 2026-07-13)
+- Collection events (`POST /api/v1/collections`) and daily `bin_health_daily` analytics (migration 0004)
+- Bin health engine: fill % from collector taps (band midpoints), fill-velocity regression, days-to-full, days-since-collection, overflow risk + recommendation per the v1 formula — pure function, 9 unit tests (published numbers are tested, per CONTRIBUTING)
+- Recomputed hourly by the scheduler, on demand via `POST /api/v1/admin/analytics/refresh`, and immediately when a collection is recorded; ranked `GET /api/v1/bins/health`
+- Dashboard "Collect today" page: ranked list with fill %, days-to-full, risk badges (label + color, never color alone), recommendation, mark-collected
+- Works from human fill taps now; model fill predictions slot into the same series when Phase 1 models land
+- Verified live in containers: fill sequence low→half→high over 3 days → bin flagged HIGH/collect-today; recording a collection resets days-since-collection (31/31 smoke checks)
+- Docker fixes from the live run: model fetch layer moved before source copy (code edits no longer re-download weights); `UV_NO_SYNC` so containers never install packages at runtime
+
 ## In progress / blocked on a human
 
 - **Phone test of the PWA spike** (Android 10 / 2 GB) — validates the PWA-over-Flutter decision; the project's #1 risk. Owner: Brian.

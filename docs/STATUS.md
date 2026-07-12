@@ -27,7 +27,7 @@
 - Reports: latest observations with authenticated photo viewer
 
 ### Infra
-- `docker-compose.yml` at repo root (Postgres+PostGIS, Redis, MinIO), all secrets via `.env` (`.env.example` committed)
+- `docker-compose.yml` at repo root (Postgres+PostGIS, Redis, MinIO); all secrets and URLs in the single gitignored repo-root `.env`; frontends are same-origin (`/api` proxied in dev, reverse proxy in production) with zero hardcoded URLs
 
 ## In progress / blocked on a human
 

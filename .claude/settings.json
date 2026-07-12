@@ -16,7 +16,8 @@
       "Skill(dataviz)",
       "Skill(dataviz:*)",
       "PowerShell(node \"C:\\\\Users\\\\ADMIN\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\bundled-skills\\\\2.1.207\\\\d18ed0cfc0aaa1ef4160dc36291d540f\\\\dataviz\\\\scripts\\\\validate_palette.js\" \"#15803d\" --mode light 2>&1)",
-      "PowerShell(Start-Sleep -Seconds 5; try { $r = Invoke-WebRequest http://localhost:5174/login -TimeoutSec 5; \"dash up: HTTP $\\($r.StatusCode\\)\" } catch { \"dash not responding: $_\" })"
+      "PowerShell(Start-Sleep -Seconds 5; try { $r = Invoke-WebRequest http://localhost:5174/login -TimeoutSec 5; \"dash up: HTTP $\\($r.StatusCode\\)\" } catch { \"dash not responding: $_\" })",
+      "PowerShell(Start-Sleep -Seconds 3; $login = Invoke-RestMethod -Method Post -Uri http://localhost:5174/api/v1/auth/login -ContentType \"application/json\" -Body '{\"phone\":\"+254700000000\",\"password\":\"smoke-test-pass-1\"}'; \"proxy login through dash dev server: role=$\\($login.role\\)\")"
     ]
   }
 }

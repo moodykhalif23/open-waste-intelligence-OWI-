@@ -30,7 +30,6 @@ Code is underway — see [docs/STATUS.md](docs/STATUS.md) for what's built and w
 - Comments: at most 3 lines, only for a *why* the code can't show, fully self-contained (no doc/requirement references).
 - Tests required for analytics formulas (bin health, index, carbon) and ingestion invariants — these produce published numbers.
 - Model changes must report golden-test-set metrics in the PR.
-- Secrets only in gitignored `.env` (see `.env.example`) — never in code or compose files.
 - Licenses: Apache-2.0 (code), CC-BY-4.0 (published data) — pending final confirmation.
 
 ## Community

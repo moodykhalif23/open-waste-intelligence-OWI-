@@ -1,0 +1,25 @@
+FROM python:3.12-slim
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+WORKDIR /app
+
+# Dependency layer caches independently of source changes.
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
+
+COPY src src
+COPY alembic alembic
+COPY alembic.ini ./
+COPY scripts scripts
+RUN uv sync --frozen --no-dev
+
+# Model weights are part of the image: the privacy gate must never depend on
+# a runtime download succeeding.
+RUN uv run python scripts/fetch_models.py
+
+RUN useradd --create-home owi && chown -R owi /app
+USER owi
+
+EXPOSE 8000
+CMD ["uv", "run", "uvicorn", "owi_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

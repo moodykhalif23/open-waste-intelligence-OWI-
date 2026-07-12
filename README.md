@@ -59,8 +59,9 @@ Read in this order if you're new:
 9. [docs/08-data-governance-ethics.md](docs/08-data-governance-ethics.md) — privacy, consent, what we will never build
 10. [docs/09-risks.md](docs/09-risks.md) — risk register with mitigations
 11. [docs/10-system-spec.md](docs/10-system-spec.md) — pinned stack, resolved ADRs, engineering standards
-12. [docs/STATUS.md](docs/STATUS.md) — **build status: the single source of truth for what's done and what's next**
-13. [docs/glossary.md](docs/glossary.md) — shared vocabulary
+12. [docs/11-deployment.md](docs/11-deployment.md) — one-compose production deploy (VPS or mini-PC)
+13. [docs/STATUS.md](docs/STATUS.md) — **build status: the single source of truth for what's done and what's next**
+14. [docs/glossary.md](docs/glossary.md) — shared vocabulary
 
 Contributors: see [CONTRIBUTING.md](CONTRIBUTING.md).
 

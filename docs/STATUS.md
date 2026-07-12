@@ -29,8 +29,15 @@
 - Bins: site/bin creation, registry table, printable QR sticker download
 - Reports: latest observations with authenticated photo viewer
 
+### Labeling pipeline (`/ml`) — Label Studio + COCO export (2026-07-13)
+- Label Studio in compose (UI at `:8080`, credentials + legacy API token in `.env`, `LABEL_STUDIO_LEGACY_API_TOKENS_ENABLED` for scripted access)
+- `python -m owi_ml.labeling.setup_project` (idempotent): creates the "OWI Waste Detection" project with the 8-class taxonomy, attaches MinIO as S3 source storage (proxied — browser never touches MinIO), syncs new images into the labeling queue
+- `python -m owi_ml.labeling.export_coco`: COCO snapshot zip → `ml/datasets/snapshots/` (gitignored)
+- Verified live: 12 ingested images synced as tasks; export produces valid COCO with all 8 categories
+- **Phase 0 engineering tasks (roadmap build order 1–6) are now all delivered**
+
 ### Infra
-- `docker-compose.yml` at repo root (Postgres+PostGIS, Redis, MinIO); all secrets and URLs in the single gitignored repo-root `.env`; frontends are same-origin (`/api` proxied in dev, reverse proxy in production) with zero hardcoded URLs
+- `docker-compose.yml` at repo root (Postgres+PostGIS, Redis, MinIO, Label Studio); all secrets and URLs in the single gitignored repo-root `.env`; frontends are same-origin (`/api` proxied in dev, reverse proxy in production) with zero hardcoded URLs
 
 ## In progress / blocked on a human
 
@@ -38,8 +45,9 @@
 
 ## Next up (rough order)
 
-1. Label Studio deployment + export-to-COCO pipeline (last Phase 0 engineering task)
-2. Production deployment story: api + worker + scheduler Dockerfiles wired into compose (incl. model fetch), deploy-to-VPS doc
-3. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
-4. Dashboard: users page with "issue device token" button (provision collector phones without a terminal)
-5. Dashboard: review queue and collect-today list (arrive with Phase 1 models)
+1. Production deployment story: api + worker + scheduler Dockerfiles wired into compose (incl. model fetch), deploy-to-VPS doc
+2. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
+3. Dashboard: users page with "issue device token" button (provision collector phones without a terminal)
+4. Dashboard: review queue and collect-today list (arrive with Phase 1 models)
+
+With all six Phase 0 engineering tasks delivered, the remaining Phase 0 work is operational, not code: partner kickoff, bin registry data entry, collector training, capture-rate tracking (gate G0).

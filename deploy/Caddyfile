@@ -1,0 +1,25 @@
+# Real domains via DASH_DOMAIN / APP_DOMAIN get automatic Let's Encrypt TLS;
+# the defaults serve self-signed HTTPS on ports 8443/8444 for LAN pilots.
+{$DASH_DOMAIN:localhost:8443} {
+	encode gzip
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+	handle {
+		root * /srv/dash
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+{$APP_DOMAIN:localhost:8444} {
+	encode gzip
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+	handle {
+		root * /srv/app
+		try_files {path} /index.html
+		file_server
+	}
+}

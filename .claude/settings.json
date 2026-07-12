@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(uv --version)",
+      "PowerShell(python --version)",
+      "PowerShell(pip --version)",
+      "PowerShell(pip install --user uv 2>&1)"
+    ]
+  }
+}

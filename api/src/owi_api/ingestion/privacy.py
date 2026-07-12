@@ -21,7 +21,7 @@ class HogPersonDetector:
 
     def __init__(self) -> None:
         self._hog = cv2.HOGDescriptor()
-        self._hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+        self._hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())  # type: ignore[attr-defined]
 
     def detect(self, image: np.ndarray) -> list[Box]:
         boxes, _ = self._hog.detectMultiScale(image, winStride=(8, 8))

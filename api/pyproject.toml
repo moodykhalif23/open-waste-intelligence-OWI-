@@ -14,7 +14,9 @@ dependencies = [
     "pydantic-settings>=2.4",
     "redis>=5.0",
     "rq>=1.16",
-    "opencv-python-headless>=4.10",
+    # <5: OpenCV 5 removed HOGDescriptor, which the bootstrap privacy gate uses until
+    # the high-recall ONNX person model lands (T5); revisit the pin then.
+    "opencv-python-headless>=4.10,<5",
     "numpy>=1.26",
     "minio>=7.2",
     "python-multipart>=0.0.9",

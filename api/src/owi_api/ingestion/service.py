@@ -35,9 +35,7 @@ def ingest_observation(
 ) -> IngestResult:
     digest = sha256_hex(image_bytes)
     existing = session.scalar(
-        select(Observation).where(
-            Observation.org_id == org_id, Observation.image_sha256 == digest
-        )
+        select(Observation).where(Observation.org_id == org_id, Observation.image_sha256 == digest)
     )
     if existing:
         return IngestResult(existing.id, True, existing.privacy_status)

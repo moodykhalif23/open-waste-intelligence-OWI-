@@ -28,8 +28,12 @@ def _owi_columns() -> list[sa.Column]:
             nullable=False,
             index=True,
         ),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.Column("deleted_at", sa.DateTime(timezone=True)),
     ]
 
@@ -43,7 +47,9 @@ def upgrade() -> None:
         "organizations",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("name", sa.String(200), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.Column("deleted_at", sa.DateTime(timezone=True)),
     )
     op.create_table(
@@ -63,7 +69,9 @@ def upgrade() -> None:
     op.create_table(
         "bins",
         *_owi_columns(),
-        sa.Column("site_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("sites.id"), nullable=False),
+        sa.Column(
+            "site_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("sites.id"), nullable=False
+        ),
         sa.Column("qr_code", sa.String(64), nullable=False, unique=True),
         sa.Column("location", geoalchemy2.Geometry("POINT", srid=4326), nullable=False),
         sa.Column("volume_liters", sa.Integer, nullable=False),

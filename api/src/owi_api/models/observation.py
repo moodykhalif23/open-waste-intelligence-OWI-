@@ -31,4 +31,6 @@ class Observation(OwiRow, Base):
     image_sha256: Mapped[str] = mapped_column(String(64))
     image_quality_flags: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
     human_fill_tap: Mapped[FillBand | None] = mapped_column(Enum(FillBand, name="fill_band"))
-    privacy_status: Mapped[PrivacyStatus] = mapped_column(Enum(PrivacyStatus, name="privacy_status"))
+    privacy_status: Mapped[PrivacyStatus] = mapped_column(
+        Enum(PrivacyStatus, name="privacy_status")
+    )

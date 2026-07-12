@@ -65,4 +65,8 @@ class S3Store:
 
 
 def get_store(settings: Settings) -> ObjectStore:
-    return LocalStore(settings.storage_root) if settings.storage_driver == "local" else S3Store(settings)
+    return (
+        LocalStore(settings.storage_root)
+        if settings.storage_driver == "local"
+        else S3Store(settings)
+    )

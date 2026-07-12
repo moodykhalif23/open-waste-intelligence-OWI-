@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from owi_api.ingestion.privacy import PersonDetector, apply_privacy_gate
+from owi_api.ingestion.quality import assess_quality, decode_image
 from owi_api.ingestion.storage import ObjectStore
 from owi_api.models.enums import FillBand, LocationSource, PrivacyStatus
 from owi_api.models.observation import Observation
@@ -68,7 +69,12 @@ def ingest_observation(
         location = bin_.location
         location_source = LocationSource.BIN_REGISTRY
 
-    gate = apply_privacy_gate(image_bytes, detector)
+    image = decode_image(image_bytes)
+    quality = assess_quality(image)
+    if not quality.ok:
+        raise ValueError(f"image rejected: {', '.join(quality.flags)}")
+
+    gate = apply_privacy_gate(image, image_bytes, detector)
     image_ref = f"images/{org_id}/{digest}.jpg"
     store.put(image_ref, gate.image_bytes, "image/jpeg")
     if gate.status is PrivacyStatus.BLURRED:
@@ -85,6 +91,10 @@ def ingest_observation(
         collector_id=meta.collector_id,
         image_ref=image_ref,
         image_sha256=digest,
+        image_quality_flags={
+            "brightness": round(quality.brightness, 1),
+            "sharpness": round(quality.sharpness, 1),
+        },
         human_fill_tap=FillBand(meta.fill_tap) if meta.fill_tap else None,
         privacy_status=gate.status,
     )

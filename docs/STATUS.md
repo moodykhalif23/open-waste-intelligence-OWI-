@@ -13,7 +13,9 @@
 - Auth: argon2 passwords, JWT with role claims, long-lived collector device tokens, per-user `token_version` revocation, bootstrap CLI (`python -m owi_api.bootstrap`)
 - Security baseline: production refuses to boot on dev-default secrets, login rate limiting (per phone + per IP), CORS allowlist, security headers, secrets only in gitignored `.env`
 - Dashboard-facing reads: observations list + authenticated image endpoint (staff roles only; `api_consumer` can never reach raw observations)
-- **Verified live** (2026-07-12): migrations on real PostGIS, 21/21 E2E smoke checks (`api/scripts/smoke.py`) against Postgres + Redis + MinIO, 22 unit tests
+- Quarantine auto-deletion (2026-07-13): hourly scheduler process (`python -m owi_api.scheduler`) purges pre-blur originals past the 72 h retention, stamps `quarantine_deleted_at` as the audit trail; on-demand admin endpoint `POST /api/v1/admin/quarantine/purge`
+- Image quality gate (2026-07-13): ingestion rejects blurry / dark / overexposed / tiny images with the reason in the batch response; accepted images store brightness + sharpness metrics in `image_quality_flags` for threshold tuning; field app warns the collector at capture time (client-side brightness + Laplacian check on the compressed canvas, EN + SW) while retaking is one tap away
+- **Verified live** (2026-07-13): migrations 0001–0003 on real PostGIS, 25/25 E2E smoke checks (`api/scripts/smoke.py`, rerunnable back-to-back) against Postgres + Redis + MinIO, 27 unit tests
 
 ### Field PWA spike (`/app`) — Vite + React + TS
 - Photo via native camera → client-side compression to ~300 KB → GPS (10 s timeout, never blocks) → fill tap → IndexedDB offline queue → auto-sync
@@ -35,9 +37,8 @@
 
 ## Next up (rough order)
 
-1. Quarantine auto-deletion job (≤ 72 h retention for pre-blur originals) — governance requirement, currently manual
-2. Image quality gate at ingestion (reject blurry/dark with instant retake feedback)
-3. Replace bootstrap HOG person detector with high-recall ONNX person model (then revisit the `opencv<5` pin)
-4. Label Studio deployment + export-to-COCO pipeline (last Phase 0 engineering task)
-5. Production deployment story: api + worker Dockerfiles wired into compose, deploy-to-VPS doc
+1. Replace bootstrap HOG person detector with high-recall ONNX person model (then revisit the `opencv<5` pin)
+3. Label Studio deployment + export-to-COCO pipeline (last Phase 0 engineering task)
+4. Production deployment story: api + worker + scheduler Dockerfiles wired into compose, deploy-to-VPS doc
+5. Dashboard: users page with "issue device token" button (provision collector phones without a terminal)
 6. Dashboard: review queue and collect-today list (arrive with Phase 1 models)

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import QrScan from "./components/QrScan";
 import { t, type Lang, type StringKey } from "./i18n";
-import { compressImage } from "./lib/compress";
+import { compressImage, type QualityWarning } from "./lib/compress";
 import { getFix, type GpsFix } from "./lib/gps";
 import { enqueue, listQueued, type FillBand } from "./lib/queue";
 import { loadSettings, saveSettings, type AppSettings } from "./lib/settings";
@@ -15,6 +15,7 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   const [photo, setPhoto] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [warning, setWarning] = useState<QualityWarning | null>(null);
   const [gps, setGps] = useState<GpsState>({ kind: "waiting" });
   const [binQr, setBinQr] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
@@ -72,11 +73,12 @@ export default function App() {
 
   async function onPhotoPicked(file: File) {
     startedAt.current = performance.now();
-    const compressed = await compressImage(file);
-    setPhoto(compressed);
+    const captured = await compressImage(file);
+    setPhoto(captured.blob);
+    setWarning(captured.warning);
     setPreviewUrl((old) => {
       if (old) URL.revokeObjectURL(old);
-      return URL.createObjectURL(compressed);
+      return URL.createObjectURL(captured.blob);
     });
     setGps({ kind: "waiting" });
     const fix = await getFix();
@@ -104,6 +106,7 @@ export default function App() {
     });
     setFillTap(null);
     setBinQr(null);
+    setWarning(null);
     await refreshCount();
     void runSync();
   }
@@ -166,6 +169,13 @@ export default function App() {
       {!scanning && previewUrl ? (
         <section className="capture">
           <img src={previewUrl} alt="" className="preview" />
+          {warning && (
+            <p className="warning">
+              {warning === "dark" && tr("qualityDark")}
+              {warning === "bright" && tr("qualityBright")}
+              {warning === "blurry" && tr("qualityBlurry")}
+            </p>
+          )}
           <p className="gps">
             {gps.kind === "waiting" && tr("gpsWaiting")}
             {gps.kind === "fix" && tr("gpsAccuracy", { m: Math.round(gps.fix.accuracyM) })}

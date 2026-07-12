@@ -171,6 +171,12 @@ button:disabled {
   color: var(--muted);
 }
 
+.warning {
+  font-size: 0.85rem;
+  font-weight: 550;
+  color: #b45309;
+}
+
 .label {
   font-weight: 620;
   font-size: 0.95rem;

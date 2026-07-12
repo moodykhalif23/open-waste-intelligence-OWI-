@@ -49,16 +49,15 @@ def _blur_region(image: np.ndarray, box: Box) -> None:
     image[y : y + h, x : x + w] = cv2.GaussianBlur(image[y : y + h, x : x + w], (kernel, kernel), 0)
 
 
-def apply_privacy_gate(image_bytes: bytes, detector: PersonDetector) -> GateResult:
+def apply_privacy_gate(
+    image: np.ndarray, original_bytes: bytes, detector: PersonDetector
+) -> GateResult:
     """Blur people before anything is persisted — a governance requirement, not an option."""
-    image = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
-    if image is None:
-        raise ValueError("not a decodable image")
-
     boxes = detector.detect(image)
     if not boxes:
-        return GateResult(image_bytes, PrivacyStatus.CLEAN, 0)
+        return GateResult(original_bytes, PrivacyStatus.CLEAN, 0)
 
+    image = image.copy()
     for box in boxes:
         _blur_region(image, _expand(box, image.shape))
     ok, encoded = cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, 85])

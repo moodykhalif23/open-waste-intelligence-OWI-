@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 
 from owi_api.ingestion.privacy import Box, GateResult, apply_privacy_gate
+from owi_api.ingestion.quality import decode_image
 from owi_api.models.enums import PrivacyStatus
 
 
@@ -26,14 +27,15 @@ def noisy_image() -> np.ndarray:
 
 
 def test_clean_image_passes_through_unmodified() -> None:
-    original = encode(noisy_image())
-    result = apply_privacy_gate(original, StubDetector([]))
+    image = noisy_image()
+    original = encode(image)
+    result = apply_privacy_gate(image, original, StubDetector([]))
     assert result == GateResult(original, PrivacyStatus.CLEAN, 0)
 
 
 def test_person_region_is_blurred() -> None:
     image = noisy_image()
-    result = apply_privacy_gate(encode(image), StubDetector([(100, 50, 60, 100)]))
+    result = apply_privacy_gate(image, encode(image), StubDetector([(100, 50, 60, 100)]))
     assert result.status is PrivacyStatus.BLURRED
     assert result.person_count == 1
 
@@ -45,4 +47,4 @@ def test_person_region_is_blurred() -> None:
 
 def test_undecodable_bytes_rejected() -> None:
     with pytest.raises(ValueError, match="decodable"):
-        apply_privacy_gate(b"not an image", StubDetector([]))
+        decode_image(b"not an image")

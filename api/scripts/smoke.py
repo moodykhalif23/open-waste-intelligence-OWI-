@@ -17,12 +17,26 @@ def check(name: str, condition: bool, detail: str = "") -> None:
         failures.append(name)
 
 
-def make_jpeg(seed: int) -> bytes:
-    rng = np.random.default_rng(seed)
-    image = rng.integers(0, 255, (480, 640, 3), dtype=np.uint8)
+def encode(image: np.ndarray) -> bytes:
     ok, buffer = cv2.imencode(".jpg", image)
     assert ok
     return buffer.tobytes()
+
+
+def make_jpeg(seed: int) -> bytes:
+    rng = np.random.default_rng(seed)
+    return encode(rng.integers(0, 255, (480, 640, 3), dtype=np.uint8))
+
+
+def make_dark_jpeg(seed: int) -> bytes:
+    rng = np.random.default_rng(seed)
+    return encode(rng.integers(0, 10, (480, 640, 3), dtype=np.uint8))
+
+
+def make_blurry_jpeg(seed: int) -> bytes:
+    rng = np.random.default_rng(seed)
+    image = rng.integers(0, 255, (480, 640, 3), dtype=np.uint8)
+    return encode(cv2.GaussianBlur(image, (51, 51), 0))
 
 
 def main() -> None:
@@ -132,6 +146,27 @@ def main() -> None:
         files=[("files", ("a.jpg", gps_image, "image/jpeg"))],
     )
     check("duplicate deduplicated", again.json()["results"][0]["status"] == "duplicate")
+
+    quality_meta = [
+        {"captured_at": "2026-07-13T10:00:00Z", "lat": -1.29, "lng": 36.82},
+        {"captured_at": "2026-07-13T10:01:00Z", "lat": -1.29, "lng": 36.82},
+    ]
+    quality = client.post(
+        "/api/v1/observations/batch",
+        headers=device_auth,
+        data={"meta": json.dumps(quality_meta)},
+        files=[
+            ("files", ("dark.jpg", make_dark_jpeg(run_seed + 3), "image/jpeg")),
+            ("files", ("blurry.jpg", make_blurry_jpeg(run_seed + 4), "image/jpeg")),
+        ],
+    ).json()["results"]
+    check(
+        "dark image rejected", quality[0]["status"] == "rejected" and "dark" in quality[0]["detail"]
+    )
+    check(
+        "blurry image rejected",
+        quality[1]["status"] == "rejected" and "blurry" in quality[1]["detail"],
+    )
 
     purge = client.post("/api/v1/admin/quarantine/purge", headers=admin)
     check("quarantine purge runs", purge.status_code == 200 and "purged" in purge.json())

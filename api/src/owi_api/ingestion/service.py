@@ -26,6 +26,10 @@ def sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def quarantine_key(org_id: uuid.UUID, digest: str) -> str:
+    return f"quarantine/{org_id}/{digest}.jpg"
+
+
 def resolve_bin(session: Session, org_id: uuid.UUID, meta: ObservationIn) -> Bin | None:
     if meta.bin_id is not None:
         bin_ = session.get(Bin, meta.bin_id)
@@ -68,8 +72,8 @@ def ingest_observation(
     image_ref = f"images/{org_id}/{digest}.jpg"
     store.put(image_ref, gate.image_bytes, "image/jpeg")
     if gate.status is PrivacyStatus.BLURRED:
-        # Original kept only for blur verification; must be deleted within 72h.
-        store.put(f"quarantine/{org_id}/{digest}.jpg", image_bytes, "image/jpeg")
+        # Original kept only for blur verification; the purge job deletes it within 72h.
+        store.put(quarantine_key(org_id, digest), image_bytes, "image/jpeg")
 
     observation = Observation(
         org_id=org_id,

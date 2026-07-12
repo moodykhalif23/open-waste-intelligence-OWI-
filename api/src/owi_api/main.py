@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from owi_api.config import settings
-from owi_api.routers import auth, bins, observations, sites, users
+from owi_api.routers import admin, auth, bins, observations, sites, users
 
 
 def create_app() -> FastAPI:
@@ -30,6 +30,7 @@ def create_app() -> FastAPI:
         return response
 
     app.include_router(auth.router)
+    app.include_router(admin.router)
     app.include_router(users.router)
     app.include_router(sites.router)
     app.include_router(bins.router)

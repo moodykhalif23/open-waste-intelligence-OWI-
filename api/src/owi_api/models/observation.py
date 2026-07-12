@@ -32,3 +32,5 @@ class Observation(OwiRow, Base):
     image_quality_flags: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
     human_fill_tap: Mapped[FillBand | None] = mapped_column(db_enum(FillBand, "fill_band"))
     privacy_status: Mapped[PrivacyStatus] = mapped_column(db_enum(PrivacyStatus, "privacy_status"))
+    # Audit stamp: when the pre-blur original was purged (≤72h retention is a hard rule).
+    quarantine_deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

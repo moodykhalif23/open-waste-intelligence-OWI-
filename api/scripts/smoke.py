@@ -2,6 +2,7 @@
 
 import json
 import sys
+import uuid
 
 import cv2
 import httpx
@@ -45,10 +46,15 @@ def main() -> None:
     check("admin login", login.status_code == 200)
     admin = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
+    # Random phone keeps the script rerunnable against the same database.
     collector = client.post(
         "/api/v1/users",
         headers=admin,
-        json={"name": "Kevin", "phone": "+254700000001", "role": "collector"},
+        json={
+            "name": "Kevin",
+            "phone": f"+2547{uuid.uuid4().int % 10**8:08d}",
+            "role": "collector",
+        },
     )
     check("create collector", collector.status_code == 201, collector.text[:120])
     device = client.post(
@@ -87,7 +93,9 @@ def main() -> None:
     qr_svg = client.get(f"/api/v1/bins/{bin_data['id']}/qr.svg", headers=admin)
     check("QR SVG renders", qr_svg.status_code == 200 and b"<svg" in qr_svg.content)
 
-    gps_image, bin_image = make_jpeg(1), make_jpeg(2)
+    # Per-run seeds: identical bytes would (correctly) dedupe against earlier runs.
+    run_seed = uuid.uuid4().int % 2**31
+    gps_image, bin_image = make_jpeg(run_seed), make_jpeg(run_seed + 1)
     meta = [
         {"captured_at": "2026-07-12T10:00:00Z", "lat": -1.2921, "lng": 36.8219, "fill_tap": "high"},
         {
@@ -101,7 +109,7 @@ def main() -> None:
     files = [
         ("files", ("a.jpg", gps_image, "image/jpeg")),
         ("files", ("b.jpg", bin_image, "image/jpeg")),
-        ("files", ("c.jpg", make_jpeg(3), "image/jpeg")),
+        ("files", ("c.jpg", make_jpeg(run_seed + 2), "image/jpeg")),
         ("files", ("d.jpg", b"not an image", "image/jpeg")),
     ]
     batch = client.post(
@@ -124,6 +132,13 @@ def main() -> None:
         files=[("files", ("a.jpg", gps_image, "image/jpeg"))],
     )
     check("duplicate deduplicated", again.json()["results"][0]["status"] == "duplicate")
+
+    purge = client.post("/api/v1/admin/quarantine/purge", headers=admin)
+    check("quarantine purge runs", purge.status_code == 200 and "purged" in purge.json())
+    check(
+        "purge is admin-only",
+        client.post("/api/v1/admin/quarantine/purge", headers=device_auth).status_code == 403,
+    )
 
     revoke = client.post(f"/api/v1/users/{collector.json()['id']}/revoke-tokens", headers=admin)
     check("revoke tokens", revoke.status_code == 204)

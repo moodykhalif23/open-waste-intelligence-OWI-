@@ -22,7 +22,9 @@ from owi_api.security import (
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
-login_limiter = SlidingWindowLimiter(limit=10, window_seconds=15 * 60)
+# Per-IP is looser than per-account: whole sites share one NAT IP in the field.
+phone_limiter = SlidingWindowLimiter(limit=10, window_seconds=15 * 60)
+ip_limiter = SlidingWindowLimiter(limit=50, window_seconds=15 * 60)
 
 
 def get_current_user(
@@ -78,9 +80,9 @@ def login(
     request: Request,
     session: Annotated[Session, Depends(get_session)],
 ) -> TokenResponse:
-    # Keyed per account and per source so attackers can't brute-force either way.
+    # Keyed per account and per source 
     client_ip = request.client.host if request.client else "unknown"
-    if not login_limiter.allow(f"phone:{body.phone}") or not login_limiter.allow(f"ip:{client_ip}"):
+    if not phone_limiter.allow(body.phone) or not ip_limiter.allow(client_ip):
         raise HTTPException(status_code=429, detail="too many attempts, try later")
 
     user = session.scalar(select(User).where(User.phone == body.phone, User.deleted_at.is_(None)))

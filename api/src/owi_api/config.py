@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     device_token_ttl_days: int = 180
 
     max_upload_bytes: int = 2 * 1024 * 1024
+    # Governance: pre-blur originals must not outlive blur verification (≤72h).
+    quarantine_retention_hours: int = 72
 
     def assert_production_safe(self) -> None:
         """Refusing to boot beats silently running a public API on dev credentials."""

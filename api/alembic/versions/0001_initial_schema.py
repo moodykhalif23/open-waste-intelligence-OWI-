@@ -13,8 +13,13 @@ depends_on = None
 # create_type=False: types are created once explicitly in upgrade(); without it
 # create_table would try to CREATE TYPE again and fail.
 user_role = postgresql.ENUM(
-    "admin", "coordinator", "collector", "viewer", "api_consumer",
-    name="user_role", create_type=False,
+    "admin",
+    "coordinator",
+    "collector",
+    "viewer",
+    "api_consumer",
+    name="user_role",
+    create_type=False,
 )
 fill_band = postgresql.ENUM(
     "empty", "low", "half", "high", "overflowing", name="fill_band", create_type=False

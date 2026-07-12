@@ -1,5 +1,12 @@
 import enum
 
+from sqlalchemy import Enum
+
+
+def db_enum(enum_cls: type[enum.StrEnum], name: str) -> Enum:
+    """Store enum values (\"admin\"), not member names (\"ADMIN\") — must match the DB types."""
+    return Enum(enum_cls, name=name, values_callable=lambda e: [m.value for m in e])
+
 
 class UserRole(enum.StrEnum):
     ADMIN = "admin"

@@ -2,12 +2,12 @@ import uuid
 from datetime import datetime
 
 from geoalchemy2 import Geometry
-from sqlalchemy import DateTime, Enum, ForeignKey, String, func
+from sqlalchemy import DateTime, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from owi_api.models.base import Base, OwiRow
-from owi_api.models.enums import UserRole
+from owi_api.models.enums import UserRole, db_enum
 
 
 class Organization(Base):
@@ -26,7 +26,7 @@ class User(OwiRow, Base):
 
     name: Mapped[str] = mapped_column(String(200))
     phone: Mapped[str | None] = mapped_column(String(30), unique=True)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole, name="user_role"))
+    role: Mapped[UserRole] = mapped_column(db_enum(UserRole, "user_role"))
     password_hash: Mapped[str | None] = mapped_column(String(200))
     # Bumping this invalidates every token the user holds (lost/stolen phone).
     token_version: Mapped[int] = mapped_column(server_default="0")

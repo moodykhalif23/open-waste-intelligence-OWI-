@@ -1,0 +1,72 @@
+# OpenWaste Intelligence (OWI)
+
+**An open-source computer vision and analytics platform for understanding waste generation, collection efficiency, and environmental health.**
+
+Anchored by a real operating partner — **Safi Cleaners and Recyclers**, a Community-Based Organization (CBO) with active waste collection operations, community members, and access to municipalities, schools, estates, and businesses.
+
+> Not another waste management app. Instead of saying *"there is garbage here,"* OWI answers:
+> How much? What type? How fast is it accumulating? How long before overflow? How efficient are collections? Which neighborhoods need more bins? Which routes waste fuel? Which recyclables are most common? Which locations are repeatedly littered?
+
+## Why this project is different
+
+Most waste-tech projects die because they are built in a lab with no ground truth. OWI is built **operations-first**: every model, metric, and dashboard is validated against the daily reality of a working CBO — its trucks, its collectors, its bins, its neighborhoods. If an analytic doesn't change a decision Safi makes, it doesn't ship.
+
+## The pipeline
+
+```
+Camera / Phone
+      │
+   OpenCV
+      │
+Object Detection
+      │
+Waste Classification
+      │
+   Tracking
+      │
+Analytics Engine
+      │
+  Dashboard
+      │
+Open Data API
+```
+
+## Modules
+
+| # | Module | One-line purpose |
+|---|--------|------------------|
+| 1 | Waste Classification | What kinds of waste, in what proportions, where, over time |
+| 2 | Bin Health Monitoring | Fill level, overflow risk, and collect-now recommendations per bin |
+| 3 | Illegal Dumping Detection | Find *locations* (never people) that need intervention |
+| 4 | Collection Route Optimization | "Google Maps for garbage collection" — which bins today, in what order |
+| 5 | Recycling Intelligence | Material counts, estimated value (KES), and partner matching |
+| 6 | Community Cleanliness Index | A comparable score per neighborhood to organize and measure clean-ups |
+| 7 | Carbon Impact Dashboard | CO₂ avoided, landfill space saved — with transparent methodology |
+| 8 | Volunteer Analytics | Hours, events, waste collected — grant-ready CBO reporting |
+
+## Documentation map
+
+Read in this order if you're new:
+
+1. [docs/01-problem-statement.md](docs/01-problem-statement.md) — the problem, who has it, why now
+2. [docs/02-prd.md](docs/02-prd.md) — **master PRD**: goals, users, scope, success metrics
+3. [docs/03-architecture.md](docs/03-architecture.md) — system design, stack, deployment model
+4. [docs/04-ml-strategy.md](docs/04-ml-strategy.md) — datasets, models, labeling, evaluation
+5. [docs/05-data-model.md](docs/05-data-model.md) — core entities and open data API shape
+6. [docs/modules/](docs/modules/) — per-module requirements (M1–M8)
+7. [docs/06-pilot-plan.md](docs/06-pilot-plan.md) — the Safi pilot: phases, sites, validation
+8. [docs/07-roadmap.md](docs/07-roadmap.md) — phased delivery plan and MVP definition
+9. [docs/08-data-governance-ethics.md](docs/08-data-governance-ethics.md) — privacy, consent, what we will never build
+10. [docs/09-risks.md](docs/09-risks.md) — risk register with mitigations
+11. [docs/10-system-spec.md](docs/10-system-spec.md) — pinned stack, resolved ADRs, engineering standards
+12. [docs/glossary.md](docs/glossary.md) — shared vocabulary
+
+Contributors: see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Status
+
+**Phase 0 — Initialization.** No code yet, by design. We are defining the problem, requirements, and pilot before writing a line of code.
+
+## License
+
+Intended license: Apache-2.0 (code) + CC-BY-4.0 (open data). To be confirmed before first release.

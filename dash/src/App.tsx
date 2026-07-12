@@ -19,7 +19,7 @@ function RequireAuth() {
 export default function App() {
   return (
     <I18nProvider>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Suspense fallback={null}>
           <Routes>
             <Route path="/login" element={<Login />} />

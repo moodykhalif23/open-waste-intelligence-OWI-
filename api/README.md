@@ -7,6 +7,7 @@ FastAPI backend: ingestion (with privacy gate), registry, analytics, workers.
 ```sh
 docker compose up -d   # from the repo root: Postgres+PostGIS, Redis, MinIO
 uv sync
+uv run python scripts/fetch_models.py   # person-detection weights (SHA256-pinned)
 uv run alembic upgrade head
 uv run uvicorn owi_api.main:app --reload
 ```

@@ -16,18 +16,6 @@ class PersonDetector(Protocol):
     def detect(self, image: np.ndarray) -> list[Box]: ...
 
 
-class HogPersonDetector:
-    """Bootstrap detector — replaced by a high-recall ONNX person model before pilot."""
-
-    def __init__(self) -> None:
-        self._hog = cv2.HOGDescriptor()
-        self._hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())  # type: ignore[attr-defined]
-
-    def detect(self, image: np.ndarray) -> list[Box]:
-        boxes, _ = self._hog.detectMultiScale(image, winStride=(8, 8))
-        return [tuple(int(v) for v in box) for box in boxes]  # type: ignore[misc]
-
-
 @dataclass(frozen=True)
 class GateResult:
     image_bytes: bytes

@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     max_upload_bytes: int = 2 * 1024 * 1024
     # Governance: pre-blur originals must not outlive blur verification (≤72h).
     quarantine_retention_hours: int = 72
+    person_model_path: Path = Path("var/models/yolox_tiny.onnx")
 
     def assert_production_safe(self) -> None:
         """Refusing to boot beats silently running a public API on dev credentials."""

@@ -1,5 +1,6 @@
 import json
 import uuid
+from functools import lru_cache
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Response, UploadFile
@@ -9,7 +10,8 @@ from sqlalchemy.orm import Session
 
 from owi_api.config import settings
 from owi_api.db import get_session
-from owi_api.ingestion.privacy import HogPersonDetector, PersonDetector
+from owi_api.ingestion.person_onnx import OnnxPersonDetector
+from owi_api.ingestion.privacy import PersonDetector
 from owi_api.ingestion.service import ingest_observation
 from owi_api.ingestion.storage import ObjectStore, get_store
 from owi_api.models.enums import UserRole
@@ -35,8 +37,14 @@ def get_object_store() -> ObjectStore:
     return get_store(settings)
 
 
+# Session loading costs ~100ms and the model is immutable — share one instance.
+@lru_cache(maxsize=1)
+def _detector() -> OnnxPersonDetector:
+    return OnnxPersonDetector(settings.person_model_path)
+
+
 def get_detector() -> PersonDetector:
-    return HogPersonDetector()
+    return _detector()
 
 
 @router.post("/batch", response_model=BatchResponse)

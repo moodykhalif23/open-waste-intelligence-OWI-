@@ -6,6 +6,12 @@ export interface SyncOutcome {
   remaining: number;
 }
 
+export class SyncError extends Error {
+  constructor(readonly status: number) {
+    super(`sync failed: HTTP ${status}`);
+  }
+}
+
 interface BatchResult {
   results: { status: "created" | "duplicate" | "rejected" }[];
 }
@@ -26,7 +32,7 @@ export async function syncQueue(token: string): Promise<SyncOutcome> {
     headers: { Authorization: `Bearer ${token}` },
     body: form,
   });
-  if (!response.ok) throw new Error(`sync failed: HTTP ${response.status}`);
+  if (!response.ok) throw new SyncError(response.status);
 
   const { results } = (await response.json()) as BatchResult;
   let sent = 0;

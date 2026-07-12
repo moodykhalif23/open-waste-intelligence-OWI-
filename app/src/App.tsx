@@ -5,7 +5,7 @@ import { compressImage } from "./lib/compress";
 import { getFix, type GpsFix } from "./lib/gps";
 import { enqueue, listQueued, type FillBand } from "./lib/queue";
 import { loadSettings, saveSettings, type AppSettings } from "./lib/settings";
-import { syncQueue } from "./lib/sync";
+import { SyncError, syncQueue } from "./lib/sync";
 
 const FILL_BANDS: FillBand[] = ["empty", "low", "half", "high", "overflowing"];
 
@@ -42,8 +42,9 @@ export default function App() {
     try {
       const outcome = await syncQueue(settings.token);
       setToast(outcome.remaining === 0 && outcome.rejected === 0 ? tr("syncDone") : null);
-    } catch {
-      setToast(tr("syncFailed"));
+    } catch (error) {
+      const unauthorized = error instanceof SyncError && error.status === 401;
+      setToast(unauthorized ? tr("tokenInvalid") : tr("syncFailed"));
     }
     await refreshCount();
   }, [settings, tr, refreshCount]);

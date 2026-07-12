@@ -1,10 +1,5 @@
 import { listQueued, remove, type QueuedReport } from "./queue";
 
-export interface SyncSettings {
-  apiUrl: string;
-  token: string;
-}
-
 export interface SyncOutcome {
   sent: number;
   rejected: number;
@@ -15,7 +10,7 @@ interface BatchResult {
   results: { status: "created" | "duplicate" | "rejected" }[];
 }
 
-export async function syncQueue(settings: SyncSettings): Promise<SyncOutcome> {
+export async function syncQueue(token: string): Promise<SyncOutcome> {
   const all = await listQueued();
   // The server can locate a report from GPS or from a scanned bin QR; without
   // either it would be rejected, so it stays queued for a retried GPS fix.
@@ -26,9 +21,9 @@ export async function syncQueue(settings: SyncSettings): Promise<SyncOutcome> {
   form.append("meta", JSON.stringify(sendable.map(toMeta)));
   for (const report of sendable) form.append("files", report.image, `${report.id}.jpg`);
 
-  const response = await fetch(`${settings.apiUrl}/api/v1/observations/batch`, {
+  const response = await fetch("/api/v1/observations/batch", {
     method: "POST",
-    headers: { Authorization: `Bearer ${settings.token}` },
+    headers: { Authorization: `Bearer ${token}` },
     body: form,
   });
   if (!response.ok) throw new Error(`sync failed: HTTP ${response.status}`);

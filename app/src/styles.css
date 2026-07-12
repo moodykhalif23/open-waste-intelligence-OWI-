@@ -1,14 +1,12 @@
 :root {
   --ink: #101828;
   --muted: #667085;
-  --line: #e5e8ee;
+  --line: #e9ebef;
   --accent: #15803d;
   --accent-soft: #f0fdf4;
   --accent-ink: #ffffff;
   --danger: #dc2626;
-  --bg: #f6f7f9;
-  --surface: #ffffff;
-  --radius: 14px;
+  --bg: #ffffff;
 }
 
 * {
@@ -42,15 +40,16 @@ button {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
+  gap: 20px;
+  padding: 18px 20px calc(20px + env(safe-area-inset-bottom));
 }
 
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 2px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
 }
 
 .topbar h1 {
@@ -65,10 +64,6 @@ button {
   gap: 6px;
   font-size: 0.78rem;
   font-weight: 550;
-  padding: 5px 11px;
-  border-radius: 999px;
-  background: var(--surface);
-  border: 1px solid var(--line);
   color: var(--muted);
 }
 
@@ -85,8 +80,8 @@ button {
 button {
   font: inherit;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
+  border-radius: 12px;
+  background: var(--bg);
   color: var(--ink);
   padding: 13px 18px;
   min-height: 50px;
@@ -119,9 +114,9 @@ button:disabled {
 
 .big {
   flex-direction: column;
-  min-height: 128px;
+  min-height: 132px;
   font-size: 1.15rem;
-  border-radius: 18px;
+  border-radius: 16px;
   gap: 10px;
 }
 
@@ -145,7 +140,6 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   background: var(--accent-soft);
-  border: 1px solid #bbe7c9;
   color: var(--accent);
   border-radius: 999px;
   padding: 7px 14px;
@@ -155,10 +149,6 @@ button:disabled {
 
 .capture,
 .scanner {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -167,8 +157,7 @@ button:disabled {
 .preview,
 .scanner-video {
   width: 100%;
-  border-radius: 12px;
-  border: 1px solid var(--line);
+  border-radius: 14px;
 }
 
 .scanner-video {
@@ -196,7 +185,7 @@ button:disabled {
 .band {
   padding: 13px 2px;
   font-size: 0.78rem;
-  border-radius: 12px;
+  border-radius: 11px;
   min-height: 54px;
   font-weight: 550;
   color: var(--muted);
@@ -219,12 +208,11 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 12px 12px 12px 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
   font-size: 0.9rem;
   font-weight: 550;
+  color: var(--muted);
 }
 
 .toast {
@@ -244,17 +232,15 @@ button:disabled {
 
 footer {
   margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }
 
 .settings {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin-top: 6px;
+  padding-top: 10px;
 }
 
 .settings label,
@@ -276,7 +262,7 @@ footer {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 11px 12px;
-  background: var(--surface);
+  background: var(--bg);
   min-height: 46px;
 }
 

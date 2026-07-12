@@ -6,6 +6,7 @@ import { VitePWA } from "vite-plugin-pwa";
 // HTTPS in dev: camera and geolocation are blocked in insecure contexts,
 // and phone-on-LAN testing is the whole point of this spike.
 export default defineConfig({
+  envDir: "..",
   server: {
     // Same-origin /api avoids mixed-content blocking (HTTPS page → HTTP API)
     // and mirrors production, where one reverse proxy serves both.

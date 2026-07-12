@@ -1,4 +1,3 @@
-const BASE: string = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 const TOKEN_KEY = "owi-dash-token";
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
@@ -6,7 +5,7 @@ export const setToken = (token: string) => localStorage.setItem(TOKEN_KEY, token
 export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
 
 async function request(path: string, init?: RequestInit): Promise<Response> {
-  const response = await fetch(`${BASE}${path}`, {
+  const response = await fetch(path, {
     ...init,
     headers: {
       Authorization: `Bearer ${getToken() ?? ""}`,
@@ -32,7 +31,7 @@ export async function apiBlob(path: string): Promise<Blob> {
 }
 
 export async function login(phone: string, password: string): Promise<void> {
-  const response = await fetch(`${BASE}/api/v1/auth/login`, {
+  const response = await fetch("/api/v1/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ phone, password }),

@@ -40,7 +40,7 @@ export default function App() {
     if (!navigator.onLine || (await listQueued()).length === 0) return;
     setToast(tr("syncing"));
     try {
-      const outcome = await syncQueue(settings);
+      const outcome = await syncQueue(settings.token);
       setToast(outcome.remaining === 0 && outcome.rejected === 0 ? tr("syncDone") : null);
     } catch {
       setToast(tr("syncFailed"));
@@ -217,13 +217,6 @@ export default function App() {
         </button>
         {showSettings && (
           <div className="settings">
-            <label>
-              {tr("apiUrl")}
-              <input
-                value={settings.apiUrl}
-                onChange={(e) => updateSettings({ apiUrl: e.target.value })}
-              />
-            </label>
             <label>
               {tr("deviceToken")}
               <input

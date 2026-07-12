@@ -51,6 +51,20 @@ def create_user(
     return UserOut(id=user.id, name=user.name, phone=user.phone, role=user.role)
 
 
+@router.post("/{user_id}/revoke-tokens", status_code=204)
+def revoke_tokens(
+    user_id: uuid.UUID,
+    session: Annotated[Session, Depends(get_session)],
+    requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN, UserRole.COORDINATOR)],
+) -> None:
+    """Lost/stolen phone: invalidates every token the user holds, immediately."""
+    user = session.get(User, user_id)
+    if user is None or user.org_id != requester.org_id:
+        raise HTTPException(status_code=404, detail="user not found")
+    user.token_version += 1
+    session.commit()
+
+
 @router.get("", response_model=list[UserOut])
 def list_users(
     session: Annotated[Session, Depends(get_session)],

@@ -7,7 +7,9 @@
       "PowerShell(pip install --user uv 2>&1)",
       "PowerShell(node --version 2>&1)",
       "PowerShell(npm --version 2>&1)",
-      "PowerShell(pnpm --version 2>&1)"
+      "PowerShell(pnpm --version 2>&1)",
+      "PowerShell(docker --version 2>&1)",
+      "PowerShell(docker info --format \"{{.ServerVersion}}\" 2>&1)"
     ]
   }
 }

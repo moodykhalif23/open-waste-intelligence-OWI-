@@ -129,6 +129,52 @@ button {
   gap: 8px;
 }
 
+.binbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip {
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.scanner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scanner-video {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #000;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+}
+
+.manual {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.manual input {
+  font: inherit;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+}
+
 .queue {
   display: flex;
   align-items: center;

@@ -17,9 +17,9 @@ interface BatchResult {
 
 export async function syncQueue(settings: SyncSettings): Promise<SyncOutcome> {
   const all = await listQueued();
-  // Reports without a GPS fix stay queued: the server requires coordinates
-  // until bin-registry lookup can supply a location instead.
-  const sendable = all.filter((r) => r.lat !== null && r.lng !== null);
+  // The server can locate a report from GPS or from a scanned bin QR; without
+  // either it would be rejected, so it stays queued for a retried GPS fix.
+  const sendable = all.filter((r) => (r.lat !== null && r.lng !== null) || r.binQr !== null);
   if (sendable.length === 0) return { sent: 0, rejected: 0, remaining: all.length };
 
   const form = new FormData();
@@ -51,6 +51,7 @@ function toMeta(report: QueuedReport) {
     captured_at: report.capturedAt,
     lat: report.lat,
     lng: report.lng,
+    bin_qr: report.binQr,
     fill_tap: report.fillTap,
   };
 }

@@ -28,6 +28,12 @@ const strings = {
     deviceToken: "Device token",
     language: "Language",
     seconds: "{s}s",
+    scanBin: "Scan bin QR",
+    binLinked: "Bin {code}",
+    manualCode: "Or type the bin code",
+    cancel: "Cancel",
+    ok: "OK",
+    cameraDenied: "Camera unavailable — type the code instead",
   },
   sw: {
     title: "Ripoti ya OWI",
@@ -56,6 +62,12 @@ const strings = {
     deviceToken: "Tokeni ya kifaa",
     language: "Lugha",
     seconds: "{s}s",
+    scanBin: "Skani QR ya pipa",
+    binLinked: "Pipa {code}",
+    manualCode: "Au andika nambari ya pipa",
+    cancel: "Ghairi",
+    ok: "Sawa",
+    cameraDenied: "Kamera haipatikani — andika nambari",
   },
 } as const;
 

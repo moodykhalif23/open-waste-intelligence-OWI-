@@ -2,7 +2,7 @@ import uuid
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -11,6 +11,7 @@ from owi_api.config import settings
 from owi_api.db import get_session
 from owi_api.models.enums import UserRole
 from owi_api.models.registry import User
+from owi_api.ratelimit import SlidingWindowLimiter
 from owi_api.security import (
     InvalidTokenError,
     TokenClaims,
@@ -20,6 +21,8 @@ from owi_api.security import (
 )
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
+
+login_limiter = SlidingWindowLimiter(limit=10, window_seconds=15 * 60)
 
 
 def get_current_user(
@@ -70,7 +73,16 @@ class MeResponse(BaseModel):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(body: LoginRequest, session: Annotated[Session, Depends(get_session)]) -> TokenResponse:
+def login(
+    body: LoginRequest,
+    request: Request,
+    session: Annotated[Session, Depends(get_session)],
+) -> TokenResponse:
+    # Keyed per account and per source so attackers can't brute-force either way.
+    client_ip = request.client.host if request.client else "unknown"
+    if not login_limiter.allow(f"phone:{body.phone}") or not login_limiter.allow(f"ip:{client_ip}"):
+        raise HTTPException(status_code=429, detail="too many attempts, try later")
+
     user = session.scalar(select(User).where(User.phone == body.phone, User.deleted_at.is_(None)))
     if (
         user is None

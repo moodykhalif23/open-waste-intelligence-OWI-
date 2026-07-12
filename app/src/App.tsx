@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import QrScan from "./components/QrScan";
 import { t, type Lang, type StringKey } from "./i18n";
 import { compressImage } from "./lib/compress";
 import { getFix, type GpsFix } from "./lib/gps";
@@ -15,6 +16,8 @@ export default function App() {
   const [photo, setPhoto] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [gps, setGps] = useState<GpsState>({ kind: "waiting" });
+  const [binQr, setBinQr] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
   const [fillTap, setFillTap] = useState<FillBand | null>(null);
   const [queueCount, setQueueCount] = useState(0);
   const [online, setOnline] = useState(navigator.onLine);
@@ -81,6 +84,7 @@ export default function App() {
       capturedAt: new Date().toISOString(),
       lat: fix?.lat ?? null,
       lng: fix?.lng ?? null,
+      binQr,
       fillTap,
       image: photo,
     });
@@ -92,6 +96,7 @@ export default function App() {
       return null;
     });
     setFillTap(null);
+    setBinQr(null);
     await refreshCount();
     void runSync();
   }
@@ -123,7 +128,32 @@ export default function App() {
         }}
       />
 
-      {previewUrl ? (
+      {scanning && (
+        <QrScan
+          onResult={(code) => {
+            setBinQr(code);
+            setScanning(false);
+          }}
+          onCancel={() => setScanning(false)}
+          labels={{
+            manual: tr("manualCode"),
+            cancel: tr("cancel"),
+            ok: tr("ok"),
+            cameraDenied: tr("cameraDenied"),
+          }}
+        />
+      )}
+
+      {!scanning && (
+        <div className="binbar">
+          <button className="secondary" onClick={() => setScanning(true)}>
+            {tr("scanBin")}
+          </button>
+          {binQr && <span className="chip">{tr("binLinked", { code: binQr })}</span>}
+        </div>
+      )}
+
+      {!scanning && previewUrl ? (
         <section className="capture">
           <img src={previewUrl} alt="" className="preview" />
           <p className="gps">
@@ -153,9 +183,11 @@ export default function App() {
           </div>
         </section>
       ) : (
-        <button className="primary big" onClick={() => fileInput.current?.click()}>
-          {tr("takePhoto")}
-        </button>
+        !scanning && (
+          <button className="primary big" onClick={() => fileInput.current?.click()}>
+            {tr("takePhoto")}
+          </button>
+        )
       )}
 
       {queueCount > 0 && (

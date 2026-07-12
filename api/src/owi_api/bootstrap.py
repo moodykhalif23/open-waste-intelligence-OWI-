@@ -15,6 +15,8 @@ def main() -> None:
     parser.add_argument("--phone", required=True)
     parser.add_argument("--password", required=True)
     args = parser.parse_args()
+    if len(args.password) < 8:
+        parser.error("password must be at least 8 characters")
 
     with SessionLocal() as session:
         org = Organization(name=args.org)

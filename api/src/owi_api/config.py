@@ -3,10 +3,18 @@ from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_DEV_DEFAULTS = {
+    "jwt_secret": "dev-only-secret-change-me-before-deploying",
+    "s3_secret_key": "owi-secret-change-me",
+    "database_url": "postgresql+psycopg://owi:owi@localhost:5432/owi",
+}
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="OWI_", env_file=".env")
 
+    environment: Literal["dev", "production"] = "dev"
+    cors_origins: list[str] = []
     database_url: str = "postgresql+psycopg://owi:owi@localhost:5432/owi"
     redis_url: str = "redis://localhost:6379/0"
 
@@ -25,6 +33,14 @@ class Settings(BaseSettings):
     device_token_ttl_days: int = 180
 
     max_upload_bytes: int = 2 * 1024 * 1024
+
+    def assert_production_safe(self) -> None:
+        """Refusing to boot beats silently running a public API on dev credentials."""
+        if self.environment != "production":
+            return
+        leaked = [name for name, value in _DEV_DEFAULTS.items() if getattr(self, name) == value]
+        if leaked:
+            raise RuntimeError(f"production run with dev-default secrets: {', '.join(leaked)}")
 
 
 settings = Settings()

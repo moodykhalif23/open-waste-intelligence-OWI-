@@ -7,6 +7,7 @@ export interface QueuedReport {
   capturedAt: string;
   lat: number | null;
   lng: number | null;
+  binQr: string | null;
   fillTap: FillBand | null;
   image: Blob;
 }

@@ -11,7 +11,10 @@ _DEV_DEFAULTS = {
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="OWI_", env_file=".env")
+    # Secrets live in the repo-root .env (shared with docker-compose), never in code.
+    model_config = SettingsConfigDict(
+        env_prefix="OWI_", env_file=(".env", "../.env"), extra="ignore"
+    )
 
     environment: Literal["dev", "production"] = "dev"
     cors_origins: list[str] = []

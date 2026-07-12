@@ -5,7 +5,7 @@ FastAPI backend: ingestion (with privacy gate), registry, analytics, workers.
 ## Run locally
 
 ```sh
-docker compose -f ../infra/docker-compose.yml up -d   # Postgres+PostGIS, Redis, MinIO
+docker compose up -d   # from the repo root: Postgres+PostGIS, Redis, MinIO
 uv sync
 uv run alembic upgrade head
 uv run uvicorn owi_api.main:app --reload

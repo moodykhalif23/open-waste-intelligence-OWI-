@@ -9,7 +9,9 @@
       "PowerShell(npm --version 2>&1)",
       "PowerShell(pnpm --version 2>&1)",
       "PowerShell(docker --version 2>&1)",
-      "PowerShell(docker info --format \"{{.ServerVersion}}\" 2>&1)"
+      "PowerShell(docker info --format \"{{.ServerVersion}}\" 2>&1)",
+      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\"; $deadline = \\(Get-Date\\).AddMinutes\\(3\\); while \\(\\(Get-Date\\) -lt $deadline\\) { $v = docker info --format \"{{.ServerVersion}}\" 2>$null; if \\($v\\) { \"daemon up: $v\"; break }; Start-Sleep -Seconds 5 }; if \\(-not $v\\) { \"daemon did not start in time\" })",
+      "PowerShell(cd c:\\\\Users\\\\ADMIN\\\\openwaste-intelligence; $deadline=\\(Get-Date\\).AddSeconds\\(60\\); do { $ok = docker exec owi-db-1 pg_isready -U owi 2>$null; Start-Sleep -Seconds 2 } while \\(\\(Get-Date\\) -lt $deadline -and -not \\($ok -match \"accepting\"\\)\\); $ok; cd api; python -m uv run alembic upgrade head 2>&1 | Select-Object -Last 5)"
     ]
   }
 }

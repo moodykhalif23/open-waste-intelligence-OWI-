@@ -48,8 +48,8 @@ Every chart in every surface (dashboard, reports, public pages) uses Apache ECha
 /ml       training, eval, dataset tooling, model registry
 /app      field PWA (collector)
 /dash     ops dashboard (React + ECharts)
-/infra    docker-compose, deploy docs
 /docs     this documentation
+docker-compose.yml at the repo root: dev/pilot services (Postgres+PostGIS, Redis, MinIO)
 ```
 
 ## Engineering standards
@@ -76,7 +76,7 @@ Every chart in every surface (dashboard, reports, public pages) uses Apache ECha
 
 ## Development environment
 
-- `docker compose up` in `/infra` brings up Postgres+PostGIS, Redis, MinIO.
+- `docker compose up` at the repo root brings up Postgres+PostGIS, Redis, MinIO.
 - `/api`: `uv sync && uv run alembic upgrade head && uv run uvicorn owi_api.main:app --reload`.
 - CI (GitHub Actions): ruff + mypy + pytest on `/api`; eslint + tsc + vitest on `/dash` and `/app` once they exist.
 - Licenses: Apache-2.0 (code) — add `LICENSE` at first public release per README's pending confirmation.

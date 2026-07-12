@@ -10,12 +10,19 @@ down_revision = None
 branch_labels = None
 depends_on = None
 
+# create_type=False: types are created once explicitly in upgrade(); without it
+# create_table would try to CREATE TYPE again and fail.
 user_role = postgresql.ENUM(
-    "admin", "coordinator", "collector", "viewer", "api_consumer", name="user_role"
+    "admin", "coordinator", "collector", "viewer", "api_consumer",
+    name="user_role", create_type=False,
 )
-fill_band = postgresql.ENUM("empty", "low", "half", "high", "overflowing", name="fill_band")
-location_source = postgresql.ENUM("gps", "bin_registry", name="location_source")
-privacy_status = postgresql.ENUM("clean", "blurred", "quarantined", name="privacy_status")
+fill_band = postgresql.ENUM(
+    "empty", "low", "half", "high", "overflowing", name="fill_band", create_type=False
+)
+location_source = postgresql.ENUM("gps", "bin_registry", name="location_source", create_type=False)
+privacy_status = postgresql.ENUM(
+    "clean", "blurred", "quarantined", name="privacy_status", create_type=False
+)
 
 
 def _owi_columns() -> list[sa.Column]:

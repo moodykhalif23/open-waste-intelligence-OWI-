@@ -18,8 +18,11 @@ class Settings(BaseSettings):
     s3_bucket: str = "owi-images"
     s3_secure: bool = False
 
-    # Stopgap shared secret until the JWT auth slice lands.
-    device_token: str = "dev-only-token"
+    # HS256 requires ≥32 bytes; deployments must override via OWI_JWT_SECRET.
+    jwt_secret: str = "dev-only-secret-change-me-before-deploying"
+    access_token_ttl_hours: int = 12
+    # Collector phones stay signed in for months; revocation is per-user via token_version.
+    device_token_ttl_days: int = 180
 
     max_upload_bytes: int = 2 * 1024 * 1024
 

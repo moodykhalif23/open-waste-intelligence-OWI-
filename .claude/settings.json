@@ -4,7 +4,10 @@
       "PowerShell(uv --version)",
       "PowerShell(python --version)",
       "PowerShell(pip --version)",
-      "PowerShell(pip install --user uv 2>&1)"
+      "PowerShell(pip install --user uv 2>&1)",
+      "PowerShell(node --version 2>&1)",
+      "PowerShell(npm --version 2>&1)",
+      "PowerShell(pnpm --version 2>&1)"
     ]
   }
 }

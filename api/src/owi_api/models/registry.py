@@ -25,8 +25,11 @@ class User(OwiRow, Base):
     __tablename__ = "users"
 
     name: Mapped[str] = mapped_column(String(200))
-    phone: Mapped[str | None] = mapped_column(String(30))
+    phone: Mapped[str | None] = mapped_column(String(30), unique=True)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole, name="user_role"))
+    password_hash: Mapped[str | None] = mapped_column(String(200))
+    # Bumping this invalidates every token the user holds (lost/stolen phone).
+    token_version: Mapped[int] = mapped_column(server_default="0")
 
 
 class Site(OwiRow, Base):

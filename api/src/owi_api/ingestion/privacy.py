@@ -17,7 +17,7 @@ class PersonDetector(Protocol):
 
 
 class HogPersonDetector:
-    """Bootstrap detector — replaced by a high-recall ONNX person model before pilot (T5)."""
+    """Bootstrap detector — replaced by a high-recall ONNX person model before pilot."""
 
     def __init__(self) -> None:
         self._hog = cv2.HOGDescriptor()
@@ -50,7 +50,7 @@ def _blur_region(image: np.ndarray, box: Box) -> None:
 
 
 def apply_privacy_gate(image_bytes: bytes, detector: PersonDetector) -> GateResult:
-    """Blur people before anything is persisted (docs/08, image lifecycle)."""
+    """Blur people before anything is persisted — a governance requirement, not an option."""
     image = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
     if image is None:
         raise ValueError("not a decodable image")

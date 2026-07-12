@@ -11,10 +11,10 @@ from owi_api.models.enums import FillBand, LocationSource, PrivacyStatus
 
 
 class Observation(OwiRow, Base):
-    """The atomic record: one photo event (docs/05-data-model.md)."""
+    """The atomic record: one photo event with location, time, and context."""
 
     __tablename__ = "observations"
-    # Content-hash dedupe: offline sync retries must never create duplicate records (R8).
+    # Content-hash dedupe: offline sync retries must never create duplicate records.
     __table_args__ = (UniqueConstraint("org_id", "image_sha256", name="uq_observation_image"),)
 
     captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

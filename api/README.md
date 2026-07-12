@@ -13,10 +13,18 @@ uv run uvicorn owi_api.main:app --reload
 
 Worker: `uv run rq worker inference --url redis://localhost:6379/0`
 
+## First-time setup
+
+```sh
+uv run python -m owi_api.bootstrap --org "Safi" --name "Admin" --phone "+2547..." --password "..."
+```
+
+Then `POST /api/v1/auth/login` with phone + password for an access token, and
+`POST /api/v1/auth/device-tokens` (as admin/coordinator) to issue long-lived collector tokens
+for field phones. Revoke a user's tokens by bumping their `token_version`.
+
 ## Checks
 
 ```sh
 uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pytest
 ```
-
-Standards: [docs/10-system-spec.md](../docs/10-system-spec.md). Governance is law: [docs/08](../docs/08-data-governance-ethics.md).

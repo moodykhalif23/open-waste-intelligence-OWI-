@@ -1,0 +1,174 @@
+:root {
+  --ink: #111827;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --accent: #15803d;
+  --accent-ink: #ffffff;
+  --bg: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+
+.shell {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbar h1 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  flex: 1;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dot-on { background: var(--accent); }
+.dot-off { background: #dc2626; }
+
+.status {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+button {
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--ink);
+  padding: 12px 16px;
+  min-height: 48px;
+  cursor: pointer;
+}
+
+.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.big {
+  min-height: 96px;
+  font-size: 1.25rem;
+}
+
+.secondary { font-weight: 500; }
+
+.linklike {
+  border: none;
+  min-height: 0;
+  padding: 4px 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.capture {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preview {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+
+.gps {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.label { font-weight: 600; }
+
+.bands {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.band {
+  padding: 12px 4px;
+  font-size: 0.8rem;
+}
+
+.band-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 8px;
+}
+
+.queue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 0.9rem;
+}
+
+.toast {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+footer { margin-top: auto; }
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+}
+
+.settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.settings input,
+.settings select {
+  font: inherit;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+}

@@ -44,7 +44,7 @@ def ingest_observation(
     image_ref = f"images/{org_id}/{digest}.jpg"
     store.put(image_ref, gate.image_bytes, "image/jpeg")
     if gate.status is PrivacyStatus.BLURRED:
-        # Original quarantined for blur verification, then deleted ≤72h (docs/08).
+        # Original kept only for blur verification; must be deleted within 72h.
         store.put(f"quarantine/{org_id}/{digest}.jpg", image_bytes, "image/jpeg")
 
     observation = Observation(

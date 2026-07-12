@@ -11,8 +11,10 @@ from owi_api.db import get_session
 from owi_api.ingestion.privacy import HogPersonDetector, PersonDetector
 from owi_api.ingestion.service import ingest_observation
 from owi_api.ingestion.storage import ObjectStore, get_store
-from owi_api.routers.auth import require_device_token
+from owi_api.models.enums import UserRole
+from owi_api.routers.auth import require_roles
 from owi_api.schemas.observation import BatchResponse, ObservationIn, ObservationResult
+from owi_api.security import TokenClaims
 
 router = APIRouter(prefix="/api/v1/observations", tags=["observations"])
 
@@ -31,7 +33,10 @@ def get_detector() -> PersonDetector:
 async def ingest_batch(
     files: list[UploadFile],
     meta: Annotated[str, Form()],
-    org_id: Annotated[uuid.UUID, Depends(require_device_token)],
+    claims: Annotated[
+        TokenClaims,
+        require_roles(UserRole.COLLECTOR, UserRole.COORDINATOR, UserRole.ADMIN),
+    ],
     session: Annotated[Session, Depends(get_session)],
     store: Annotated[ObjectStore, Depends(get_object_store)],
     detector: Annotated[PersonDetector, Depends(get_detector)],
@@ -45,6 +50,8 @@ async def ingest_batch(
 
     results: list[ObservationResult] = []
     for item, file in zip(metas, files, strict=True):
+        if item.collector_id is None and claims.role is UserRole.COLLECTOR:
+            item.collector_id = claims.user_id
         image_bytes = await file.read()
         if len(image_bytes) > settings.max_upload_bytes:
             results.append(
@@ -54,7 +61,9 @@ async def ingest_batch(
             )
             continue
         try:
-            ingested = ingest_observation(session, store, detector, org_id, item, image_bytes)
+            ingested = ingest_observation(
+                session, store, detector, claims.org_id, item, image_bytes
+            )
         except ValueError as exc:
             results.append(
                 ObservationResult(

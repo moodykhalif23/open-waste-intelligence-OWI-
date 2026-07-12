@@ -15,6 +15,6 @@ pnpm install
 pnpm dev          # serves HTTPS on your LAN IP — camera/GPS require a secure context
 ```
 
-Open `https://<laptop-ip>:5173` on the phone, accept the self-signed cert, and set the server address + device token under Settings. Reports without a GPS fix stay queued (the server requires coordinates until bin-registry lookup can supply a location).
+Open `https://<laptop-ip>:5173` on the phone and accept the self-signed cert. The dev server proxies `/api` to the local API (`127.0.0.1:8000`), so only the device token needs to be set under Settings — leave the server address empty. Reports sync with GPS coordinates or a scanned bin QR; with neither, they stay queued until a GPS fix succeeds.
 
 Checks: `pnpm check` (tsc + eslint).

@@ -49,6 +49,12 @@ export default function App() {
   }, [settings, tr, refreshCount]);
 
   useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  useEffect(() => {
     void refreshCount();
     const goOnline = () => {
       setOnline(true);
@@ -111,8 +117,10 @@ export default function App() {
     <main className="shell">
       <header className="topbar">
         <h1>{tr("title")}</h1>
-        <span className={online ? "dot dot-on" : "dot dot-off"} aria-hidden />
-        <span className="status">{online ? tr("online") : tr("offline")}</span>
+        <span className={online ? "pill pill-on" : "pill pill-off"}>
+          <span className="dot" aria-hidden />
+          {online ? tr("online") : tr("offline")}
+        </span>
       </header>
 
       <input
@@ -147,6 +155,7 @@ export default function App() {
       {!scanning && (
         <div className="binbar">
           <button className="secondary" onClick={() => setScanning(true)}>
+            <QrIcon />
             {tr("scanBin")}
           </button>
           {binQr && <span className="chip">{tr("binLinked", { code: binQr })}</span>}
@@ -185,6 +194,7 @@ export default function App() {
       ) : (
         !scanning && (
           <button className="primary big" onClick={() => fileInput.current?.click()}>
+            <CameraIcon />
             {tr("takePhoto")}
           </button>
         )
@@ -235,5 +245,27 @@ export default function App() {
         )}
       </footer>
     </main>
+  );
+}
+
+function CameraIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 7h3l2-2.5h6L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" />
+      <circle cx="12" cy="13" r="3.5" />
+    </svg>
+  );
+}
+
+function QrIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+      <rect x="4" y="4" width="6" height="6" rx="1" />
+      <rect x="14" y="4" width="6" height="6" rx="1" />
+      <rect x="4" y="14" width="6" height="6" rx="1" />
+      <path d="M14 14h3v3h3v3h-6z" />
+    </svg>
   );
 }

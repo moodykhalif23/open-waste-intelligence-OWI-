@@ -71,10 +71,6 @@ Read in this order if you're new:
 
 Contributors: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Status
-
-**Phase 0 — Foundation, code underway** (started 2026-07-12). Backend spine (ingestion + privacy gate + auth + bin registry), field PWA spike, and dashboard skeleton are built and verified end-to-end. Progress is tracked in exactly one place: [docs/STATUS.md](docs/STATUS.md).
-
 ## License
 
 Intended license: Apache-2.0 (code) + CC-BY-4.0 (open data). To be confirmed before first release.

@@ -7,6 +7,7 @@ import Login from "./pages/Login";
 
 const Overview = lazy(() => import("./pages/Overview"));
 const BinHealth = lazy(() => import("./pages/BinHealth"));
+const RoutesPage = lazy(() => import("./pages/Routes"));
 const Bins = lazy(() => import("./pages/Bins"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Review = lazy(() => import("./pages/Review"));
@@ -28,6 +29,7 @@ export default function App() {
               <Route element={<Layout />}>
                 <Route index element={<Overview />} />
                 <Route path="collect" element={<BinHealth />} />
+                <Route path="routes" element={<RoutesPage />} />
                 <Route path="bins" element={<Bins />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="review" element={<Review />} />

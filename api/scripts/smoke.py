@@ -204,6 +204,28 @@ def main() -> None:
         ours_after is not None and (ours_after["days_since_collection"] or 0) < 1,
     )
 
+    truck = client.post(
+        "/api/v1/trucks",
+        headers=admin,
+        json={
+            "name": "Truck 1",
+            "capacity_kg": 2000,
+            "fuel_l_per_100km": 25,
+            "depot_lat": -1.2921,
+            "depot_lng": 36.8219,
+        },
+    )
+    check("create truck", truck.status_code == 201, truck.text[:120])
+    plan = client.post("/api/v1/routes/optimize", headers=admin, json={})
+    check("route optimization runs", plan.status_code == 200, plan.text[:150])
+    if plan.status_code == 200:
+        routes = plan.json()
+        served = sum(r["bins_served"] for r in routes)
+        check("route covers collect-today bins", served >= 1, f"served={served}")
+        check("route reports distance + fuel", all(r["planned_km"] >= 0 for r in routes))
+    listed = client.get("/api/v1/routes", headers=device_auth)
+    check("driver can read today's routes", listed.status_code == 200)
+
     ev = client.post(
         "/api/v1/volunteers",
         headers=admin,

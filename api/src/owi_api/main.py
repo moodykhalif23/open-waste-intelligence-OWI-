@@ -11,6 +11,7 @@ from owi_api.routers import (
     observations,
     operations,
     review,
+    routes,
     sites,
     users,
     volunteers,
@@ -44,6 +45,7 @@ def create_app() -> FastAPI:
     app.include_router(users.router)
     app.include_router(sites.router)
     app.include_router(operations.router)
+    app.include_router(routes.router)
     app.include_router(bins.router)
     app.include_router(observations.router)
     app.include_router(review.router)

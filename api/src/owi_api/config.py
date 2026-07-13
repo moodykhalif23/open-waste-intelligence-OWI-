@@ -40,6 +40,13 @@ class Settings(BaseSettings):
     quarantine_retention_hours: int = 72
     person_model_path: Path = Path("var/models/yolox_tiny.onnx")
 
+    # Empty = straight-line (haversine) distances; set to a self-hosted OSRM base
+    # URL (e.g. http://osrm:5000) for road distances once an OSM extract is loaded.
+    osrm_url: str = ""
+    route_time_limit_s: int = 5
+    # Loose municipal waste ~0.1 kg/L; turns fill-band x bin volume into a demand estimate.
+    waste_density_kg_per_l: float = 0.1
+
     def assert_production_safe(self) -> None:
         """Refusing to boot beats silently running a public API on dev credentials."""
         if self.environment != "production":

@@ -314,6 +314,41 @@ button:hover {
   color: var(--accent);
 }
 
+.route-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.route-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.route-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+.stop-list {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 0.86rem;
+}
+
+.stop-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .materials {
   border: 1px solid var(--line);
   border-radius: 10px;

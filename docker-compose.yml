@@ -100,6 +100,18 @@ services:
       db:
         condition: service_healthy
 
+  # Optional road-distance engine. Enable with the "osrm" profile after preparing an
+  # OSM extract (see docs/11-deployment.md), then set OWI_OSRM_URL=http://osrm:5000.
+  # Without it the routing engine uses straight-line distances.
+  osrm:
+    image: osrm/osrm-backend:latest
+    profiles: [osrm]
+    command: osrm-routed --algorithm mld /data/region.osrm
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./var/osrm:/data
+
   web:
     build:
       context: .

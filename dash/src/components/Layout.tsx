@@ -15,6 +15,7 @@ export default function Layout() {
             {t("overview")}
           </NavLink>
           <NavLink to="/collect">{t("collectToday")}</NavLink>
+          <NavLink to="/routes">{t("routes")}</NavLink>
           <NavLink to="/bins">{t("bins")}</NavLink>
           <NavLink to="/reports">{t("reports")}</NavLink>
           <NavLink to="/review">{t("review")}</NavLink>

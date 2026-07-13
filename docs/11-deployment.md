@@ -60,6 +60,23 @@ LAN mode (no domains): open `https://<server-ip>:8443` (dashboard) and `https://
 - [ ] Provision collector phones: dashboard login → issue device tokens (or `POST /api/v1/auth/device-tokens`)
 - [ ] After any deploy: `docker compose exec api uv run python scripts/smoke.py http://localhost:8000 <admin-phone> <password>` must print ALL PASS
 
+## Road distances for route optimization (optional)
+
+Route optimization works out of the box with straight-line (haversine) distances — good enough to start. For real road distances, run a self-hosted OSRM on an OpenStreetMap extract (one-time prep, ~10 min + a few GB RAM):
+
+```sh
+mkdir -p var/osrm && cd var/osrm
+curl -O https://download.geofabrik.de/africa/kenya-latest.osm.pbf
+mv kenya-latest.osm.pbf region.osm.pbf
+docker run --rm -v "$PWD:/data" osrm/osrm-backend osrm-extract -p /opt/car.lua /data/region.osm.pbf
+docker run --rm -v "$PWD:/data" osrm/osrm-backend osrm-partition /data/region.osrm
+docker run --rm -v "$PWD:/data" osrm/osrm-backend osrm-customize /data/region.osrm
+cd ../..
+docker compose --profile prod --profile osrm up -d osrm   # start the routing service
+```
+
+Then add `OWI_OSRM_URL=http://osrm:5000` to `.env` and `make restart`. The routing engine switches to road distances automatically; nothing else changes.
+
 ## Updating
 
 ```sh

@@ -58,3 +58,9 @@ class EventType(enum.StrEnum):
     CLEANUP = "cleanup"
     EDUCATION = "education"
     SORTING = "sorting"
+
+
+class RouteStatus(enum.StrEnum):
+    PLANNED = "planned"
+    ACTIVE = "active"
+    DONE = "done"

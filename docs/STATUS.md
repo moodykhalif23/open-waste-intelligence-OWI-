@@ -11,7 +11,7 @@ Platform foundation (ingestion, privacy gate, image-quality gate, auth + RBAC, b
 | M2 Bin Health             | **done**        | overflow WhatsApp/SMS digest (M2-F5); bin history page with fill curve (M2-F7)                                                                                                                     |
 | M4 Route Optimization     | **done**        | plan-vs-actual from GPS breadcrumbs (M4-F4); what-if scenario runner (M4-F6)                                                                                                                       |
 | M8 Volunteer Analytics    | **done**        | spreadsheet bulk import (M8-F2); volunteer certificates (M8-F6); WeasyPrint PDF.                                                                                                                   |
-| M1 Waste Classification   | **partial**     | end-to-end inference live: worker runs the active ONNX over ingested images → predictions land in the review queue (verified: real glass image → "glass" 0.9998). Still needed: composition aggregates + headline view (M1-F2); comparison/trend views (M1-F3); sorting-ground-truth calibration (M1-F4); aggregate→observation drill-down (M1-F6) |
+| M1 Waste Classification   | **done** (calibration pending data) | inference live (worker → review queue); composition aggregates + headline view (M1-F2); period-over-period comparison (M1-F3); material drill-down to observations (M1-F6). Only remaining: sorting-ground-truth calibration (M1-F4) — needs sorting-site weights that don't exist until the pilot |
 | M3 Illegal Dumping        | **not started** | candidate flagging + review queue, hotspot map, per-site timeline, intervention tracking                                                                                                           |
 | M5 Recycling Intelligence | **not started** | material volume + kg tracking, KES price table, value dashboard, partner registry, sorting reconciliation                                                                                          |
 | M6 Cleanliness Index      | **not started** | area boundaries, daily 0–100 score + components, trends, data-sufficiency guard, methodology page                                                                                                 |
@@ -67,7 +67,8 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 - `registry.py` CLI publishes to `POST /api/v1/models`; API register/activate/list endpoints (admin) — exactly one active model per task
 - **Verified live end-to-end**: trained (loss 0.71→0.19, golden macro-F1 0.73 / 86% acc), exported valid ONNX (`onnx.checker`), registered + activated in the API registry. Gate correctly reports below-0.80 for a public-only baseline — refuses to bless an under-trained model
 - Public-data strategy proven: pretrain on TrashNet now, fine-tune on the local Safi export when it exists; golden set stays local-only
-- **Worker inference live (2026-07-13)**: model registration uploads the ONNX to the object store (`PUT /api/v1/models/{id}/artifact`) + stores class labels (migration 0008); the batch worker loads the active model's ONNX (cached), preprocesses with OpenCV, runs onnxruntime, and writes a Prediction per observation. Torch-free worker. Idempotent per (observation, model). Verified live end-to-end in containers: real glass image → worker → prediction `material=glass conf=0.9998` in the review queue (49/49 smoke checks). **The active-learning loop is closed** — corrections in the review queue feed the next training round
+- **Worker inference live (2026-07-13)**: model registration uploads the ONNX to the object store (`PUT /api/v1/models/{id}/artifact`) + stores class labels (migration 0008); the batch worker loads the active model's ONNX (cached), preprocesses with OpenCV, runs onnxruntime, and writes a Prediction per observation. Torch-free worker. Idempotent per (observation, model). Verified live end-to-end in containers: real glass image → worker → prediction `material=glass conf=0.9998` in the review queue. **The active-learning loop is closed** — corrections in the review queue feed the next training round
+- **M1 composition (2026-07-13)**: `GET /api/v1/analytics/composition?days=&site_id=` aggregates each observation's effective material (human correction wins over prediction) into shares with previous-period deltas and a data-sufficiency guard (< 20 → flagged indicative); pure aggregator with 5 unit tests. Dashboard **Composition** page: period selector (7/30/90d), headline % tiles, ECharts bar, per-material change arrows, and drill-down to the filtered observations (`?material=`). Verified live (51/51 smoke checks)
 
 ### Infra & deployment
 
@@ -132,7 +133,7 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 
 ## Next up (rough order)
 
-1. M1 composition dashboards: aggregate confirmed predictions into composition-by-area/period views + the headline "Today's waste" panel (M1-F2/F3), drilling down to observations (M1-F6)
+1. M5 Recycling Intelligence (Phase 2): KES price table, material kg tracking, value dashboard, partner registry — builds directly on M1 composition + collection weights
 2. Fine-tune on real Safi data once Phase 0 collection runs; push the baseline past the 0.80 golden gate
 2. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
 3. M1 composition views + M5 recycling value on the dashboard (arrive with the classification model)

@@ -19,6 +19,7 @@ from owi_api.models.registry import Bin
 from owi_api.models.route import Route, RouteStop, Truck
 from owi_api.routers.auth import get_current_user, require_roles
 from owi_api.security import TokenClaims
+from owi_api.weights import estimate_collection_weight
 
 router = APIRouter(prefix="/api/v1", tags=["routes"])
 
@@ -312,6 +313,7 @@ def collect_stop(
             bin_id=stop.bin_id,
             occurred_at=datetime.now(UTC),
             collector_id=claims.user_id if claims.role is UserRole.COLLECTOR else None,
+            estimated_weight_kg=estimate_collection_weight(session, stop.bin_id),
         )
     )
     stop.collected = True

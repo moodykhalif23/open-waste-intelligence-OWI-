@@ -20,6 +20,8 @@ class CollectionEvent(OwiRow, Base):
     post_observation_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("observations.id")
     )
+    # Estimated at collection time from the bin's fill x volume x waste density.
+    estimated_weight_kg: Mapped[float] = mapped_column(Float, default=0.0)
 
 
 class BinHealthDaily(OwiRow, Base):

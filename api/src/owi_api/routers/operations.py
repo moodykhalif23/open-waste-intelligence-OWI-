@@ -14,6 +14,7 @@ from owi_api.models.operations import BinHealthDaily, CollectionEvent
 from owi_api.models.registry import Bin, Site
 from owi_api.routers.auth import require_roles
 from owi_api.security import TokenClaims
+from owi_api.weights import estimate_collection_weight
 
 router = APIRouter(prefix="/api/v1", tags=["operations"])
 
@@ -60,6 +61,7 @@ def record_collection(
         bin_id=body.bin_id,
         occurred_at=body.occurred_at or datetime.now(UTC),
         collector_id=claims.user_id if claims.role is UserRole.COLLECTOR else None,
+        estimated_weight_kg=estimate_collection_weight(session, body.bin_id),
     )
     session.add(event)
     session.commit()

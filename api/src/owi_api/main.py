@@ -13,6 +13,7 @@ from owi_api.routers import (
     review,
     sites,
     users,
+    volunteers,
 )
 
 
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     app.include_router(bins.router)
     app.include_router(observations.router)
     app.include_router(review.router)
+    app.include_router(volunteers.router)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:

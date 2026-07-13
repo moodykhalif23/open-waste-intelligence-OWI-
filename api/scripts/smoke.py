@@ -204,6 +204,39 @@ def main() -> None:
         ours_after is not None and (ours_after["days_since_collection"] or 0) < 1,
     )
 
+    ev = client.post(
+        "/api/v1/volunteers",
+        headers=admin,
+        json={
+            "occurred_on": "2026-07-01",
+            "event_type": "cleanup",
+            "area": "Estate A",
+            "organizer": "Wanjiru",
+            "participant_count": 12,
+            "hours_total": 36.0,
+            "materials_kg": {"plastic": 15.5, "glass": 4.0},
+        },
+    )
+    check("volunteer event created", ev.status_code == 201, ev.text[:120])
+    vsum = client.get("/api/v1/volunteers/summary", headers=admin).json()
+    check(
+        "volunteer summary aggregates",
+        vsum["events"] >= 1
+        and vsum["participants"] >= 12
+        and vsum["kg_by_material"]["plastic"] >= 15.5,
+    )
+    report = client.get(
+        "/api/v1/volunteers/report",
+        headers=admin,
+        params={"start": "2026-01-01", "end": "2026-12-31"},
+    )
+    check(
+        "grant report renders",
+        report.status_code == 200
+        and "Community Impact Report" in report.text
+        and "Volunteer hours" in report.text,
+    )
+
     queue = client.get("/api/v1/predictions", headers=admin)
     check(
         "review queue reachable (empty until a model is active)",

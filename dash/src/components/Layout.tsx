@@ -18,6 +18,7 @@ export default function Layout() {
           <NavLink to="/bins">{t("bins")}</NavLink>
           <NavLink to="/reports">{t("reports")}</NavLink>
           <NavLink to="/review">{t("review")}</NavLink>
+          <NavLink to="/volunteers">{t("volunteers")}</NavLink>
           <NavLink to="/users">{t("users")}</NavLink>
         </nav>
         <select

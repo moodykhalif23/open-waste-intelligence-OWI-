@@ -10,6 +10,7 @@ const BinHealth = lazy(() => import("./pages/BinHealth"));
 const Bins = lazy(() => import("./pages/Bins"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Review = lazy(() => import("./pages/Review"));
+const Volunteers = lazy(() => import("./pages/Volunteers"));
 const Users = lazy(() => import("./pages/Users"));
 
 function RequireAuth() {
@@ -30,6 +31,7 @@ export default function App() {
                 <Route path="bins" element={<Bins />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="review" element={<Review />} />
+                <Route path="volunteers" element={<Volunteers />} />
                 <Route path="users" element={<Users />} />
               </Route>
             </Route>

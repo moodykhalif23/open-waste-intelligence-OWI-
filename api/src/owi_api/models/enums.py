@@ -52,3 +52,9 @@ class ReviewStatus(enum.StrEnum):
     UNREVIEWED = "unreviewed"
     CONFIRMED = "confirmed"
     CORRECTED = "corrected"
+
+
+class EventType(enum.StrEnum):
+    CLEANUP = "cleanup"
+    EDUCATION = "education"
+    SORTING = "sorting"

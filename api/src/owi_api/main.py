@@ -8,6 +8,7 @@ from owi_api.routers import (
     admin,
     auth,
     bins,
+    models,
     observations,
     operations,
     review,
@@ -49,6 +50,7 @@ def create_app() -> FastAPI:
     app.include_router(bins.router)
     app.include_router(observations.router)
     app.include_router(review.router)
+    app.include_router(models.router)
     app.include_router(volunteers.router)
 
     @app.get("/healthz")

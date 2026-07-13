@@ -80,13 +80,21 @@
 - Savings report (G2 headline, 2026-07-13): `GET /routes/savings` compares a fixed full-sweep (optimized visit to every bin) against need-driven routing (only bins due) and reports the **km-per-tonne reduction %** plus fuel litres and optional KES (set `OWI_FUEL_PRICE_KES_PER_L`). Self-contained — no manual baseline entry; a measured Phase 0 fuel-log baseline can replace the computed one later. Pure savings math with 3 unit tests; dashboard savings panel on the Routes page (headline % + baseline-vs-optimized table)
 - Mid-day replan (M4-F3, 2026-07-13): `POST /routes/replan` recomputes the **uncollected** stops (plus any added bins, minus broken-down trucks) over the remaining fleet, superseding today's plan while keeping collected stops as history (collections are recorded independently). Dashboard: "Replan remaining" button + per-truck "Breakdown" action on each route card. Optimize/replan share one `_plan_and_persist` helper. Verified live (46/46 smoke checks) — **M4 is complete**
 
+### ML training/eval harness (`/ml`, 2026-07-13)
+- **Public-data strategy is built in**: `data/taxonomy_map.py` folds public-set categories (TACO/TrashNet/Roboflow) into the OWI 8 classes → pretrain on public data, fine-tune on the local export. `data/coco.py` loads + merges COCO exports (local wins on conflict); `data/split.py` freezes a deterministic golden set by image-name hash so it never leaks into training
+- `eval/metrics.py`: macro-F1 + per-class precision/recall/F1 — the frozen-golden-set go/no-go gate (≥ 0.80); 6 unit tests
+- `train/classify.py`: T2 pipeline entrypoint — data prep/split/golden run today; the model fit is behind an optional `train` dep group + real images (documented). `registry.py` publishes a trained model to the API
+- API model registry endpoints: `POST /api/v1/models` (admin, register + activate — exactly one active model per task) and `GET /api/v1/models`; the batch worker already queries active models, so activating a trained model makes predictions start flowing into the review queue
+- 12 ml unit tests; verified live: model register/activate/list (admin-only), worker runs against the active model (48/48 smoke checks)
+- **This is scaffolding**: real training runs when the labeled Safi dataset exists; a public-data-pretrained baseline can seed the review queue before then
+
 ## In progress / blocked on a human
 
 - **Phone test of the PWA spike** (Android 10 / 2 GB) — validates the PWA-over-Flutter decision; the project's #1 risk. Owner: Brian.
 
 ## Next up (rough order)
 
-1. Train the first models (T1/T2/T3) on Phase 0 data → activate in the registry → predictions flow into the review queue (needs the labeled dataset)
+1. Train the first models (T1/T2/T3): pretrain T1/T2 on public data now for a baseline, fine-tune on the labeled Safi export when it exists; needs the optional `train` dep group + images. Harness, golden gate, and registry activation are ready
 3. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
 4. M1 composition views + M5 recycling value on the dashboard (arrive with the classification model)
 5. Grant report hardening: WeasyPrint server-side PDF; fold in composition (M1) + carbon (M7) sections once those land

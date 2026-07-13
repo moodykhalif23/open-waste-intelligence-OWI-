@@ -279,6 +279,25 @@ def main() -> None:
         and "Volunteer hours" in report.text,
     )
 
+    model = client.post(
+        "/api/v1/models",
+        headers=admin,
+        json={
+            "task": "fill",
+            "version": "smoke-1",
+            "metrics": {"macro_f1": 0.83},
+            "activate": True,
+        },
+    )
+    check("model registered + activated", model.status_code == 201 and model.json()["active"])
+    check(
+        "model register is admin-only",
+        client.post(
+            "/api/v1/models", headers=device_auth, json={"task": "fill", "version": "x"}
+        ).status_code
+        == 403,
+    )
+
     queue = client.get("/api/v1/predictions", headers=admin)
     check(
         "review queue reachable (empty until a model is active)",

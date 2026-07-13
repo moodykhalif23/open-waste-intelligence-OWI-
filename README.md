@@ -44,6 +44,15 @@ Open Data API
 | 7 | Carbon Impact Dashboard | CO₂ avoided, landfill space saved — with transparent methodology |
 | 8 | Volunteer Analytics | Hours, events, waste collected — grant-ready CBO reporting |
 
+## Run it
+
+```sh
+# create the repo-root .env with secrets — see docs/11-deployment.md for the template
+make web               # builds + starts the whole platform
+```
+
+Dashboard at `https://localhost:8443`, field app at `https://localhost:8444` (accept the self-signed cert once per device), Label Studio at `http://localhost:8080`. `make help` lists all targets. First run: `make bootstrap ORG="Safi" NAME="Admin" PHONE="+2547..." PASSWORD="..."`.
+
 ## Documentation map
 
 Read in this order if you're new:

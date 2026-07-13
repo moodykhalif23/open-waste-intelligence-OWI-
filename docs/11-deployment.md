@@ -29,8 +29,8 @@ APP_DOMAIN=app.example.org
 EOF
 # generate values with: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 
-# 2. Build and start everything:
-docker compose --profile prod up -d --build
+# 2. Build and start everything (make web wraps this):
+make web        # or: docker compose --profile prod up -d --build
 
 # 3. First organization + admin:
 docker compose exec api uv run python -m owi_api.bootstrap \

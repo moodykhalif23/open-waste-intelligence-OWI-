@@ -69,6 +69,11 @@ class OptimizeIn(BaseModel):
     bin_ids: list[uuid.UUID] | None = None
 
 
+class ReplanIn(BaseModel):
+    add_bin_ids: list[uuid.UUID] | None = None
+    disable_truck_ids: list[uuid.UUID] | None = None
+
+
 class ScenarioOut(BaseModel):
     km: float
     tonnes: float
@@ -314,42 +319,34 @@ def collect_stop(
     refresh_bin(session, stop.bin_id)
 
 
-@router.post("/routes/optimize", response_model=list[RouteOut])
-def optimize_routes(
-    body: OptimizeIn,
-    requester: Annotated[TokenClaims, require_roles(*PLANNERS)],
-    session: Annotated[Session, Depends(get_session)],
-) -> list[RouteOut]:
-    trucks = list(
+def _active_trucks(session: Session, org_id: uuid.UUID) -> list[Truck]:
+    return list(
         session.scalars(
             select(Truck).where(
-                Truck.org_id == requester.org_id,
-                Truck.deleted_at.is_(None),
-                Truck.active.is_(True),
+                Truck.org_id == org_id, Truck.deleted_at.is_(None), Truck.active.is_(True)
             )
         )
     )
-    if not trucks:
-        raise HTTPException(status_code=400, detail="no active trucks — add one first")
 
-    if body.bin_ids is not None:
-        bin_ids = body.bin_ids
-    else:
-        bin_ids = list(
-            session.scalars(
-                select(BinHealthDaily.bin_id)
-                .where(
-                    BinHealthDaily.org_id == requester.org_id,
-                    BinHealthDaily.overflow_risk != OverflowRisk.LOW,
-                )
-                .order_by(BinHealthDaily.bin_id, BinHealthDaily.date.desc())
-                .distinct(BinHealthDaily.bin_id)
+
+def _collect_today_bins(session: Session, org_id: uuid.UUID) -> list[uuid.UUID]:
+    return list(
+        session.scalars(
+            select(BinHealthDaily.bin_id)
+            .where(
+                BinHealthDaily.org_id == org_id,
+                BinHealthDaily.overflow_risk != OverflowRisk.LOW,
             )
+            .order_by(BinHealthDaily.bin_id, BinHealthDaily.date.desc())
+            .distinct(BinHealthDaily.bin_id)
         )
-    if not bin_ids:
-        raise HTTPException(status_code=400, detail="no bins to collect")
+    )
 
-    stops = _bin_demand(session, requester.org_id, bin_ids)
+
+def _plan_and_persist(
+    session: Session, org_id: uuid.UUID, bin_ids: list[uuid.UUID], trucks: list[Truck]
+) -> list[RouteOut]:
+    stops = _bin_demand(session, org_id, bin_ids)
     depot_row = session.execute(
         select(func.ST_Y(Truck.depot), func.ST_X(Truck.depot)).where(Truck.id == trucks[0].id)
     ).one()
@@ -374,7 +371,7 @@ def optimize_routes(
         truck = by_truck[uuid.UUID(tr.truck_id)]
         km = round(tr.distance_m / 1000, 2)
         route = Route(
-            org_id=requester.org_id,
+            org_id=org_id,
             date=today,
             truck_id=truck.id,
             status=RouteStatus.PLANNED,
@@ -386,11 +383,58 @@ def optimize_routes(
         session.add(route)
         session.flush()
         for seq, bid in enumerate(tr.stop_bin_ids):
-            session.add(
-                RouteStop(
-                    org_id=requester.org_id, route_id=route.id, bin_id=uuid.UUID(bid), seq=seq
-                )
-            )
+            session.add(RouteStop(org_id=org_id, route_id=route.id, bin_id=uuid.UUID(bid), seq=seq))
         session.commit()
         out.append(_route_out(session, route, truck.name))
     return out
+
+
+@router.post("/routes/optimize", response_model=list[RouteOut])
+def optimize_routes(
+    body: OptimizeIn,
+    requester: Annotated[TokenClaims, require_roles(*PLANNERS)],
+    session: Annotated[Session, Depends(get_session)],
+) -> list[RouteOut]:
+    trucks = _active_trucks(session, requester.org_id)
+    if not trucks:
+        raise HTTPException(status_code=400, detail="no active trucks — add one first")
+    bin_ids = body.bin_ids or _collect_today_bins(session, requester.org_id)
+    if not bin_ids:
+        raise HTTPException(status_code=400, detail="no bins to collect")
+    return _plan_and_persist(session, requester.org_id, bin_ids, trucks)
+
+
+@router.post("/routes/replan", response_model=list[RouteOut])
+def replan_routes(
+    body: ReplanIn,
+    requester: Annotated[TokenClaims, require_roles(*PLANNERS)],
+    session: Annotated[Session, Depends(get_session)],
+) -> list[RouteOut]:
+    """Mid-day recompute: re-plan the uncollected stops (plus any added bins) over the
+    still-available trucks, superseding today's existing plan. Collected stops stay done."""
+    today = datetime.now(UTC).date()
+    disabled = set(body.disable_truck_ids or [])
+    trucks = [t for t in _active_trucks(session, requester.org_id) if t.id not in disabled]
+    if not trucks:
+        raise HTTPException(status_code=400, detail="no trucks left after breakdowns")
+
+    existing = session.scalars(
+        select(Route).where(
+            Route.org_id == requester.org_id,
+            Route.deleted_at.is_(None),
+            Route.date == today,
+        )
+    ).all()
+    pending: set[uuid.UUID] = set()
+    for route in existing:
+        for stop in session.scalars(
+            select(RouteStop).where(RouteStop.route_id == route.id, RouteStop.collected.is_(False))
+        ):
+            pending.add(stop.bin_id)
+        route.deleted_at = datetime.now(UTC)  # supersede the old plan; collections are kept
+    pending.update(body.add_bin_ids or [])
+    session.commit()
+
+    if not pending:
+        raise HTTPException(status_code=400, detail="nothing left to collect")
+    return _plan_and_persist(session, requester.org_id, list(pending), trucks)

@@ -358,6 +358,17 @@ button:hover {
   font-size: 0.9rem;
 }
 
+.route-head-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.head-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .stop-list {
   margin: 0;
   padding-left: 20px;

@@ -223,6 +223,9 @@ def main() -> None:
         served = sum(r["bins_served"] for r in routes)
         check("route covers collect-today bins", served >= 1, f"served={served}")
         check("route reports distance + fuel", all(r["planned_km"] >= 0 for r in routes))
+    replan = client.post("/api/v1/routes/replan", headers=admin, json={})
+    check("mid-day replan runs", replan.status_code == 200, replan.text[:150])
+
     listed = client.get("/api/v1/routes", headers=device_auth)
     check("driver can read today's routes", listed.status_code == 200)
     stops = [s for r in listed.json() for s in r["stops"]]

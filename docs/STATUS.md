@@ -76,7 +76,9 @@
 - OSRM is an optional compose service (`osrm` profile) with a one-time OSM-extract prep documented in docs/11-deployment.md — not required to run
 - Verified live in containers: truck created → optimize planned a route over 13 collect-today bins with distance/fuel → driver reads today's routes (41/41 smoke checks)
 - Two deploy fixes from the live run: `httpx` promoted to a runtime dependency (OSRM client needs it); model-fetch retry already in place held up
-- Driver route view (2026-07-13): field app **Collect** tab is now route-first — shows the planned route's numbered stops per truck with a progress count; the driver taps a stop done, which records the collection, resets that bin's health, and ticks the stop (`POST /routes/stops/{id}/collect`). Falls back to the raw collect-today list when no route is planned. Verified live: driver marks a stop → it shows collected (43/43 smoke checks)
+- Driver route view (2026-07-13): field app **Collect** tab is now route-first — shows the planned route's numbered stops per truck with a progress count; the driver taps a stop done, which records the collection, resets that bin's health, and ticks the stop (`POST /routes/stops/{id}/collect`). Falls back to the raw collect-today list when no route is planned. Verified live: driver marks a stop → it shows collected
+- Savings report (G2 headline, 2026-07-13): `GET /routes/savings` compares a fixed full-sweep (optimized visit to every bin) against need-driven routing (only bins due) and reports the **km-per-tonne reduction %** plus fuel litres and optional KES (set `OWI_FUEL_PRICE_KES_PER_L`). Self-contained — no manual baseline entry; a measured Phase 0 fuel-log baseline can replace the computed one later. Pure savings math with 3 unit tests; dashboard savings panel on the Routes page (headline % + baseline-vs-optimized table)
+- Mid-day replan (M4-F3, 2026-07-13): `POST /routes/replan` recomputes the **uncollected** stops (plus any added bins, minus broken-down trucks) over the remaining fleet, superseding today's plan while keeping collected stops as history (collections are recorded independently). Dashboard: "Replan remaining" button + per-truck "Breakdown" action on each route card. Optimize/replan share one `_plan_and_persist` helper. Verified live (46/46 smoke checks) — **M4 is complete**
 
 ## In progress / blocked on a human
 
@@ -84,8 +86,7 @@
 
 ## Next up (rough order)
 
-1. M4 follow-ups: mid-day replan (bin added / truck breakdown → recompute remaining stops); savings report vs the Phase 0 fixed-schedule baseline (the grant headline, G2)
-2. Train the first models (T1/T2/T3) on Phase 0 data → activate in the registry → predictions flow into the review queue (needs the labeled dataset)
+1. Train the first models (T1/T2/T3) on Phase 0 data → activate in the registry → predictions flow into the review queue (needs the labeled dataset)
 3. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
 4. M1 composition views + M5 recycling value on the dashboard (arrive with the classification model)
 5. Grant report hardening: WeasyPrint server-side PDF; fold in composition (M1) + carbon (M7) sections once those land

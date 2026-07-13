@@ -19,6 +19,7 @@ interface Stop {
 
 interface Route {
   id: string;
+  truck_id: string;
   truck_name: string;
   planned_km: number;
   planned_fuel_l: number;
@@ -82,6 +83,22 @@ export default function Routes() {
     }
   }
 
+  async function replan(disableTruckId?: string) {
+    setPlanning(true);
+    setError(null);
+    try {
+      const planned = await api<Route[]>("/api/v1/routes/replan", {
+        method: "POST",
+        body: JSON.stringify(disableTruckId ? { disable_truck_ids: [disableTruckId] } : {}),
+      });
+      setRoutes(planned);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPlanning(false);
+    }
+  }
+
   async function loadSavings() {
     setSavingsBusy(true);
     setError(null);
@@ -110,9 +127,16 @@ export default function Routes() {
       <section>
         <div className="section-head">
           <h2>{t("todaysRoutes")}</h2>
-          <button className="primary" disabled={planning} onClick={() => void planToday()}>
-            {planning ? t("planning") : t("planToday")}
-          </button>
+          <div className="head-actions">
+            {routes.length > 0 && (
+              <button className="secondary" disabled={planning} onClick={() => void replan()}>
+                {t("replan")}
+              </button>
+            )}
+            <button className="primary" disabled={planning} onClick={() => void planToday()}>
+              {planning ? t("planning") : t("planToday")}
+            </button>
+          </div>
         </div>
         {error && <p className="error">{error}</p>}
         {routes.length === 0 ? (
@@ -122,7 +146,17 @@ export default function Routes() {
             {routes.map((route) => (
               <div className="route-card" key={route.id}>
                 <div className="route-head">
-                  <strong>{route.truck_name}</strong>
+                  <div className="route-head-top">
+                    <strong>{route.truck_name}</strong>
+                    <button
+                      className="linklike"
+                      disabled={planning}
+                      title={t("breakdownHint")}
+                      onClick={() => void replan(route.truck_id)}
+                    >
+                      {t("breakdown")}
+                    </button>
+                  </div>
                   <span className="muted">
                     {route.bins_served} {t("stops")} · {route.planned_km} km ·{" "}
                     {route.planned_fuel_l} L · {Math.round(route.demand_kg)} kg

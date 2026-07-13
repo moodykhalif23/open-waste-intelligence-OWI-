@@ -371,6 +371,19 @@ def main() -> None:
     )
     check("partner matching works", "PET Buyer" in match_resp.json()["partners"])
 
+    factors = client.get("/api/v1/carbon/factors", headers=admin)
+    check(
+        "carbon factor table loads (cited)",
+        factors.status_code == 200 and len(factors.json()) >= 8,
+    )
+    carbon = client.get("/api/v1/carbon?days=30", headers=admin)
+    check(
+        "carbon report computes with method version + range",
+        carbon.status_code == 200
+        and carbon.json()["method_version"] == "carbon-v1"
+        and carbon.json()["co2e_low_kg"] <= carbon.json()["co2e_high_kg"],
+    )
+
     comp = client.get("/api/v1/analytics/composition?days=30", headers=admin)
     check("composition endpoint", comp.status_code == 200 and "materials" in comp.json())
     check(

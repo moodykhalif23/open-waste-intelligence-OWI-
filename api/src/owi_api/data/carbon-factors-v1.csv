@@ -1,0 +1,9 @@
+material,co2e_kg_per_kg,source
+plastic,1.5,US EPA WARM v15 — mixed plastics, recycle vs landfill
+glass,0.3,US EPA WARM v15 — glass, recycle vs landfill
+metal,2.5,US EPA WARM v15 — mixed metals (aluminium is far higher)
+paper,1.1,US EPA WARM v15 — mixed paper, recycle vs landfill
+organic,0.25,IPCC 2019 waste guidelines — composting vs landfill (avoided CH4)
+e_waste,1.0,literature estimate — mixed electronics (pending external review)
+textile,2.0,US EPA WARM v15 — textiles, recycle vs landfill
+other_mixed,0.0,no factor — unsegregated

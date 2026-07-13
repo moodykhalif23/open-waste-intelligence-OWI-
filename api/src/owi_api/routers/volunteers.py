@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from owi_api.analytics.carbon import carbon_report, load_factors
 from owi_api.analytics.volunteer import EventFacts, MonthPoint, VolunteerSummary, summarize
 from owi_api.db import get_session
 from owi_api.models.enums import EventType, UserRole
@@ -14,6 +15,7 @@ from owi_api.models.registry import Organization
 from owi_api.models.volunteer import VolunteerEvent
 from owi_api.reports.grant import render_grant_report
 from owi_api.routers.auth import get_current_user, require_roles
+from owi_api.routers.carbon import kg_by_material
 from owi_api.security import TokenClaims
 
 router = APIRouter(prefix="/api/v1/volunteers", tags=["volunteers"])
@@ -124,5 +126,14 @@ def grant_report(
     if org is None:
         raise HTTPException(status_code=404, detail="organization not found")
     s = summarize(_facts(_load(session, requester.org_id, start, end)))
-    html = render_grant_report(org.name, start, end, s)
+
+    days = max(1, (end - start).days)
+    report = carbon_report(kg_by_material(session, requester.org_id, days), load_factors())
+    carbon_line = (
+        f"~{report.co2e_low_kg:g}-{report.co2e_high_kg:g} kg CO2e avoided "
+        f"(~{report.trees_equivalent:g} tree-years), {report.landfill_m3_saved:g} m3 landfill saved"
+        if report.co2e_avoided_kg > 0
+        else None
+    )
+    html = render_grant_report(org.name, start, end, s, carbon_line)
     return Response(content=html, media_type="text/html")

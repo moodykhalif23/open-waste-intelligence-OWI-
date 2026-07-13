@@ -38,6 +38,7 @@ def render_grant_report(
     start: date,
     end: date,
     summary: VolunteerSummary,
+    carbon_line: str | None = None,
 ) -> str:
     materials = (
         "".join(
@@ -79,8 +80,8 @@ def render_grant_report(
 <h2>Activity by month</h2>
 <table><thead><tr><th>Month</th><th>Events</th><th>Hours</th><th>Collected</th></tr></thead>
 <tbody>{trend}</tbody></table>
-
-<p class="note">Every figure is aggregated directly from recorded volunteer events.
-Waste composition and carbon-impact sections join this report once the classification
-model is live. Participation is counted in aggregate; no personal data is included.</p>
+{f"<h2>Estimated carbon impact</h2><p>{escape(carbon_line)}</p>" if carbon_line else ""}
+<p class="note">Every figure is aggregated directly from recorded records. Carbon impact is an
+estimate (methodology carbon-v1) shown as a range — informational reporting, not tradable
+offsets. Participation is counted in aggregate; no personal data is included.</p>
 </body></html>"""

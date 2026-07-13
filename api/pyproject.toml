@@ -40,6 +40,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/owi_api"]
+# Ship the cited carbon factor table in non-editable (wheel) builds too.
+force-include = { "src/owi_api/data/carbon-factors-v1.csv" = "owi_api/data/carbon-factors-v1.csv" }
 
 [tool.ruff]
 line-length = 100

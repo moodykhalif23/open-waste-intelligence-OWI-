@@ -55,6 +55,7 @@ body {
   display: flex;
   gap: 2px;
   flex: 1;
+  flex-wrap: wrap;
 }
 
 .topbar nav a {

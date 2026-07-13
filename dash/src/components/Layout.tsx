@@ -19,6 +19,7 @@ export default function Layout() {
           <NavLink to="/routes">{t("routes")}</NavLink>
           <NavLink to="/recycling">{t("recycling")}</NavLink>
           <NavLink to="/dumping">{t("dumping")}</NavLink>
+          <NavLink to="/carbon">{t("carbon")}</NavLink>
           <NavLink to="/bins">{t("bins")}</NavLink>
           <NavLink to="/reports">{t("reports")}</NavLink>
           <NavLink to="/review">{t("review")}</NavLink>

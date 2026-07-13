@@ -83,7 +83,7 @@ export default function Overview() {
 
   return (
     <PageStack>
-      <PageHeader title={t("overview")} description={t("signInTagline")} />
+      <PageHeader description={t("signInTagline")} />
       <Grid container spacing={{ xs: 2, md: 2.5 }}>
         <Grid size={{ xs: 12, sm: 4 }}>
           <StatCard label={t("totalBins")} value={bins.length} icon={<DeleteOutlineOutlined />} />

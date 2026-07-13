@@ -10,11 +10,9 @@ import type { NavLeaf } from "../nav";
 // The sidebar shows one entry; the sub-pages live here as a segmented tab bar
 // so the rail stays light. Tabs are real router links (deep-linkable).
 export default function SectionNav({
-  title,
   description,
   items,
 }: {
-  title: StringKey;
   description?: StringKey;
   items: NavLeaf[];
 }) {
@@ -24,7 +22,7 @@ export default function SectionNav({
 
   return (
     <Box>
-      <PageHeader title={t(title)} description={description ? t(description) : undefined} />
+      {description && <PageHeader description={t(description)} />}
       <Box
         sx={{
           mt: 2,

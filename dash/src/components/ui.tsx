@@ -17,7 +17,7 @@ export function PageHeader({
   description,
   action,
 }: {
-  title: ReactNode;
+  title?: ReactNode;
   description?: ReactNode;
   action?: ReactNode;
 }) {
@@ -32,9 +32,9 @@ export function PageHeader({
       }}
     >
       <Box sx={{ minWidth: 0 }}>
-        {typeof title === "string" ? <Typography variant="h4">{title}</Typography> : title}
+        {title != null && (typeof title === "string" ? <Typography variant="h4">{title}</Typography> : title)}
         {description && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, maxWidth: 620 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: title != null ? 0.5 : 0, maxWidth: 620 }}>
             {description}
           </Typography>
         )}

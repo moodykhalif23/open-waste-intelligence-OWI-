@@ -161,7 +161,7 @@ export default function Routes() {
 
   return (
     <PageStack>
-      <PageHeader title={t("routes")} description={t("savingsHint")} action={routesAction} />
+      <PageHeader description={t("savingsHint")} action={routesAction} />
 
       <Grid container spacing={{ xs: 2, md: 2.5 }}>
         <Grid size={{ xs: 12, sm: 4 }}>

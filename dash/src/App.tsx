@@ -50,7 +50,6 @@ export default function App() {
                     path="intelligence"
                     element={
                       <SectionNav
-                        title="navIntelligence"
                         description="navIntelligenceDesc"
                         items={kids("/intelligence")}
                       />
@@ -68,7 +67,6 @@ export default function App() {
                     path="records"
                     element={
                       <SectionNav
-                        title="navRecords"
                         description="navRecordsDesc"
                         items={kids("/records")}
                       />
@@ -85,7 +83,6 @@ export default function App() {
                     path="admin"
                     element={
                       <SectionNav
-                        title="navAdmin"
                         description="navAdminDesc"
                         items={kids("/admin")}
                       />

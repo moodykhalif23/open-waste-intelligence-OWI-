@@ -4,16 +4,11 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { api, type Role, type User } from "../api";
+import { DataTable, type GridColDef } from "../components/DataTable";
 import { Muted, PageStack, SectionCard } from "../components/ui";
 import { useI18n } from "../i18n";
 
@@ -55,6 +50,37 @@ export default function Users() {
 
   if (users === null) return <Muted>{t("loading")}</Muted>;
 
+  const columns: GridColDef<User>[] = [
+    { field: "name", headerName: t("name"), flex: 1, minWidth: 130 },
+    {
+      field: "phone",
+      headerName: t("phone"),
+      flex: 1,
+      minWidth: 130,
+      renderCell: (p) => <Box sx={{ fontFamily: "ui-monospace, monospace" }}>{(p.value as string) ?? "—"}</Box>,
+    },
+    { field: "role", headerName: t("role"), width: 130 },
+    {
+      field: "actions",
+      headerName: "",
+      width: 240,
+      sortable: false,
+      filterable: false,
+      renderCell: (p) => (
+        <Stack direction="row" spacing={1} sx={{ height: "100%", alignItems: "center" }}>
+          {p.row.role === "collector" && (
+            <Button variant="outlined" size="small" onClick={() => void issueToken(p.row)}>
+              {t("issueToken")}
+            </Button>
+          )}
+          <Button variant="outlined" size="small" color="error" onClick={() => void revoke(p.row)}>
+            {t("revokeTokens")}
+          </Button>
+        </Stack>
+      ),
+    },
+  ];
+
   return (
     <PageStack>
       <SectionCard title={t("newUser")}>
@@ -62,50 +88,7 @@ export default function Users() {
       </SectionCard>
 
       <SectionCard title={t("users")}>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>{t("name")}</TableCell>
-                <TableCell>{t("phone")}</TableCell>
-                <TableCell>{t("role")}</TableCell>
-                <TableCell align="right" />
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id} hover>
-                  <TableCell>{user.name}</TableCell>
-                  <TableCell sx={{ fontFamily: "ui-monospace, monospace" }}>
-                    {user.phone ?? "—"}
-                  </TableCell>
-                  <TableCell>{user.role}</TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
-                      {user.role === "collector" && (
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => void issueToken(user)}
-                        >
-                          {t("issueToken")}
-                        </Button>
-                      )}
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        color="error"
-                        onClick={() => void revoke(user)}
-                      >
-                        {t("revokeTokens")}
-                      </Button>
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <DataTable rows={users} columns={columns} />
 
         {issued && (
           <Alert severity="success" icon={false} sx={{ mt: 2.5 }}>

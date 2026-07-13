@@ -1,22 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Grid from "@mui/material/Grid";
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  MenuItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Alert, Box, Button, Chip, MenuItem, TextField, Typography } from "@mui/material";
 import { api } from "../api";
+import { DataTable, type GridColDef } from "../components/DataTable";
 import EChart, { donutOption, MATERIAL_COLORS } from "../components/EChart";
 import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
@@ -52,6 +39,39 @@ export default function Composition() {
   }, [reload]);
 
   const label = (m: string) => t(m as StringKey);
+
+  const columns: GridColDef<MaterialShare>[] = [
+    { field: "material", headerName: t("material"), flex: 1, minWidth: 120, valueGetter: (_v, row) => label(row.material) },
+    { field: "share_pct", headerName: t("share"), type: "number", width: 100, valueFormatter: (v) => `${v}%` },
+    {
+      field: "delta_pct",
+      headerName: t("change"),
+      width: 120,
+      renderCell: (p) =>
+        p.value == null ? (
+          "—"
+        ) : (
+          <Chip
+            size="small"
+            color={(p.value as number) >= 0 ? "success" : "error"}
+            label={`${(p.value as number) >= 0 ? "▲" : "▼"} ${Math.abs(p.value as number)}`}
+          />
+        ),
+    },
+    { field: "count", headerName: t("observationsCol"), type: "number", width: 110 },
+    {
+      field: "actions",
+      headerName: "",
+      width: 100,
+      sortable: false,
+      filterable: false,
+      renderCell: (p) => (
+        <Button size="small" variant="outlined" onClick={() => navigate(`/records/reports?material=${p.row.material}`)}>
+          {t("view")}
+        </Button>
+      ),
+    },
+  ];
 
   const periodSelect = (
     <TextField
@@ -118,48 +138,7 @@ export default function Composition() {
           </SectionCard>
 
           <SectionCard>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>{t("material")}</TableCell>
-                    <TableCell>{t("share")}</TableCell>
-                    <TableCell>{t("change")}</TableCell>
-                    <TableCell>{t("observationsCol")}</TableCell>
-                    <TableCell />
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {data.materials.map((m) => (
-                    <TableRow key={m.material}>
-                      <TableCell>{label(m.material)}</TableCell>
-                      <TableCell>{m.share_pct}%</TableCell>
-                      <TableCell>
-                        {m.delta_pct === null ? (
-                          "—"
-                        ) : (
-                          <Chip
-                            size="small"
-                            color={m.delta_pct >= 0 ? "success" : "error"}
-                            label={`${m.delta_pct >= 0 ? "▲" : "▼"} ${Math.abs(m.delta_pct)}`}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell>{m.count}</TableCell>
-                      <TableCell align="right">
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => navigate(`/records/reports?material=${m.material}`)}
-                        >
-                          {t("view")}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <DataTable rows={data.materials} columns={columns} getRowId={(r) => r.material} />
           </SectionCard>
         </>
       )}

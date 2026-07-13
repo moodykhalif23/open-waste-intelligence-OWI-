@@ -10,18 +10,13 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CloseIcon from "@mui/icons-material/Close";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import { api, apiBlob } from "../api";
+import { DataTable, type GridColDef } from "../components/DataTable";
 import { Muted, PageStack, SectionCard } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
@@ -102,6 +97,39 @@ export default function Dumping() {
 
   if (sites === null) return <Muted>{t("loading")}</Muted>;
 
+  const siteCols: GridColDef<Site>[] = [
+    {
+      field: "location",
+      headerName: t("location"),
+      flex: 1,
+      minWidth: 150,
+      sortable: false,
+      valueGetter: (_v, row) => `${row.lat.toFixed(4)}, ${row.lng.toFixed(4)}`,
+      renderCell: (p) => <Box sx={{ fontFamily: "ui-monospace, monospace" }}>{p.value as string}</Box>,
+    },
+    { field: "event_count", headerName: t("events"), type: "number", width: 100 },
+    { field: "last_seen", headerName: t("lastSeen"), width: 130, valueFormatter: (v) => new Date(v as string).toLocaleDateString() },
+    { field: "hotspot_score", headerName: t("risk"), type: "number", width: 90 },
+    {
+      field: "status",
+      headerName: t("status"),
+      width: 120,
+      renderCell: (p) => <Chip size="small" color={STATUS_COLOR[p.row.status]} label={t(`dump_${p.row.status}` as StringKey)} />,
+    },
+    {
+      field: "actions",
+      headerName: "",
+      width: 90,
+      sortable: false,
+      filterable: false,
+      renderCell: (p) => (
+        <Button variant="outlined" size="small" onClick={() => void openSite(p.row.id)}>
+          {t("view")}
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <PageStack>
       <SectionCard title={t("reviewQueue")}>
@@ -124,44 +152,7 @@ export default function Dumping() {
         {sites.length === 0 ? (
           <Muted>{t("noSites")}</Muted>
         ) : (
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{t("location")}</TableCell>
-                  <TableCell>{t("events")}</TableCell>
-                  <TableCell>{t("lastSeen")}</TableCell>
-                  <TableCell>{t("risk")}</TableCell>
-                  <TableCell>{t("status")}</TableCell>
-                  <TableCell />
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sites.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell sx={{ fontFamily: "monospace" }}>
-                      {s.lat.toFixed(4)}, {s.lng.toFixed(4)}
-                    </TableCell>
-                    <TableCell>{s.event_count}</TableCell>
-                    <TableCell>{new Date(s.last_seen).toLocaleDateString()}</TableCell>
-                    <TableCell>{s.hotspot_score}</TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        color={STATUS_COLOR[s.status]}
-                        label={t(`dump_${s.status}` as StringKey)}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Button variant="outlined" size="small" onClick={() => void openSite(s.id)}>
-                        {t("view")}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable rows={sites} columns={siteCols} />
         )}
       </SectionCard>
 

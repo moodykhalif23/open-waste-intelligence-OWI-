@@ -8,14 +8,9 @@ import FormLabel from "@mui/material/FormLabel";
 import Grid from "@mui/material/Grid";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import { api } from "../api";
+import { DataTable, type GridColDef } from "../components/DataTable";
 import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
@@ -75,6 +70,24 @@ export default function Recycling() {
   const label = (m: string) => t(m as StringKey);
   if (value === null) return <Muted>{t("loading")}</Muted>;
 
+  const valueCols: GridColDef<MaterialValue>[] = [
+    { field: "material", headerName: t("material"), flex: 1, minWidth: 110, valueGetter: (_v, row) => label(row.material) },
+    { field: "kg", headerName: t("kgEst"), type: "number", width: 100, valueFormatter: (v) => Number(v).toLocaleString() },
+    { field: "kes_per_kg", headerName: t("pricePerKg"), type: "number", width: 110, valueFormatter: (v) => (v == null ? "—" : `KES ${v}`) },
+    { field: "value_kes", headerName: t("valueKes"), type: "number", flex: 1, minWidth: 120, valueFormatter: (v) => (v ? `KES ${Math.round(Number(v)).toLocaleString()}` : "—") },
+    { field: "partners", headerName: t("matchingPartners"), type: "number", width: 100 },
+  ];
+  const priceCols: GridColDef<Price>[] = [
+    { field: "material", headerName: t("material"), flex: 1, minWidth: 110, valueGetter: (_v, row) => label(row.material) },
+    { field: "kes_per_kg", headerName: t("pricePerKg"), type: "number", width: 120, valueFormatter: (v) => `KES ${v}` },
+    { field: "effective_date", headerName: t("effectiveDate"), flex: 1, minWidth: 120 },
+  ];
+  const partnerCols: GridColDef<Partner>[] = [
+    { field: "name", headerName: t("name"), flex: 1, minWidth: 120 },
+    { field: "materials_accepted", headerName: t("accepts"), flex: 1.4, minWidth: 160, valueGetter: (_v, row) => row.materials_accepted.map(label).join(", ") },
+    { field: "min_kg_per_month", headerName: t("minKg"), type: "number", width: 100 },
+  ];
+
   return (
     <PageStack>
       <Grid container spacing={3}>
@@ -96,32 +109,7 @@ export default function Recycling() {
         {value.materials.length === 0 ? (
           <Muted>{t("noValueYet")}</Muted>
         ) : (
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{t("material")}</TableCell>
-                  <TableCell>{t("kgEst")}</TableCell>
-                  <TableCell>{t("pricePerKg")}</TableCell>
-                  <TableCell>{t("valueKes")}</TableCell>
-                  <TableCell>{t("matchingPartners")}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {value.materials.map((m) => (
-                  <TableRow key={m.material}>
-                    <TableCell>{label(m.material)}</TableCell>
-                    <TableCell>{m.kg.toLocaleString()}</TableCell>
-                    <TableCell>{m.kes_per_kg === null ? "—" : `KES ${m.kes_per_kg}`}</TableCell>
-                    <TableCell>
-                      {m.value_kes ? `KES ${Math.round(m.value_kes).toLocaleString()}` : "—"}
-                    </TableCell>
-                    <TableCell>{m.partners}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable rows={value.materials} columns={valueCols} getRowId={(r) => r.material} toolbar={false} />
         )}
         <Alert severity="info" sx={{ mt: 2.5 }}>
           {t("valueMethod")}
@@ -143,26 +131,7 @@ export default function Recycling() {
             {prices.length === 0 ? (
               <Muted>{t("noPrices")}</Muted>
             ) : (
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>{t("material")}</TableCell>
-                      <TableCell>{t("pricePerKg")}</TableCell>
-                      <TableCell>{t("effectiveDate")}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {prices.map((p) => (
-                      <TableRow key={p.id}>
-                        <TableCell>{label(p.material)}</TableCell>
-                        <TableCell>KES {p.kes_per_kg}</TableCell>
-                        <TableCell>{p.effective_date}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+              <DataTable rows={prices} columns={priceCols} toolbar={false} pageSize={5} />
             )}
           </SectionCard>
         </Grid>
@@ -171,26 +140,7 @@ export default function Recycling() {
             {partners.length === 0 ? (
               <Muted>{t("noPartners")}</Muted>
             ) : (
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>{t("name")}</TableCell>
-                      <TableCell>{t("accepts")}</TableCell>
-                      <TableCell>{t("minKg")}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {partners.map((p) => (
-                      <TableRow key={p.id}>
-                        <TableCell>{p.name}</TableCell>
-                        <TableCell>{p.materials_accepted.map(label).join(", ")}</TableCell>
-                        <TableCell>{p.min_kg_per_month}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+              <DataTable rows={partners} columns={partnerCols} toolbar={false} pageSize={5} />
             )}
           </SectionCard>
         </Grid>

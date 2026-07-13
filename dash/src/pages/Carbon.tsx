@@ -1,13 +1,8 @@
 import { useEffect, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Grid from "@mui/material/Grid";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
 import { api } from "../api";
+import { DataTable, type GridColDef } from "../components/DataTable";
 import EChart, { hbarOption } from "../components/EChart";
 import { Muted, PageStack, Panel, SectionCard, StatCard } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
@@ -43,6 +38,11 @@ export default function Carbon() {
   const label = (m: string) => t(m as StringKey);
   const range = `${Math.round(data.co2e_low_kg)}–${Math.round(data.co2e_high_kg)}`;
   const ranked = [...data.materials].sort((a, b) => b.co2e_kg - a.co2e_kg);
+  const columns: GridColDef<MaterialCarbon>[] = [
+    { field: "material", headerName: t("material"), flex: 1, minWidth: 110, valueGetter: (_v, row) => label(row.material) },
+    { field: "kg", headerName: t("kgEst"), type: "number", flex: 1, minWidth: 90, valueFormatter: (v) => Number(v).toLocaleString() },
+    { field: "co2e_kg", headerName: t("co2eKg"), type: "number", flex: 1, minWidth: 90, valueFormatter: (v) => Number(v).toLocaleString() },
+  ];
 
   return (
     <PageStack>
@@ -78,26 +78,7 @@ export default function Carbon() {
               </Panel>
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>{t("material")}</TableCell>
-                      <TableCell align="right">{t("kgEst")}</TableCell>
-                      <TableCell align="right">{t("co2eKg")}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {ranked.map((m) => (
-                      <TableRow key={m.material}>
-                        <TableCell>{label(m.material)}</TableCell>
-                        <TableCell align="right">{m.kg.toLocaleString()}</TableCell>
-                        <TableCell align="right">{m.co2e_kg.toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+              <DataTable rows={ranked} columns={columns} getRowId={(r) => r.material} toolbar={false} pageSize={8} />
             </Grid>
           </Grid>
         </SectionCard>

@@ -3,16 +3,11 @@ import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import { api, getToken } from "../api";
+import { DataTable, type GridColDef } from "../components/DataTable";
 import EChart, { lineOption } from "../components/EChart";
 import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
 import { useI18n } from "../i18n";
@@ -82,6 +77,15 @@ export default function Volunteers() {
     values: summary.monthly.map((m) => m.hours),
   };
 
+  const eventCols: GridColDef<Event>[] = [
+    { field: "occurred_on", headerName: t("date"), width: 120 },
+    { field: "event_type", headerName: t("type"), width: 120, valueGetter: (_v, row) => t(row.event_type as "cleanup") },
+    { field: "area", headerName: t("area"), flex: 1, minWidth: 120 },
+    { field: "organizer", headerName: t("organizer"), flex: 1, minWidth: 120 },
+    { field: "participant_count", headerName: t("participants"), type: "number", width: 120 },
+    { field: "hours_total", headerName: t("hours"), type: "number", width: 100 },
+  ];
+
   return (
     <PageStack>
       <Grid container spacing={3}>
@@ -125,32 +129,7 @@ export default function Volunteers() {
         {events.length === 0 ? (
           <Muted>{t("noData")}</Muted>
         ) : (
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>{t("date")}</TableCell>
-                  <TableCell>{t("type")}</TableCell>
-                  <TableCell>{t("area")}</TableCell>
-                  <TableCell>{t("organizer")}</TableCell>
-                  <TableCell align="right">{t("participants")}</TableCell>
-                  <TableCell align="right">{t("hours")}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {events.map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell>{e.occurred_on}</TableCell>
-                    <TableCell>{t(e.event_type as "cleanup")}</TableCell>
-                    <TableCell>{e.area}</TableCell>
-                    <TableCell>{e.organizer}</TableCell>
-                    <TableCell align="right">{e.participant_count}</TableCell>
-                    <TableCell align="right">{e.hours_total}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable rows={events} columns={eventCols} />
         )}
       </SectionCard>
     </PageStack>

@@ -17,6 +17,7 @@ import DeleteOutlineOutlined from "@mui/icons-material/DeleteOutlineOutlined";
 import RouteOutlined from "@mui/icons-material/RouteOutlined";
 import LocalGasStationOutlined from "@mui/icons-material/LocalGasStationOutlined";
 import { api } from "../api";
+import { DataTable, type GridColDef } from "../components/DataTable";
 import { Muted, PageHeader, PageStack, Panel, SectionCard, StatCard } from "../components/ui";
 import { useI18n } from "../i18n";
 
@@ -133,6 +134,12 @@ export default function Routes() {
 
   const totalKm = routes.reduce((s, r) => s + r.planned_km, 0);
   const totalFuel = routes.reduce((s, r) => s + r.planned_fuel_l, 0);
+
+  const truckCols: GridColDef<Truck>[] = [
+    { field: "name", headerName: t("name"), flex: 1, minWidth: 120 },
+    { field: "capacity_kg", headerName: t("capacityKg"), type: "number", width: 120 },
+    { field: "fuel_l_per_100km", headerName: t("fuelUse"), type: "number", flex: 1, minWidth: 120, valueFormatter: (v) => `${v} L/100km` },
+  ];
 
   const routesAction = (
     <Stack direction="row" spacing={1.5}>
@@ -334,26 +341,7 @@ export default function Routes() {
             {trucks.length === 0 ? (
               <Muted>{t("noTrucks")}</Muted>
             ) : (
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>{t("name")}</TableCell>
-                      <TableCell>{t("capacityKg")}</TableCell>
-                      <TableCell>{t("fuelUse")}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {trucks.map((tk) => (
-                      <TableRow key={tk.id} hover>
-                        <TableCell>{tk.name}</TableCell>
-                        <TableCell>{tk.capacity_kg}</TableCell>
-                        <TableCell>{tk.fuel_l_per_100km} L/100km</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+              <DataTable rows={trucks} columns={truckCols} toolbar={false} pageSize={5} />
             )}
           </SectionCard>
         </Grid>

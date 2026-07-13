@@ -4,16 +4,11 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { api, type ApiKey, type ApiKeyCreated, type PublicMeta } from "../api";
+import { DataTable, type GridColDef } from "../components/DataTable";
 import { Muted, PageStack, SectionCard } from "../components/ui";
 import { useI18n } from "../i18n";
 
@@ -49,6 +44,35 @@ export default function OpenData() {
   }
 
   if (keys === null) return <Muted>{t("loading")}</Muted>;
+
+  const columns: GridColDef<ApiKey>[] = [
+    { field: "label", headerName: t("keyLabel"), flex: 1, minWidth: 120 },
+    { field: "key_prefix", headerName: t("keyPrefix"), width: 140, renderCell: (p) => <Box sx={{ fontFamily: "ui-monospace, monospace" }}>{p.value as string}</Box> },
+    { field: "created_at", headerName: t("created"), width: 130, valueFormatter: (v) => fmtDate(v as string) },
+    { field: "last_used_at", headerName: t("lastUsed"), width: 130, valueGetter: (_v, row) => (row.last_used_at ? fmtDate(row.last_used_at) : t("never")) },
+    {
+      field: "status",
+      headerName: t("status"),
+      width: 110,
+      sortable: false,
+      renderCell: (p) => (
+        <Chip size="small" color={p.row.revoked_at ? "default" : "success"} label={p.row.revoked_at ? t("revoked") : t("active")} />
+      ),
+    },
+    {
+      field: "actions",
+      headerName: "",
+      width: 110,
+      sortable: false,
+      filterable: false,
+      renderCell: (p) =>
+        p.row.revoked_at ? null : (
+          <Button size="small" variant="outlined" color="error" onClick={() => void revoke(p.row.id)}>
+            {t("revoke")}
+          </Button>
+        ),
+    },
+  ];
 
   return (
     <PageStack>
@@ -118,44 +142,7 @@ export default function OpenData() {
         {keys.length === 0 ? (
           <Muted>{t("noKeys")}</Muted>
         ) : (
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{t("keyLabel")}</TableCell>
-                  <TableCell>{t("keyPrefix")}</TableCell>
-                  <TableCell>{t("created")}</TableCell>
-                  <TableCell>{t("lastUsed")}</TableCell>
-                  <TableCell>{t("status")}</TableCell>
-                  <TableCell align="right" />
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {keys.map((k) => (
-                  <TableRow key={k.id} hover>
-                    <TableCell>{k.label}</TableCell>
-                    <TableCell sx={{ fontFamily: "ui-monospace, monospace" }}>{k.key_prefix}</TableCell>
-                    <TableCell>{fmtDate(k.created_at)}</TableCell>
-                    <TableCell>{k.last_used_at ? fmtDate(k.last_used_at) : t("never")}</TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        color={k.revoked_at ? "default" : "success"}
-                        label={k.revoked_at ? t("revoked") : t("active")}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      {!k.revoked_at && (
-                        <Button variant="outlined" size="small" color="error" onClick={() => void revoke(k.id)}>
-                          {t("revoke")}
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable rows={keys} columns={columns} toolbar={false} />
         )}
       </SectionCard>
     </PageStack>

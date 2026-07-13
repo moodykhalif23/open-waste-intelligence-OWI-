@@ -1,17 +1,13 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import DownloadIcon from "@mui/icons-material/Download";
 import { api, apiBlob, type Bin, type Site } from "../api";
+import { DataTable, type GridColDef } from "../components/DataTable";
 import { Muted, PageStack, SectionCard } from "../components/ui";
 import { useI18n } from "../i18n";
 
@@ -46,9 +42,49 @@ export default function Bins() {
   if (bins === null) return <Muted>{t("loading")}</Muted>;
   const siteName = (id: string) => sites.find((s) => s.id === id)?.name ?? id.slice(0, 8);
 
+  const columns: GridColDef<Bin>[] = [
+    {
+      field: "qr_code",
+      headerName: t("qrCode"),
+      flex: 1,
+      minWidth: 130,
+      renderCell: (p) => (
+        <Box sx={{ fontFamily: "ui-monospace, monospace" }}>{p.value as string}</Box>
+      ),
+    },
+    {
+      field: "site_id",
+      headerName: t("site"),
+      flex: 1,
+      minWidth: 130,
+      valueGetter: (_v, row) => siteName(row.site_id),
+    },
+    { field: "bin_type", headerName: t("binType"), width: 120 },
+    { field: "volume_liters", headerName: t("volume"), type: "number", width: 100 },
+    { field: "lat", headerName: t("lat"), type: "number", width: 110, valueFormatter: (v) => Number(v).toFixed(5) },
+    { field: "lng", headerName: t("lng"), type: "number", width: 110, valueFormatter: (v) => Number(v).toFixed(5) },
+    {
+      field: "actions",
+      headerName: "",
+      width: 120,
+      sortable: false,
+      filterable: false,
+      renderCell: (p) => (
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<DownloadIcon />}
+          onClick={() => void downloadQr(p.row)}
+        >
+          {t("downloadQr")}
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <PageStack>
-      <Grid container spacing={3}>
+      <Grid container spacing={{ xs: 2, md: 2.5 }}>
         <Grid size={{ xs: 12, md: 6 }}>
           <SiteForm onCreated={reload} />
         </Grid>
@@ -57,49 +93,7 @@ export default function Bins() {
         </Grid>
       </Grid>
       <SectionCard title={t("bins")}>
-        {bins.length === 0 ? (
-          <Muted>{t("noData")}</Muted>
-        ) : (
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>{t("qrCode")}</TableCell>
-                  <TableCell>{t("site")}</TableCell>
-                  <TableCell>{t("binType")}</TableCell>
-                  <TableCell>{t("volume")}</TableCell>
-                  <TableCell>{t("lat")}</TableCell>
-                  <TableCell>{t("lng")}</TableCell>
-                  <TableCell />
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {bins.map((bin) => (
-                  <TableRow key={bin.id} hover>
-                    <TableCell sx={{ fontFamily: "ui-monospace, monospace" }}>
-                      {bin.qr_code}
-                    </TableCell>
-                    <TableCell>{siteName(bin.site_id)}</TableCell>
-                    <TableCell>{bin.bin_type}</TableCell>
-                    <TableCell>{bin.volume_liters}</TableCell>
-                    <TableCell>{bin.lat.toFixed(5)}</TableCell>
-                    <TableCell>{bin.lng.toFixed(5)}</TableCell>
-                    <TableCell align="right">
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<DownloadIcon />}
-                        onClick={() => void downloadQr(bin)}
-                      >
-                        {t("downloadQr")}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
+        {bins.length === 0 ? <Muted>{t("noData")}</Muted> : <DataTable rows={bins} columns={columns} />}
       </SectionCard>
     </PageStack>
   );

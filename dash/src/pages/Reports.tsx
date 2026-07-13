@@ -1,16 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
 import CloseIcon from "@mui/icons-material/Close";
 import PhotoOutlinedIcon from "@mui/icons-material/PhotoOutlined";
 import { api, apiBlob, type Bin, type Observation } from "../api";
+import { DataTable, type GridColDef } from "../components/DataTable";
 import { Muted, PageStack, SectionCard } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
@@ -40,6 +36,43 @@ export default function Reports() {
   const binCode = (id: string | null) =>
     id === null ? t("noBin") : (bins.find((b) => b.id === id)?.qr_code ?? id.slice(0, 8));
 
+  const columns: GridColDef<Observation>[] = [
+    { field: "captured_at", headerName: t("capturedAt"), flex: 1, minWidth: 170, valueFormatter: (v) => new Date(v as string).toLocaleString() },
+    {
+      field: "bin_id",
+      headerName: t("bin"),
+      flex: 1,
+      minWidth: 120,
+      valueGetter: (_v, row) => binCode(row.bin_id),
+      renderCell: (p) => <Box sx={{ fontFamily: "ui-monospace, monospace" }}>{p.value as string}</Box>,
+    },
+    {
+      field: "fill_tap",
+      headerName: t("fillTap"),
+      width: 120,
+      renderCell: (p) => (p.value ? <Chip size="small" label={t(p.value as StringKey)} /> : "—"),
+    },
+    { field: "location_source", headerName: t("source"), width: 120 },
+    {
+      field: "privacy_status",
+      headerName: t("privacy"),
+      width: 120,
+      renderCell: (p) => <Chip size="small" variant="outlined" label={p.value as string} />,
+    },
+    {
+      field: "photo",
+      headerName: t("photo"),
+      width: 110,
+      sortable: false,
+      filterable: false,
+      renderCell: (p) => (
+        <Button variant="text" size="small" startIcon={<PhotoOutlinedIcon />} onClick={() => void viewPhoto(p.row.id)}>
+          {t("view")}
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <PageStack>
       <SectionCard
@@ -60,51 +93,7 @@ export default function Reports() {
         {observations.length === 0 ? (
           <Muted>{t("noData")}</Muted>
         ) : (
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{t("capturedAt")}</TableCell>
-                  <TableCell>{t("bin")}</TableCell>
-                  <TableCell>{t("fillTap")}</TableCell>
-                  <TableCell>{t("source")}</TableCell>
-                  <TableCell>{t("privacy")}</TableCell>
-                  <TableCell>{t("photo")}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {observations.map((obs) => (
-                  <TableRow key={obs.id} hover>
-                    <TableCell>{new Date(obs.captured_at).toLocaleString()}</TableCell>
-                    <TableCell sx={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
-                      {binCode(obs.bin_id)}
-                    </TableCell>
-                    <TableCell>
-                      {obs.fill_tap ? (
-                        <Chip size="small" label={t(obs.fill_tap as StringKey)} />
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell>{obs.location_source}</TableCell>
-                    <TableCell>
-                      <Chip size="small" variant="outlined" label={obs.privacy_status} />
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="text"
-                        size="small"
-                        startIcon={<PhotoOutlinedIcon />}
-                        onClick={() => void viewPhoto(obs.id)}
-                      >
-                        {t("view")}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable rows={observations} columns={columns} pageSize={15} />
         )}
       </SectionCard>
     </PageStack>

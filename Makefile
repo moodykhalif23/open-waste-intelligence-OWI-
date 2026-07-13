@@ -2,7 +2,7 @@
 COMPOSE := docker compose --profile prod
 ADMIN_PHONE ?= +254700000000
 
-.PHONY: help web up down restart logs ps smoke bootstrap dev build clean
+.PHONY: help web up down restart logs ps smoke bootstrap dev build clean ml-setup ml-data ml-train ml-register
 
 help: ## Show available targets
 	@echo OpenWaste Intelligence — make targets:
@@ -56,3 +56,16 @@ dev: ## Print source dev-server commands
 
 clean: ## Stop and remove volumes (DESTROYS local data)
 	$(COMPOSE) down -v
+
+ml-setup: ## Install the ML training stack (PyTorch etc.)
+	cd ml && uv sync --group train
+
+ml-data: ## Download public training data (TrashNet)
+	cd ml && uv run --group train python -m owi_ml.data.download
+
+ml-train: ## Train the T2 material classifier on downloaded data
+	cd ml && uv run --group train python -m owi_ml.train.classify --data datasets/trashnet
+
+ml-register: ## Publish + activate the trained model (API_URL, TOKEN required)
+	cd ml && uv run python -m owi_ml.registry --api $(API_URL) --token $(TOKEN) \
+		--task classify --version $(VERSION) --onnx artifacts/classifier.onnx --metrics artifacts/metrics.json

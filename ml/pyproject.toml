@@ -15,6 +15,15 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.11",
 ]
+# Heavy training stack — kept out of the base install; `make ml-setup` pulls it.
+train = [
+    "torch>=2.2",
+    "torchvision>=0.17",
+    "pillow>=10.2",
+    "pyarrow>=16.0",
+    "numpy>=1.26",
+    "onnx>=1.16",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -34,6 +43,11 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 strict = true
 packages = ["owi_ml"]
 mypy_path = "src"
+
+[[tool.mypy.overrides]]
+# Training stack is an optional extra; its imports live inside functions.
+module = ["torch.*", "torchvision.*", "PIL.*", "pyarrow.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

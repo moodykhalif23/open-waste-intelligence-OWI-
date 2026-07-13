@@ -10,7 +10,7 @@
 |---|---|---|---|
 | T1 Waste object detection | Object detection | photo | bounding boxes: waste items |
 | T2 Material classification | Classification (per box or per region) | photo + boxes | plastic / glass / metal / paper / organic / e-waste / textile / other |
-| T3 Bin fill-level estimation | Ordinal classification | photo of registered bin | empty / low / half / high / overflowing + confidence |
+| T3 Bin fill-level estimation | Ordinal classification | photo of **any** bin | empty / low / half / high / overflowing + confidence |
 | T4 Dumping candidate flagging | Scene classification + change detection | photo of non-bin location, or repeat photos of same spot | "waste accumulation present" score |
 | T5 Person/face detection (privacy gate) | Detection | every ingested photo | blur regions (applied then discarded) |
 | T6 Quantity estimation | Regression (later phase) | photo + boxes | item counts; volume estimate via bin-relative calibration |
@@ -68,7 +68,7 @@ Rules: report at top level; sub-classes are best-effort and drive M5 (recycling 
 | Task | Baseline (Phase 1) | Notes |
 |---|---|---|
 | T1+T2 | Single-stage detector with material classes (YOLO-family, small/medium variant), fine-tuned TACO → Safi dataset | **Licensing:** Ultralytics YOLOv8/11 is AGPL-3.0 — acceptable since OWI is open-source anyway, but evaluate Apache-2.0 alternatives (RT-DETR via PaddleDetection/HF, YOLO-NAS, RF-DETR) so downstream users aren't constrained. Decision = ADR in repo. |
-| T3 | CNN ordinal classifier (MobileNetV3/EfficientNet-lite head) per registered-bin crop | Bin registry stores a reference photo per bin → crop/align makes this much easier than open-world fill estimation. |
+| T3 | CNN ordinal classifier (MobileNetV3/EfficientNet-lite head) on the whole bin photo — **bin-type-agnostic**, works on any bin, no per-bin reference required | A registered bin's reference photo is an *optional* enhancement (crop/align) where available, never a requirement. Trains on fill-labeled bin photos from any source; generalizes across bin types so the model — and the whole platform — deploys for any operator, not just Safi. |
 | T4 | Two signals ORed: (a) T1 detection density at a non-bin location, (b) image-diff vs. reference photo of known hotspots | Always human-confirmed. Precision matters more than recall at first. |
 | T5 | Off-the-shelf person/face detector (e.g., YOLO person class + a face model) tuned for high recall | High recall > precision: over-blurring is acceptable, under-blurring is not. |
 

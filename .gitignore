@@ -15,6 +15,7 @@ dist/
 .env
 var/
 ml/datasets/
+ml/artifacts/
 *.onnx
 
 # OS / editors

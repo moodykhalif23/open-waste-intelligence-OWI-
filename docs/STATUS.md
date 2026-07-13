@@ -1,6 +1,24 @@
 # Build Status — single source of truth
 
-**This is the only place build progress is tracked.** Other docs describe the product and its plans; when something ships, it gets recorded here and removed from any checklist elsewhere. Last updated: **2026-07-12**.
+**This is the only place build progress is tracked.** Other docs describe the product and its plans; when something ships, it gets recorded here and removed from any checklist elsewhere. Last updated: **2026-07-13**.
+
+## Feature completeness vs docs (honest audit)
+
+Platform foundation (ingestion, privacy gate, image-quality gate, auth + RBAC, bin registry, object store, batch queue, model registry, review queue, deploy, ML training harness) is **done**. Per-module against the docs:
+
+| Module | State | Remaining to be "fully featured" |
+|---|---|---|
+| M2 Bin Health | **done** | overflow WhatsApp/SMS digest (M2-F5); bin history page with fill curve (M2-F7) |
+| M4 Route Optimization | **done** | plan-vs-actual from GPS breadcrumbs (M4-F4); what-if scenario runner (M4-F6) |
+| M8 Volunteer Analytics | **done** | spreadsheet bulk import (M8-F2); volunteer certificates (M8-F6); WeasyPrint PDF |
+| M1 Waste Classification | **partial** | model (baseline training now); composition aggregates + headline view (M1-F2); comparison/trend views (M1-F3); sorting-ground-truth calibration (M1-F4); aggregate→observation drill-down (M1-F6) |
+| M3 Illegal Dumping | **not started** | candidate flagging + review queue, hotspot map, per-site timeline, intervention tracking |
+| M5 Recycling Intelligence | **not started** | material volume + kg tracking, KES price table, value dashboard, partner registry, sorting reconciliation |
+| M6 Cleanliness Index | **not started** | area boundaries, daily 0–100 score + components, trends, data-sufficiency guard, methodology page |
+| M7 Carbon Impact | **not started** | factor table (carbon-factors-v1.csv), calc engine, dashboard, uncertainty ranges |
+| Open Data API | **not started** | aggregates-only public endpoints, small-cell suppression, API keys, 7-day delay |
+
+These are tracked so we complete them **one module at a time, fully** — not half-built across the board. Order follows the roadmap: M1 composition views next (once the classifier trains), then M5/M3 (Phase 2), then M6/M7/Open API (Phase 3).
 
 ## Done
 

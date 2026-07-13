@@ -23,7 +23,7 @@ const theme = createTheme({
       contrastText: "#ffffff",
     },
     success: { main: emerald[600] },
-    background: { default: "#f7f9f8", paper: "#ffffff" },
+    background: { default: "#e6f2ea", paper: "#ffffff" },
     text: { primary: "#0f172a", secondary: "#64748b" },
     divider: border,
   },

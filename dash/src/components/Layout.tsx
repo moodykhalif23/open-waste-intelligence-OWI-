@@ -29,13 +29,8 @@ import { NAV, locate } from "../nav";
 const DRAWER_WIDTH = 232;
 
 function BinMark() {
-  return (
-    <svg viewBox="0 0 64 64" width="24" height="24" aria-hidden>
-      <path d="M22 26h20l-2 24a3 3 0 0 1-3 2.7H27a3 3 0 0 1-3-2.7z" fill="#059669" />
-      <rect x="20" y="22" width="24" height="4" rx="2" fill="#059669" />
-      <rect x="28" y="17" width="8" height="4" rx="2" fill="#059669" />
-    </svg>
-  );
+  // Same mark as the favicon (public/icon.svg) so the brand reads consistently.
+  return <Box component="img" src="/icon.svg" alt="OpenWaste" sx={{ width: 26, height: 26, display: "block" }} />;
 }
 
 export default function Layout() {

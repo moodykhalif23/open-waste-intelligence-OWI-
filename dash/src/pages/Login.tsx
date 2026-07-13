@@ -61,11 +61,11 @@ export default function Login() {
               placeItems: "center",
               width: 56,
               height: 56,
-              borderRadius: 3,
-              bgcolor: "rgba(52,211,153,0.14)",
+              borderRadius: "8px",
+              bgcolor: "#ffffff",
             }}
           >
-            <BinMark size={34} />
+            <Box component="img" src="/icon.svg" alt="" sx={{ width: 36, height: 36, display: "block" }} />
           </Box>
           <Typography sx={{ fontWeight: 720, fontSize: "1.4rem", letterSpacing: "-0.02em" }}>
             OpenWaste
@@ -93,11 +93,11 @@ export default function Login() {
                 placeItems: "center",
                 width: 44,
                 height: 44,
-                borderRadius: 2.5,
+                borderRadius: "8px",
                 bgcolor: "#ecfdf5",
               }}
             >
-              <BinMark size={28} color="#059669" />
+              <Box component="img" src="/icon.svg" alt="" sx={{ width: 30, height: 30, display: "block" }} />
             </Box>
             <Typography sx={{ fontWeight: 700, fontSize: "1.15rem", letterSpacing: "-0.01em" }}>
               OpenWaste Intelligence

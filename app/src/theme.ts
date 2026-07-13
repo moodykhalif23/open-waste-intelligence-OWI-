@@ -9,7 +9,7 @@ const theme = createTheme({
     mode: "light",
     primary: { main: emerald[600], light: emerald[500], dark: emerald[700], contrastText: "#fff" },
     success: { main: emerald[600] },
-    background: { default: "#f6f8f7", paper: "#ffffff" },
+    background: { default: "#e6f2ea", paper: "#ffffff" },
     text: { primary: "#0f172a", secondary: "#64748b" },
     divider: "#e8ebf0",
   },

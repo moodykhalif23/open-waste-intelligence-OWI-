@@ -23,6 +23,7 @@ import Toolbar from "@mui/material/Toolbar";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import AccountCircleOutlined from "@mui/icons-material/AccountCircleOutlined";
+import ChevronRightOutlined from "@mui/icons-material/ChevronRightOutlined";
 import CheckOutlined from "@mui/icons-material/CheckOutlined";
 import LanguageOutlined from "@mui/icons-material/LanguageOutlined";
 import LogoutOutlined from "@mui/icons-material/LogoutOutlined";
@@ -47,6 +48,7 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [acct, setAcct] = useState<null | HTMLElement>(null);
   const [alerts, setAlerts] = useState(0);
+  const [collectCount, setCollectCount] = useState(0);
 
   const here = locate(location.pathname);
   const barTitle = here ? t(here.entry.key) : t("appName");
@@ -55,7 +57,15 @@ export default function Layout() {
     void api<{ unreviewed: number }>("/api/v1/predictions")
       .then((r) => setAlerts(r.unreviewed ?? 0))
       .catch(() => setAlerts(0));
+    void api<{ recommendation: string }[]>("/api/v1/bins/health")
+      .then((rows) => setCollectCount(rows.filter((r) => r.recommendation === "collect_today").length))
+      .catch(() => setCollectCount(0));
   }, [location.pathname]);
+
+  const ops = [
+    { count: collectCount, label: t("toCollect"), to: "/collect", bg: "#fef2f2", fg: "#b91c1c" },
+    { count: alerts, label: t("toReview"), to: "/records/review", bg: "#ecfdf5", fg: "#047857" },
+  ];
 
   const isActive = (path: string) =>
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
@@ -91,6 +101,59 @@ export default function Layout() {
           </ListItemButton>
         ))}
       </List>
+
+      <Box sx={{ p: 1.5, borderTop: "1px solid", borderColor: "divider" }}>
+        <Typography variant="overline" sx={{ display: "block", px: 1, mb: 0.5, color: "text.secondary", fontSize: "0.68rem" }}>
+          {t("today")}
+        </Typography>
+        {ops.map((row) => {
+          const zero = row.count === 0;
+          return (
+            <Box
+              key={row.to}
+              component="button"
+              onClick={() => {
+                navigate(row.to);
+                setMobileOpen(false);
+              }}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1.25,
+                width: "100%",
+                border: "none",
+                bgcolor: "transparent",
+                cursor: "pointer",
+                borderRadius: "6px",
+                px: 1,
+                py: 0.75,
+                "&:hover": { bgcolor: "#f1f5f4" },
+              }}
+            >
+              <Box
+                sx={{
+                  minWidth: 34,
+                  height: 30,
+                  px: 1,
+                  display: "grid",
+                  placeItems: "center",
+                  borderRadius: "6px",
+                  fontWeight: 800,
+                  fontSize: "1rem",
+                  bgcolor: zero ? "#f1f5f4" : row.bg,
+                  color: zero ? "text.secondary" : row.fg,
+                }}
+              >
+                {row.count}
+              </Box>
+              <Typography sx={{ flex: 1, textAlign: "left", fontWeight: 570, fontSize: "0.92rem" }}>
+                {row.label}
+              </Typography>
+              <ChevronRightOutlined sx={{ fontSize: 18, color: "text.secondary" }} />
+            </Box>
+          );
+        })}
+      </Box>
     </Box>
   );
 

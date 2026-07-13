@@ -7,9 +7,6 @@ Anchored by a real operating partner — **Safi Cleaners and Recyclers**, a Comm
 > Not another waste management app. Instead of saying *"there is garbage here,"* OWI answers:
 > How much? What type? How fast is it accumulating? How long before overflow? How efficient are collections? Which neighborhoods need more bins? Which routes waste fuel? Which recyclables are most common? Which locations are repeatedly littered?
 
-## Why this project is different
-
-Most waste-tech projects die because they are built in a lab with no ground truth. OWI is built **operations-first**: every model, metric, and dashboard is validated against the daily reality of a working CBO — its trucks, its collectors, its bins, its neighborhoods. If an analytic doesn't change a decision Safi makes, it doesn't ship.
 
 ## The pipeline
 
@@ -73,10 +70,6 @@ Read in this order if you're new:
 14. [docs/glossary.md](docs/glossary.md) — shared vocabulary
 
 Contributors: see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Status
-
-**Phase 0 — Foundation, code underway** (started 2026-07-12). Backend spine (ingestion + privacy gate + auth + bin registry), field PWA spike, and dashboard skeleton are built and verified end-to-end. Progress is tracked in exactly one place: [docs/STATUS.md](docs/STATUS.md).
 
 ## License
 

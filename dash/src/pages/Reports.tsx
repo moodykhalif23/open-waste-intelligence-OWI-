@@ -1,13 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import Grid from "@mui/material/Grid";
 import CloseIcon from "@mui/icons-material/Close";
 import PhotoOutlinedIcon from "@mui/icons-material/PhotoOutlined";
+import PhotoCameraOutlined from "@mui/icons-material/PhotoCameraOutlined";
+import LinkOutlined from "@mui/icons-material/LinkOutlined";
+import WarningAmberOutlined from "@mui/icons-material/WarningAmberOutlined";
+import MyLocationOutlined from "@mui/icons-material/MyLocationOutlined";
 import { api, apiBlob, type Bin, type Observation } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import { Muted, PageStack, SectionCard } from "../components/ui";
+import { Muted, PageHeader, PageStack, SectionCard, StatCard } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
 export default function Reports() {
@@ -21,9 +26,19 @@ export default function Reports() {
   useEffect(() => {
     setObservations(null);
     const q = material ? `&material=${encodeURIComponent(material)}` : "";
-    void api<Observation[]>(`/api/v1/observations?limit=200${q}`).then(setObservations);
+    void api<Observation[]>(`/api/v1/observations?limit=1000${q}`).then(setObservations);
     void api<Bin[]>("/api/v1/bins").then(setBins);
   }, [material]);
+
+  const stats = useMemo(() => {
+    const list = observations ?? [];
+    return {
+      total: list.length,
+      linked: list.filter((o) => o.bin_id).length,
+      overflowing: list.filter((o) => o.fill_tap === "overflowing").length,
+      sources: new Set(list.map((o) => o.location_source)).size,
+    };
+  }, [observations]);
 
   async function viewPhoto(id: string) {
     const blob = await apiBlob(`/api/v1/observations/${id}/image`);
@@ -75,6 +90,23 @@ export default function Reports() {
 
   return (
     <PageStack>
+      <PageHeader description={t("reportsHub")} />
+
+      <Grid container spacing={{ xs: 1.5, md: 2 }}>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard label={t("reportsTotal")} value={stats.total.toLocaleString()} icon={<PhotoCameraOutlined />} />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard label={t("reportsLinked")} value={stats.linked.toLocaleString()} icon={<LinkOutlined />} />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard label={t("overflowing")} value={stats.overflowing.toLocaleString()} color="#c0392b" icon={<WarningAmberOutlined />} />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard label={t("reportsSources")} value={stats.sources} icon={<MyLocationOutlined />} />
+        </Grid>
+      </Grid>
+
       <SectionCard
         title={t("reports")}
         action={
@@ -93,7 +125,7 @@ export default function Reports() {
         {observations.length === 0 ? (
           <Muted>{t("noData")}</Muted>
         ) : (
-          <DataTable rows={observations} columns={columns} pageSize={15} />
+          <DataTable rows={observations} columns={columns} pageSize={25} />
         )}
       </SectionCard>
     </PageStack>

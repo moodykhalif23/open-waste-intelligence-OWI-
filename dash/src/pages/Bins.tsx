@@ -8,6 +8,7 @@ import TextField from "@mui/material/TextField";
 import DownloadIcon from "@mui/icons-material/Download";
 import { api, apiBlob, type Bin, type Site } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
+import MapView from "../components/MapView";
 import { Muted, PageStack, SectionCard } from "../components/ui";
 import { useI18n } from "../i18n";
 
@@ -92,6 +93,14 @@ export default function Bins() {
           <BinForm sites={sites} onCreated={reload} />
         </Grid>
       </Grid>
+      {bins.length > 0 && (
+        <SectionCard title={t("map")}>
+          <MapView
+            points={bins.map((b) => ({ lat: b.lat, lng: b.lng, label: `${b.qr_code} · ${siteName(b.site_id)}` }))}
+          />
+        </SectionCard>
+      )}
+
       <SectionCard title={t("bins")}>
         {bins.length === 0 ? <Muted>{t("noData")}</Muted> : <DataTable rows={bins} columns={columns} />}
       </SectionCard>

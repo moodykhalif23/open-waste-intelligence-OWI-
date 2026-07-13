@@ -17,7 +17,9 @@ import DeleteOutlineOutlined from "@mui/icons-material/DeleteOutlineOutlined";
 import RouteOutlined from "@mui/icons-material/RouteOutlined";
 import LocalGasStationOutlined from "@mui/icons-material/LocalGasStationOutlined";
 import { api } from "../api";
+import { CATEGORICAL } from "../components/EChart";
 import { DataTable, type GridColDef } from "../components/DataTable";
+import MapView, { type MapLine, type MapPoint } from "../components/MapView";
 import { Muted, PageHeader, PageStack, Panel, SectionCard, StatCard } from "../components/ui";
 import { useI18n } from "../i18n";
 
@@ -135,6 +137,18 @@ export default function Routes() {
   const totalKm = routes.reduce((s, r) => s + r.planned_km, 0);
   const totalFuel = routes.reduce((s, r) => s + r.planned_fuel_l, 0);
 
+  const routeColor = (i: number) => CATEGORICAL[i % CATEGORICAL.length] ?? "#101828";
+  const mapPoints: MapPoint[] = routes.flatMap((r, i) =>
+    r.stops.map((s) => ({ lat: s.lat, lng: s.lng, color: routeColor(i), label: `${r.truck_name} · #${s.seq} ${s.qr_code}` })),
+  );
+  const mapLines: MapLine[] = routes
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => r.stops.length > 1)
+    .map(({ r, i }) => ({
+      color: routeColor(i),
+      points: [...r.stops].sort((a, b) => a.seq - b.seq).map((s) => [s.lat, s.lng] as [number, number]),
+    }));
+
   const truckCols: GridColDef<Truck>[] = [
     { field: "name", headerName: t("name"), flex: 1, minWidth: 120 },
     { field: "capacity_kg", headerName: t("capacityKg"), type: "number", width: 120 },
@@ -191,6 +205,11 @@ export default function Routes() {
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
+        )}
+        {mapPoints.length > 0 && (
+          <Box sx={{ mb: 2.5 }}>
+            <MapView points={mapPoints} lines={mapLines} height={360} />
+          </Box>
         )}
         {routes.length === 0 ? (
           <Muted>{t("noRoutes")}</Muted>

@@ -185,44 +185,37 @@ export function StatCard({
 }) {
   return (
     <Card sx={{ height: "100%" }}>
-      <CardContent>
-        <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1 }}>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography
-              sx={{
-                fontWeight: 720,
-                letterSpacing: "-0.02em",
-                fontSize: "1.95rem",
-                lineHeight: 1.05,
-                color,
-              }}
-            >
-              {value}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-              {label}
-            </Typography>
-          </Box>
+      <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+          <Typography
+            variant="overline"
+            sx={{ color: "text.secondary", fontSize: "0.68rem", lineHeight: 1.4, letterSpacing: "0.06em" }}
+          >
+            {label}
+          </Typography>
           {icon && (
             <Box
               sx={{
                 display: "grid",
                 placeItems: "center",
-                width: 38,
-                height: 38,
+                width: 28,
+                height: 28,
                 borderRadius: "4px",
                 flexShrink: 0,
                 bgcolor: "#fbeecf",
                 color: "#835a09",
-                "& svg": { fontSize: 20 },
+                "& svg": { fontSize: 17 },
               }}
             >
               {icon}
             </Box>
           )}
         </Box>
+        <Typography sx={{ fontWeight: 720, letterSpacing: "-0.02em", fontSize: "1.5rem", lineHeight: 1.1, mt: 0.5, color }}>
+          {value}
+        </Typography>
         {sub && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
             {sub}
           </Typography>
         )}

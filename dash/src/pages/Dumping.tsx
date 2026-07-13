@@ -18,6 +18,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import { api, apiBlob } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
+import MapView from "../components/MapView";
 import { Muted, PageStack, SectionCard } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
@@ -63,6 +64,12 @@ const STATUS_COLOR: Record<Site["status"], "error" | "warning" | "success"> = {
   active: "error",
   recurring: "warning",
   cleaned: "success",
+};
+
+const STATUS_HEX: Record<Site["status"], string> = {
+  active: "#c0392b",
+  recurring: "#b4791a",
+  cleaned: "#0e7a55",
 };
 
 export default function Dumping() {
@@ -153,7 +160,17 @@ export default function Dumping() {
         {sites.length === 0 ? (
           <Muted>{t("noSites")}</Muted>
         ) : (
-          <DataTable rows={sites} columns={siteCols} />
+          <Stack spacing={2.5}>
+            <MapView
+              points={sites.map((s) => ({
+                lat: s.lat,
+                lng: s.lng,
+                color: STATUS_HEX[s.status],
+                label: `${t(`dump_${s.status}` as StringKey)} · ${s.hotspot_score}`,
+              }))}
+            />
+            <DataTable rows={sites} columns={siteCols} />
+          </Stack>
         )}
       </SectionCard>
 

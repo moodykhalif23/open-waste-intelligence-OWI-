@@ -66,6 +66,7 @@ ml-data: ## Download public training data (TrashNet)
 ml-train: ## Train the T2 material classifier on downloaded data
 	cd ml && uv run --group train python -m owi_ml.train.classify --data datasets/trashnet
 
-ml-register: ## Publish + activate the trained model (API_URL, TOKEN required)
+ml-register: ## Publish + activate the trained model (API_URL, TOKEN, VERSION required)
 	cd ml && uv run python -m owi_ml.registry --api $(API_URL) --token $(TOKEN) \
-		--task classify --version $(VERSION) --onnx artifacts/classifier.onnx --metrics artifacts/metrics.json
+		--task classify --version $(VERSION) --onnx artifacts/classifier.onnx \
+		--labels artifacts/labels.json --metrics artifacts/metrics.json

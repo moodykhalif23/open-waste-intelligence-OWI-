@@ -20,6 +20,9 @@ class MLModel(OwiRow, Base):
     dataset_hash: Mapped[str | None] = mapped_column(String(64))
     metrics: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
     active: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Object-store key of the ONNX artifact; class order the model's outputs map to.
+    artifact_ref: Mapped[str | None] = mapped_column(String(300))
+    labels: Mapped[list[str]] = mapped_column(JSONB, default=list)
 
 
 class Prediction(OwiRow, Base):

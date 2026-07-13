@@ -2,12 +2,14 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
+from owi_api.config import settings
 from owi_api.db import get_session
+from owi_api.ingestion.storage import ObjectStore, get_store
 from owi_api.models.enums import PredictionTask, UserRole
 from owi_api.models.prediction import MLModel
 from owi_api.routers.auth import require_roles
@@ -16,12 +18,17 @@ from owi_api.security import TokenClaims
 router = APIRouter(prefix="/api/v1/models", tags=["models"])
 
 
+def get_object_store() -> ObjectStore:
+    return get_store(settings)
+
+
 class ModelIn(BaseModel):
     task: PredictionTask
     version: str = Field(min_length=1, max_length=50)
     git_commit: str | None = None
     dataset_hash: str | None = None
     metrics: dict[str, float] = Field(default_factory=dict)
+    labels: list[str] = Field(default_factory=list)
     activate: bool = True
 
 
@@ -64,6 +71,7 @@ def register_model(
     model.git_commit = body.git_commit
     model.dataset_hash = body.dataset_hash
     model.metrics = dict(body.metrics)
+    model.labels = list(body.labels)
     if body.activate:
         # Exactly one active model per task: the batch worker runs whatever is active.
         session.execute(
@@ -72,6 +80,24 @@ def register_model(
             .values(active=False)
         )
         model.active = True
+    session.commit()
+    return _to_out(model)
+
+
+@router.put("/{model_id}/artifact", response_model=ModelOut)
+async def upload_artifact(
+    model_id: uuid.UUID,
+    file: UploadFile,
+    requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN)],
+    session: Annotated[Session, Depends(get_session)],
+    store: Annotated[ObjectStore, Depends(get_object_store)],
+) -> ModelOut:
+    model = session.get(MLModel, model_id)
+    if model is None or model.org_id != requester.org_id:
+        raise HTTPException(status_code=404, detail="model not found")
+    key = f"models/{model.org_id}/{model.id}.onnx"
+    store.put(key, await file.read(), "application/octet-stream")
+    model.artifact_ref = key
     session.commit()
     return _to_out(model)
 

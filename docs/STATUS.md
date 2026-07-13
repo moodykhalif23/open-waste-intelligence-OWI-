@@ -11,7 +11,7 @@ Platform foundation (ingestion, privacy gate, image-quality gate, auth + RBAC, b
 | M2 Bin Health             | **done**        | overflow WhatsApp/SMS digest (M2-F5); bin history page with fill curve (M2-F7)                                                                                                                     |
 | M4 Route Optimization     | **done**        | plan-vs-actual from GPS breadcrumbs (M4-F4); what-if scenario runner (M4-F6)                                                                                                                       |
 | M8 Volunteer Analytics    | **done**        | spreadsheet bulk import (M8-F2); volunteer certificates (M8-F6); WeasyPrint PDF.                                                                                                                   |
-| M1 Waste Classification   | **partial**     | model (baseline training now); composition aggregates + headline view (M1-F2); comparison/trend views (M1-F3); sorting-ground-truth calibration (M1-F4); aggregate→observation drill-down (M1-F6) |
+| M1 Waste Classification   | **partial**     | real baseline model trained + registered active (macro-F1 0.73 on public data — below the 0.80 gate, as expected pre-local-data); still needed: worker runs the ONNX to write predictions; composition aggregates + headline view (M1-F2); comparison/trend views (M1-F3); sorting-ground-truth calibration (M1-F4); aggregate→observation drill-down (M1-F6) |
 | M3 Illegal Dumping        | **not started** | candidate flagging + review queue, hotspot map, per-site timeline, intervention tracking                                                                                                           |
 | M5 Recycling Intelligence | **not started** | material volume + kg tracking, KES price table, value dashboard, partner registry, sorting reconciliation                                                                                          |
 | M6 Cleanliness Index      | **not started** | area boundaries, daily 0–100 score + components, trends, data-sufficiency guard, methodology page                                                                                                 |
@@ -58,6 +58,15 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 - `python -m owi_ml.labeling.export_coco`: COCO snapshot zip → `ml/datasets/snapshots/` (gitignored)
 - Verified live: 12 ingested images synced as tasks; export produces valid COCO with all 8 categories
 - **Phase 0 engineering tasks (roadmap build order 1–6) are now all delivered**
+
+### Real ML training (`/ml`, 2026-07-13)
+- **T3 fill-level generalized** off Safi-specific bins → bin-type-agnostic (any bin photo; per-bin reference optional). Platform stays deployable by any operator.
+- `train` optional dep group (PyTorch, torchvision, onnx/onnxscript); `make ml-setup / ml-data / ml-train / ml-register`
+- `data/download.py`: pulls TrashNet (resized) → 2,528 real waste images mapped to OWI classes
+- `train/classify.py`: real MobileNetV3 fine-tune → deterministic golden-split eval with the macro-F1 gate → ONNX export (legacy exporter) + labels.json + metrics.json
+- `registry.py` CLI publishes to `POST /api/v1/models`; API register/activate/list endpoints (admin) — exactly one active model per task
+- **Verified live end-to-end**: trained (loss 0.71→0.19, golden macro-F1 0.73 / 86% acc), exported valid ONNX (`onnx.checker`), registered + activated in the API registry. Gate correctly reports below-0.80 for a public-only baseline — refuses to bless an under-trained model
+- Public-data strategy proven: pretrain on TrashNet now, fine-tune on the local Safi export when it exists; golden set stays local-only
 
 ### Infra & deployment
 
@@ -122,7 +131,8 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 
 ## Next up (rough order)
 
-1. Train the first models (T1/T2/T3): pretrain T1/T2 on public data now for a baseline, fine-tune on the labeled Safi export when it exists; needs the optional `train` dep group + images. Harness, golden gate, and registry activation are ready
+1. Worker inference: load the active model's ONNX + run it over ingested observations → write Prediction rows → predictions appear in the review queue (the last link to make the active-learning loop live). Needs model-artifact serving (store the ONNX where the worker can fetch it)
+2. Fine-tune on real Safi data once Phase 0 collection runs; push the baseline past the 0.80 golden gate
 2. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
 3. M1 composition views + M5 recycling value on the dashboard (arrive with the classification model)
 4. Grant report hardening: WeasyPrint server-side PDF; fold in composition (M1) + carbon (M7) sections once those land

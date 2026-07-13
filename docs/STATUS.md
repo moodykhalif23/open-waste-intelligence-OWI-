@@ -12,7 +12,7 @@ Platform foundation (ingestion, privacy gate, image-quality gate, auth + RBAC, b
 | M4 Route Optimization     | **done**        | plan-vs-actual from GPS breadcrumbs (M4-F4); what-if scenario runner (M4-F6)                                                                                                                       |
 | M8 Volunteer Analytics    | **done**        | spreadsheet bulk import (M8-F2); volunteer certificates (M8-F6); WeasyPrint PDF.                                                                                                                   |
 | M1 Waste Classification   | **done** (calibration pending data) | inference live (worker → review queue); composition aggregates + headline view (M1-F2); period-over-period comparison (M1-F3); material drill-down to observations (M1-F6). Only remaining: sorting-ground-truth calibration (M1-F4) — needs sorting-site weights that don't exist until the pilot |
-| M3 Illegal Dumping        | **not started** | candidate flagging + review queue, hotspot map, per-site timeline, intervention tracking                                                                                                           |
+| M3 Illegal Dumping        | **done** (model later) | human-confirm review queue over street observations, recency×frequency hotspot list, per-site timeline, intervention + recurrence tracking, coarse analytics. Candidate auto-flagging model comes with Phase 1 detection; a map view can replace the hotspot list later |
 | M5 Recycling Intelligence | **done** (calibration pending data) | material kg tracking, dated KES price table, value dashboard, partner registry + matching, supply-profile export all live. Only remaining: sorting-site reconciliation (M5-F5) — needs real sorted weights from the pilot |
 | M6 Cleanliness Index      | **not started** | area boundaries, daily 0–100 score + components, trends, data-sufficiency guard, methodology page                                                                                                 |
 | M7 Carbon Impact          | **not started** | factor table (carbon-factors-v1.csv), calc engine, dashboard, uncertainty ranges                                                                                                                   |
@@ -78,6 +78,14 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 - Verified live in containers (55/55 smoke checks): tonnage → composition → priced value; missing prices correctly yield KES 0; partner matching respects material + minimum
 - Honest: value chains two estimates (tonnage + photo composition), shown as indicative pending sorting-site calibration (M5-F5)
 
+### M3 Illegal Dumping (2026-07-13)
+- Governance-first: finds **locations, never people** (privacy gate blurs at ingestion); every candidate is **human-confirmed** before it becomes a record; site coordinates stay staff-only (no open API)
+- Data model (migration 0010): dumping sites / events / candidates / interventions
+- Review queue over non-bin (street) observations: confirm / reject / duplicate; confirm folds the point into a nearby site within 100 m (PostGIS `ST_DWithin`) or opens a new one, records an event, and re-derives status
+- Recency×frequency **hotspot list** (pure helper, 4 unit tests), per-site **timeline** (events + interventions), **intervention tracking** with automatic recurrence detection (a confirmed event after a cleanup → status `recurring` — the module's real product: which interventions actually work), and coarse analytics (by weekday / area)
+- Dashboard **Dumping** page: candidate review with photo, hotspot table with status badges, site panel with timeline + record-intervention
+- Verified live in containers (61/61 smoke checks): street obs → candidate → confirmed site → double-review blocked (409) → cleanup intervention → status flips to cleaned
+
 ### Infra & deployment
 
 - `docker-compose.yml` at repo root (Postgres+PostGIS, Redis, MinIO, Label Studio); all secrets and URLs in the single gitignored repo-root `.env`; frontends are same-origin (`/api` proxied in dev, reverse proxy in production) with zero hardcoded URLs
@@ -141,9 +149,10 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 
 ## Next up (rough order)
 
-1. M3 Illegal Dumping (Phase 2): non-bin accumulation observations, human-confirm review queue, hotspot list, intervention tracking — the last Phase 2 module
-2. M7 Carbon Impact (Phase 3): factor table + calc engine on M5's calibrated weights; then M6 Cleanliness Index; then the Open Data API
-3. Fine-tune on real Safi data once Phase 0 collection runs; push the baseline past the 0.80 golden gate
+1. M7 Carbon Impact (Phase 3): factor table (carbon-factors-v1.csv) + calc engine on M5's material weights, uncertainty ranges, dashboard
+2. M6 Cleanliness Index (Phase 3): area 0–100 score from litter/overflow/dumping/reliability signals (M1–M4 already produce them), methodology page, data-sufficiency guard
+3. Open Data API (Phase 3): aggregates-only public endpoints, small-cell suppression, API keys, 7-day delay
+4. Fine-tune on real Safi data once Phase 0 collection runs; push the baseline past the 0.80 golden gate
 2. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
 3. M1 composition views + M5 recycling value on the dashboard (arrive with the classification model)
 4. Grant report hardening: WeasyPrint server-side PDF; fold in composition (M1) + carbon (M7) sections once those land

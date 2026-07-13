@@ -14,7 +14,7 @@ Platform foundation (ingestion, privacy gate, image-quality gate, auth + RBAC, b
 | M1 Waste Classification   | **done** (calibration pending data) | inference live (worker → review queue); composition aggregates + headline view (M1-F2); period-over-period comparison (M1-F3); material drill-down to observations (M1-F6). Only remaining: sorting-ground-truth calibration (M1-F4) — needs sorting-site weights that don't exist until the pilot |
 | M3 Illegal Dumping        | **done** (model later) | human-confirm review queue over street observations, recency×frequency hotspot list, per-site timeline, intervention + recurrence tracking, coarse analytics. Candidate auto-flagging model comes with Phase 1 detection; a map view can replace the hotspot list later |
 | M5 Recycling Intelligence | **done** (calibration pending data) | material kg tracking, dated KES price table, value dashboard, partner registry + matching, supply-profile export all live. Only remaining: sorting-site reconciliation (M5-F5) — needs real sorted weights from the pilot |
-| M6 Cleanliness Index      | **not started** | area boundaries, daily 0–100 score + components, trends, data-sufficiency guard, methodology page                                                                                                 |
+| M6 Cleanliness Index      | **done** (litter + public page later) | daily 0–100 per-area score from overflow + dumping + reliability signals, decomposable component breakdown, data-sufficiency guard, versioned methodology, stored daily for trends. Remaining: litter-density component (needs detection model), GeoJSON area boundaries + opt-in public page |
 | M7 Carbon Impact          | **done** (external review pending) | cited factor table (`carbon-factors-v1.csv`), calc engine over M5 weights with method version + uncertainty ranges, dashboard, grant-report carbon block. Only remaining: external methodology review + Kenyan-context factors (governance ask, needs a reviewer) |
 | Open Data API             | **not started** | aggregates-only public endpoints, small-cell suppression, API keys, 7-day delay                                                                                                                    |
 
@@ -94,6 +94,13 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 - Hard line honored: never presented as carbon credits; no factor without a citation, no number without a version
 - Verified live in containers (63/63 smoke checks)
 
+### M6 Cleanliness Index (2026-07-13)
+- Weighted 0–100 per-area score (pure engine, 4 unit tests) from the signals other modules already produce: bin overflow (M2), illegal dumping proximity (M3, PostGIS distance + recency decay), collection reliability (M2/M4). Litter density (0.35) awaits the detection model, so v1 renormalizes weights over present components and says so
+- **Decomposable** (M6-F2): every score returns its component breakdown; **data-sufficiency guard** (M6-F4): < 10 observations → "insufficient data", never a misleading score; **versioned methodology** endpoint (M6-F6, `cleanliness-v1`) framed as trends-not-shame, never a staff metric
+- Daily snapshots (`cleanliness_daily`, migration 0011) recomputed by the scheduler + admin refresh, so trends have real history; `GET /cleanliness`, `/cleanliness/methodology`, `/cleanliness/trend`
+- Dashboard **Cleanliness** page: per-area score badge + component bars + methodology note
+- Verified live in containers (65/65 smoke checks): components compute, sufficiency guard withholds scores on thin data
+
 ### Infra & deployment
 
 - `docker-compose.yml` at repo root (Postgres+PostGIS, Redis, MinIO, Label Studio); all secrets and URLs in the single gitignored repo-root `.env`; frontends are same-origin (`/api` proxied in dev, reverse proxy in production) with zero hardcoded URLs
@@ -157,9 +164,8 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 
 ## Next up (rough order)
 
-1. M6 Cleanliness Index (Phase 3): area 0–100 score from litter/overflow/dumping/reliability signals (M1–M4 already produce them all), methodology page, data-sufficiency guard
-2. Open Data API (Phase 3): aggregates-only public endpoints, small-cell suppression, API keys, 7-day delay — the last module
-3. Fine-tune on real Safi data once Phase 0 collection runs; push the baseline past the 0.80 golden gate
+1. Open Data API (Phase 3): aggregates-only public endpoints, small-cell suppression (< 3 bins / < 20 obs), API keys, 7-day delay, CC-BY attribution — the last module
+2. Fine-tune on real Safi data once Phase 0 collection runs; push the baseline past the 0.80 golden gate
 2. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
 3. M1 composition views + M5 recycling value on the dashboard (arrive with the classification model)
 4. Grant report hardening: WeasyPrint server-side PDF; fold in composition (M1) + carbon (M7) sections once those land

@@ -8,11 +8,12 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from owi_api.analytics.osrm import get_distance_matrix
+from owi_api.analytics.refresh import refresh_bin
 from owi_api.analytics.routing import Stop, TruckSpec, solve_routes
 from owi_api.config import settings
 from owi_api.db import get_session
 from owi_api.models.enums import OverflowRisk, RouteStatus, UserRole
-from owi_api.models.operations import BinHealthDaily
+from owi_api.models.operations import BinHealthDaily, CollectionEvent
 from owi_api.models.registry import Bin
 from owi_api.models.route import Route, RouteStop, Truck
 from owi_api.routers.auth import get_current_user, require_roles
@@ -40,11 +41,13 @@ class TruckOut(BaseModel):
 
 
 class StopOut(BaseModel):
+    id: uuid.UUID
     seq: int
     bin_id: uuid.UUID
     qr_code: str
     lat: float
     lng: float
+    collected: bool
 
 
 class RouteOut(BaseModel):
@@ -140,7 +143,17 @@ def _route_out(session: Session, route: Route, truck_name: str) -> RouteOut:
                 Bin.id == stop.bin_id
             )
         ).one()
-        stops_out.append(StopOut(seq=stop.seq, bin_id=stop.bin_id, qr_code=qr, lat=lat, lng=lng))
+        stops_out.append(
+            StopOut(
+                id=stop.id,
+                seq=stop.seq,
+                bin_id=stop.bin_id,
+                qr_code=qr,
+                lat=lat,
+                lng=lng,
+                collected=stop.collected,
+            )
+        )
     return RouteOut(
         id=route.id,
         truck_id=route.truck_id,
@@ -172,6 +185,31 @@ def list_routes(
         )
     ).all()
     return [_route_out(session, route, name) for route, name in rows]
+
+
+@router.post("/routes/stops/{stop_id}/collect", status_code=204)
+def collect_stop(
+    stop_id: uuid.UUID,
+    claims: Annotated[TokenClaims, require_roles(*STAFF)],
+    session: Annotated[Session, Depends(get_session)],
+) -> None:
+    """Driver marks a stop done: records the collection, resets bin health, ticks the stop."""
+    stop = session.get(RouteStop, stop_id)
+    if stop is None or stop.org_id != claims.org_id:
+        raise HTTPException(status_code=404, detail="stop not found")
+    if stop.collected:
+        return
+    session.add(
+        CollectionEvent(
+            org_id=claims.org_id,
+            bin_id=stop.bin_id,
+            occurred_at=datetime.now(UTC),
+            collector_id=claims.user_id if claims.role is UserRole.COLLECTOR else None,
+        )
+    )
+    stop.collected = True
+    session.commit()
+    refresh_bin(session, stop.bin_id)
 
 
 @router.post("/routes/optimize", response_model=list[RouteOut])

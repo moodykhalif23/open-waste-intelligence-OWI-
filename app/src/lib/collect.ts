@@ -8,6 +8,25 @@ export interface BinHealth {
   recommendation: "collect_today" | "schedule_soon" | "no_action";
 }
 
+export interface RouteStop {
+  id: string;
+  seq: number;
+  bin_id: string;
+  qr_code: string;
+  lat: number;
+  lng: number;
+  collected: boolean;
+}
+
+export interface Route {
+  id: string;
+  truck_name: string;
+  planned_km: number;
+  planned_fuel_l: number;
+  bins_served: number;
+  stops: RouteStop[];
+}
+
 async function authed(path: string, token: string, init?: RequestInit): Promise<Response> {
   const response = await fetch(path, {
     ...init,
@@ -18,6 +37,14 @@ async function authed(path: string, token: string, init?: RequestInit): Promise<
   });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response;
+}
+
+export async function fetchRoutes(token: string): Promise<Route[]> {
+  return (await authed("/api/v1/routes", token).then((r) => r.json())) as Route[];
+}
+
+export async function collectStop(token: string, stopId: string): Promise<void> {
+  await authed(`/api/v1/routes/stops/${stopId}/collect`, token, { method: "POST" });
 }
 
 export async function fetchCollectList(token: string): Promise<BinHealth[]> {

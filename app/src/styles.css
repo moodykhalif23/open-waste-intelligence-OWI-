@@ -317,6 +317,76 @@ button:disabled {
   padding: 10px 18px;
 }
 
+.routes {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.route-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 10px;
+}
+
+.stop-seq {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stop-num {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stop-code {
+  flex: 1;
+  font-size: 0.92rem;
+}
+
+.stop-btn {
+  min-height: 40px;
+  padding: 8px 16px;
+}
+
+.stop-check {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 1.2rem;
+  width: 44px;
+  text-align: center;
+}
+
+.stop.done .stop-num {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.stop.done .stop-code {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
 footer {
   padding-top: 12px;
   border-top: 1px solid var(--line);

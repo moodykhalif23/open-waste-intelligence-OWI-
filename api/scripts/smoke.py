@@ -225,6 +225,16 @@ def main() -> None:
         check("route reports distance + fuel", all(r["planned_km"] >= 0 for r in routes))
     listed = client.get("/api/v1/routes", headers=device_auth)
     check("driver can read today's routes", listed.status_code == 200)
+    stops = [s for r in listed.json() for s in r["stops"]]
+    if stops:
+        first = stops[0]
+        done = client.post(f"/api/v1/routes/stops/{first['id']}/collect", headers=device_auth)
+        check("driver marks a stop collected", done.status_code == 204)
+        after = client.get("/api/v1/routes", headers=device_auth).json()
+        marked = next(
+            (s for r in after for s in r["stops"] if s["id"] == first["id"]), None
+        )
+        check("stop shows collected after marking", marked is not None and marked["collected"])
 
     ev = client.post(
         "/api/v1/volunteers",

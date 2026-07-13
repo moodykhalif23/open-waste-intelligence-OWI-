@@ -68,15 +68,26 @@
 - Build robustness fix (proved in a real flaky-network build): `scripts/fetch_models.py` now retries model download with backoff, so a transient GitHub failure no longer breaks the image build
 - New product logo: person lifting the lid of a standalone green bin, no background — applied to field app + dashboard
 
+### M4 Collection Route Optimization (2026-07-13)
+- CVRP engine (OR-Tools, Apache-2.0): cheapest set of routes collecting every due bin within truck capacity; bin demand estimated from latest fill % x volume x waste density; 7 unit tests (haversine correctness, all-served, capacity split, infeasible-demand rejection, matrix-agnostic)
+- **Distance-provider abstraction**: pure `HaversineMatrix` default (zero infra) + `OsrmMatrix` road-distance upgrade — set `OWI_OSRM_URL` to switch, nothing else changes
+- Trucks + routes + route_stops (migration 0007); endpoints: truck CRUD, `POST /routes/optimize` (auto-selects collect-today bins or takes an explicit set), `GET /routes`
+- Dashboard **Routes / Plan today** page: truck management, one-click optimize, per-truck ordered stop list with km + fuel + demand tiles
+- OSRM is an optional compose service (`osrm` profile) with a one-time OSM-extract prep documented in docs/11-deployment.md — not required to run
+- Verified live in containers: truck created → optimize planned a route over 13 collect-today bins with distance/fuel → driver reads today's routes (41/41 smoke checks)
+- Two deploy fixes from the live run: `httpx` promoted to a runtime dependency (OSRM client needs it); model-fetch retry already in place held up
+- Driver route view (2026-07-13): field app **Collect** tab is now route-first — shows the planned route's numbered stops per truck with a progress count; the driver taps a stop done, which records the collection, resets that bin's health, and ticks the stop (`POST /routes/stops/{id}/collect`). Falls back to the raw collect-today list when no route is planned. Verified live: driver marks a stop → it shows collected (43/43 smoke checks)
+
 ## In progress / blocked on a human
 
 - **Phone test of the PWA spike** (Android 10 / 2 GB) — validates the PWA-over-Flutter decision; the project's #1 risk. Owner: Brian.
 
 ## Next up (rough order)
 
-1. Train the first models (T1/T2/T3) on Phase 0 data → activate in the registry → predictions flow into the review queue (needs the labeled dataset)
-2. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
-3. M1 composition views + M5 recycling value on the dashboard (arrive with the classification model)
-4. Grant report hardening: WeasyPrint server-side PDF; fold in composition (M1) + carbon (M7) sections once those land
+1. M4 follow-ups: mid-day replan (bin added / truck breakdown → recompute remaining stops); savings report vs the Phase 0 fixed-schedule baseline (the grant headline, G2)
+2. Train the first models (T1/T2/T3) on Phase 0 data → activate in the registry → predictions flow into the review queue (needs the labeled dataset)
+3. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
+4. M1 composition views + M5 recycling value on the dashboard (arrive with the classification model)
+5. Grant report hardening: WeasyPrint server-side PDF; fold in composition (M1) + carbon (M7) sections once those land
 
 With all six Phase 0 engineering tasks delivered, the remaining Phase 0 work is operational, not code: partner kickoff, bin registry data entry, collector training, capture-rate tracking (gate G0).

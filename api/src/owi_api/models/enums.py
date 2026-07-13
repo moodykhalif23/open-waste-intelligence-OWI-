@@ -60,6 +60,25 @@ class EventType(enum.StrEnum):
     SORTING = "sorting"
 
 
+class DumpingStatus(enum.StrEnum):
+    ACTIVE = "active"
+    CLEANED = "cleaned"
+    RECURRING = "recurring"
+
+
+class DumpingReview(enum.StrEnum):
+    CONFIRMED = "confirmed"
+    REJECTED = "rejected"
+    DUPLICATE = "duplicate"
+
+
+class InterventionKind(enum.StrEnum):
+    BIN_ADDED = "bin_added"
+    SIGNAGE = "signage"
+    CLEANUP = "cleanup"
+    ENGAGEMENT = "engagement"
+
+
 class RouteStatus(enum.StrEnum):
     PLANNED = "planned"
     ACTIVE = "active"

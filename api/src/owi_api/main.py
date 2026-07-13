@@ -9,6 +9,7 @@ from owi_api.routers import (
     analytics,
     auth,
     bins,
+    dumping,
     models,
     observations,
     operations,
@@ -55,6 +56,7 @@ def create_app() -> FastAPI:
     app.include_router(models.router)
     app.include_router(analytics.router)
     app.include_router(recycling.router)
+    app.include_router(dumping.router)
     app.include_router(volunteers.router)
 
     @app.get("/healthz")

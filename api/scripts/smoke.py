@@ -302,6 +302,40 @@ def main() -> None:
         == 403,
     )
 
+    # Illegal dumping: a non-bin (street) observation becomes a candidate, confirm → site.
+    dump_obs = client.post(
+        "/api/v1/observations/batch",
+        headers=device_auth,
+        data={"meta": json.dumps([{"captured_at": "2026-07-13T09:00:00Z", "lat": -1.30, "lng": 36.80}])},
+        files=[("files", ("street.jpg", make_jpeg(run_seed + 20), "image/jpeg"))],
+    ).json()["results"][0]
+    check("street observation created", dump_obs["status"] == "created")
+    cands = client.get("/api/v1/dumping/candidates", headers=admin).json()
+    check("dumping candidate surfaced", any(c["observation_id"] == dump_obs["observation_id"] for c in cands))
+    confirmed = client.post(
+        f"/api/v1/dumping/candidates/{dump_obs['observation_id']}/review",
+        headers=admin,
+        json={"review": "confirmed"},
+    )
+    check("confirm creates dumping site", confirmed.status_code == 200 and confirmed.json()["event_count"] >= 1)
+    site_id = confirmed.json()["id"]
+    check(
+        "no re-review of same candidate",
+        client.post(
+            f"/api/v1/dumping/candidates/{dump_obs['observation_id']}/review",
+            headers=admin,
+            json={"review": "confirmed"},
+        ).status_code == 409,
+    )
+    interv = client.post(
+        f"/api/v1/dumping/sites/{site_id}/interventions",
+        headers=admin,
+        json={"kind": "cleanup", "performed_on": "2026-07-13", "notes": "cleared"},
+    )
+    check("intervention recorded", interv.status_code == 201)
+    sites = client.get("/api/v1/dumping/sites", headers=admin).json()
+    check("hotspot list ranks sites", len(sites) >= 1 and "hotspot_score" in sites[0])
+
     price = client.post(
         "/api/v1/recycling/prices",
         headers=admin,

@@ -1,4 +1,10 @@
 from owi_api.models.base import Base
+from owi_api.models.dumping import (
+    DumpingCandidate,
+    DumpingEvent,
+    DumpingIntervention,
+    DumpingSite,
+)
 from owi_api.models.observation import Observation
 from owi_api.models.operations import BinHealthDaily, CollectionEvent
 from owi_api.models.prediction import MLModel, Prediction
@@ -12,6 +18,10 @@ __all__ = [
     "Bin",
     "BinHealthDaily",
     "CollectionEvent",
+    "DumpingCandidate",
+    "DumpingEvent",
+    "DumpingIntervention",
+    "DumpingSite",
     "MLModel",
     "MaterialPrice",
     "Observation",

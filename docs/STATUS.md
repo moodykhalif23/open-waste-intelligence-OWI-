@@ -13,7 +13,7 @@ Platform foundation (ingestion, privacy gate, image-quality gate, auth + RBAC, b
 | M8 Volunteer Analytics    | **done**        | spreadsheet bulk import (M8-F2); volunteer certificates (M8-F6); WeasyPrint PDF.                                                                                                                   |
 | M1 Waste Classification   | **done** (calibration pending data) | inference live (worker → review queue); composition aggregates + headline view (M1-F2); period-over-period comparison (M1-F3); material drill-down to observations (M1-F6). Only remaining: sorting-ground-truth calibration (M1-F4) — needs sorting-site weights that don't exist until the pilot |
 | M3 Illegal Dumping        | **not started** | candidate flagging + review queue, hotspot map, per-site timeline, intervention tracking                                                                                                           |
-| M5 Recycling Intelligence | **not started** | material volume + kg tracking, KES price table, value dashboard, partner registry, sorting reconciliation                                                                                          |
+| M5 Recycling Intelligence | **done** (calibration pending data) | material kg tracking, dated KES price table, value dashboard, partner registry + matching, supply-profile export all live. Only remaining: sorting-site reconciliation (M5-F5) — needs real sorted weights from the pilot |
 | M6 Cleanliness Index      | **not started** | area boundaries, daily 0–100 score + components, trends, data-sufficiency guard, methodology page                                                                                                 |
 | M7 Carbon Impact          | **not started** | factor table (carbon-factors-v1.csv), calc engine, dashboard, uncertainty ranges                                                                                                                   |
 | Open Data API             | **not started** | aggregates-only public endpoints, small-cell suppression, API keys, 7-day delay                                                                                                                    |
@@ -69,6 +69,14 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 - Public-data strategy proven: pretrain on TrashNet now, fine-tune on the local Safi export when it exists; golden set stays local-only
 - **Worker inference live (2026-07-13)**: model registration uploads the ONNX to the object store (`PUT /api/v1/models/{id}/artifact`) + stores class labels (migration 0008); the batch worker loads the active model's ONNX (cached), preprocesses with OpenCV, runs onnxruntime, and writes a Prediction per observation. Torch-free worker. Idempotent per (observation, model). Verified live end-to-end in containers: real glass image → worker → prediction `material=glass conf=0.9998` in the review queue. **The active-learning loop is closed** — corrections in the review queue feed the next training round
 - **M1 composition (2026-07-13)**: `GET /api/v1/analytics/composition?days=&site_id=` aggregates each observation's effective material (human correction wins over prediction) into shares with previous-period deltas and a data-sufficiency guard (< 20 → flagged indicative); pure aggregator with 5 unit tests. Dashboard **Composition** page: period selector (7/30/90d), headline % tiles, ECharts bar, per-material change arrows, and drill-down to the filtered observations (`?material=`). Verified live (51/51 smoke checks)
+
+### M5 Recycling Intelligence (2026-07-13)
+- Dated KES price table (`material_prices`) — history revalues correctly (latest effective price ≤ today wins); dashboard editor
+- Collections now estimate + store `estimated_weight_kg` (fill × volume × density) so tonnage is real; value engine splits that tonnage by composition share and prices each material (pure, 3 unit tests)
+- `GET /api/v1/recycling/value` (per-material kg + KES + matching-partner count), partner registry + `partners/match` (accepts material AND meets monthly minimum), supply-profile HTML export for buyer negotiations
+- Dashboard **Recycling** page: headline tiles (kg / est. value / partners), per-material value table, price editor, partner registry with material checkboxes
+- Verified live in containers (55/55 smoke checks): tonnage → composition → priced value; missing prices correctly yield KES 0; partner matching respects material + minimum
+- Honest: value chains two estimates (tonnage + photo composition), shown as indicative pending sorting-site calibration (M5-F5)
 
 ### Infra & deployment
 
@@ -133,8 +141,9 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 
 ## Next up (rough order)
 
-1. M5 Recycling Intelligence (Phase 2): KES price table, material kg tracking, value dashboard, partner registry — builds directly on M1 composition + collection weights
-2. Fine-tune on real Safi data once Phase 0 collection runs; push the baseline past the 0.80 golden gate
+1. M3 Illegal Dumping (Phase 2): non-bin accumulation observations, human-confirm review queue, hotspot list, intervention tracking — the last Phase 2 module
+2. M7 Carbon Impact (Phase 3): factor table + calc engine on M5's calibrated weights; then M6 Cleanliness Index; then the Open Data API
+3. Fine-tune on real Safi data once Phase 0 collection runs; push the baseline past the 0.80 golden gate
 2. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
 3. M1 composition views + M5 recycling value on the dashboard (arrive with the classification model)
 4. Grant report hardening: WeasyPrint server-side PDF; fold in composition (M1) + carbon (M7) sections once those land

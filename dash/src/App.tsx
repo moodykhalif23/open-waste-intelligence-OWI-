@@ -12,6 +12,7 @@ const RoutesPage = lazy(() => import("./pages/Routes"));
 const Recycling = lazy(() => import("./pages/Recycling"));
 const Dumping = lazy(() => import("./pages/Dumping"));
 const Carbon = lazy(() => import("./pages/Carbon"));
+const Cleanliness = lazy(() => import("./pages/Cleanliness"));
 const Bins = lazy(() => import("./pages/Bins"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Review = lazy(() => import("./pages/Review"));
@@ -38,6 +39,7 @@ export default function App() {
                 <Route path="recycling" element={<Recycling />} />
                 <Route path="dumping" element={<Dumping />} />
                 <Route path="carbon" element={<Carbon />} />
+                <Route path="cleanliness" element={<Cleanliness />} />
                 <Route path="bins" element={<Bins />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="review" element={<Review />} />

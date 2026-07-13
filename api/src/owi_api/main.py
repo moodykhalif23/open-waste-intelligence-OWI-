@@ -10,6 +10,7 @@ from owi_api.routers import (
     auth,
     bins,
     carbon,
+    cleanliness,
     dumping,
     models,
     observations,
@@ -58,6 +59,7 @@ def create_app() -> FastAPI:
     app.include_router(analytics.router)
     app.include_router(recycling.router)
     app.include_router(carbon.router)
+    app.include_router(cleanliness.router)
     app.include_router(dumping.router)
     app.include_router(volunteers.router)
 

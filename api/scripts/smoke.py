@@ -371,6 +371,14 @@ def main() -> None:
     )
     check("partner matching works", "PET Buyer" in match_resp.json()["partners"])
 
+    clean = client.get("/api/v1/cleanliness", headers=admin)
+    check("cleanliness scores compute", clean.status_code == 200 and isinstance(clean.json(), list))
+    method = client.get("/api/v1/cleanliness/methodology", headers=admin)
+    check(
+        "cleanliness methodology published",
+        method.status_code == 200 and method.json()["version"] == "cleanliness-v1",
+    )
+
     factors = client.get("/api/v1/carbon/factors", headers=admin)
     check(
         "carbon factor table loads (cited)",

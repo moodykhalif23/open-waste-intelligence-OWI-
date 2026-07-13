@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from owi_api.analytics.cleanliness_refresh import refresh_cleanliness
 from owi_api.analytics.refresh import refresh_bin_health
 from owi_api.config import settings
 from owi_api.db import get_session
@@ -24,7 +25,10 @@ def run_analytics_refresh(
     requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN, UserRole.COORDINATOR)],
     session: Annotated[Session, Depends(get_session)],
 ) -> dict[str, int]:
-    return {"bins": refresh_bin_health(session)}
+    return {
+        "bins": refresh_bin_health(session),
+        "cleanliness_areas": refresh_cleanliness(session),
+    }
 
 
 @router.post("/quarantine/purge")

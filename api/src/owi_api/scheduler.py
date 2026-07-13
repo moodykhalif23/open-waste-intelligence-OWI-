@@ -3,6 +3,7 @@
 import logging
 import time
 
+from owi_api.analytics.cleanliness_refresh import refresh_cleanliness
 from owi_api.analytics.refresh import refresh_bin_health
 from owi_api.config import settings
 from owi_api.db import SessionLocal
@@ -20,8 +21,10 @@ def run_once() -> None:
             session, get_store(settings), settings.quarantine_retention_hours
         )
         refreshed = refresh_bin_health(session)
+        scored = refresh_cleanliness(session)
     logger.info("quarantine purge: %d originals deleted", purged)
     logger.info("bin health refresh: %d bins scored", refreshed)
+    logger.info("cleanliness refresh: %d areas scored", scored)
 
 
 def main() -> None:

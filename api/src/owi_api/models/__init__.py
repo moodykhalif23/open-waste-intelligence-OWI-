@@ -1,4 +1,5 @@
 from owi_api.models.base import Base
+from owi_api.models.cleanliness import CleanlinessDaily
 from owi_api.models.dumping import (
     DumpingCandidate,
     DumpingEvent,
@@ -17,6 +18,7 @@ __all__ = [
     "Base",
     "Bin",
     "BinHealthDaily",
+    "CleanlinessDaily",
     "CollectionEvent",
     "DumpingCandidate",
     "DumpingEvent",

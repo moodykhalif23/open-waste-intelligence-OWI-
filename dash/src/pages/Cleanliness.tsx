@@ -29,9 +29,9 @@ interface Methodology {
 
 // Higher score = cleaner area.
 function scoreHex(score: number): string {
-  if (score >= 75) return "#059669";
-  if (score >= 50) return "#d97706";
-  return "#dc2626";
+  if (score >= 75) return "#0e7a55";
+  if (score >= 50) return "#b4791a";
+  return "#c0392b";
 }
 
 export default function Cleanliness() {

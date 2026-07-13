@@ -1,17 +1,20 @@
 import { createTheme } from "@mui/material/styles";
 
-// Emerald, kept flat: solid fills and soft tints, never gradients.
+// Mimosa: ink primary + mimosa gold accent + warm neutrals. Flat, no gradients.
 // Tuned for one-handed field use - large touch targets, calm surfaces.
-const emerald = { 50: "#ecfdf5", 100: "#d1fae5", 500: "#10b981", 600: "#059669", 700: "#047857" };
+const ink = { 50: "#eceef1", 100: "#dfe2e8", 500: "#3a4256", 600: "#101828", 700: "#05070c" };
 
 const theme = createTheme({
   palette: {
     mode: "light",
-    primary: { main: emerald[600], light: emerald[500], dark: emerald[700], contrastText: "#fff" },
-    success: { main: emerald[600] },
-    background: { default: "#e6f2ea", paper: "#ffffff" },
-    text: { primary: "#0f172a", secondary: "#64748b" },
-    divider: "#e8ebf0",
+    primary: { main: ink[600], light: ink[500], dark: ink[700], contrastText: "#fff" },
+    secondary: { main: "#f2b949", dark: "#835a09", light: "#f7ce77", contrastText: "#3a2a05" },
+    success: { main: "#0e7a55" },
+    warning: { main: "#b4791a" },
+    error: { main: "#c0392b" },
+    background: { default: "#f8f6f0", paper: "#ffffff" },
+    text: { primary: "#201a10", secondary: "#6b6456" },
+    divider: "#eae6dd",
   },
   shape: { borderRadius: 4 },
   typography: {
@@ -28,7 +31,7 @@ const theme = createTheme({
     MuiCssBaseline: { styleOverrides: { body: { WebkitFontSmoothing: "antialiased" } } },
     MuiCard: {
       defaultProps: { elevation: 0 },
-      styleOverrides: { root: { border: "1px solid #e8ebf0", borderRadius: 4 } },
+      styleOverrides: { root: { border: "1px solid #eae6dd", borderRadius: 4 } },
     },
     MuiButton: {
       defaultProps: { disableElevation: true },
@@ -37,7 +40,7 @@ const theme = createTheme({
     MuiAppBar: {
       defaultProps: { elevation: 0, color: "inherit" },
       styleOverrides: {
-        root: { backgroundColor: "#ffffff", borderBottom: "1px solid #e8ebf0", color: "#0f172a" },
+        root: { backgroundColor: "#ffffff", borderBottom: "1px solid #eae6dd", color: "#201a10" },
       },
     },
     MuiOutlinedInput: { styleOverrides: { root: { borderRadius: 4 } } },
@@ -48,9 +51,9 @@ const theme = createTheme({
           textTransform: "none",
           fontWeight: 550,
           "&.Mui-selected": {
-            backgroundColor: emerald[600],
+            backgroundColor: ink[600],
             color: "#fff",
-            "&:hover": { backgroundColor: emerald[700] },
+            "&:hover": { backgroundColor: ink[700] },
           },
         },
       },

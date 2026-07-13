@@ -23,10 +23,10 @@ echarts.use([
 
 type ChartOption = echarts.EChartsCoreOption;
 
-export const INK = "#0f172a";
-export const MUTED = "#64748b";
-export const LINE = "#e7ebf0";
-export const ACCENT = "#059669";
+export const INK = "#201a10";
+export const MUTED = "#6b6456";
+export const LINE = "#eae6dd";
+export const ACCENT = "#101828";
 
 // Validated categorical palette (dataviz skill, light surface: worst adjacent
 // CVD ΔE 24.2). Contrast WARN on aqua/yellow/magenta is relieved by the direct
@@ -56,7 +56,7 @@ export const MATERIAL_COLORS: Record<string, string> = {
 };
 
 // Emerald single-hue ramp, light→dark, for sequential (heatmap) magnitude.
-const SEQUENTIAL = ["#eafaf3", "#a7e3c8", "#5ccf9c", "#10b981", "#047857"];
+const SEQUENTIAL = ["#eceef1", "#c2c7d0", "#3a4256", "#3a4256", "#05070c"];
 
 export default function EChart({ option, height = 280 }: { option: ChartOption; height?: number }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -156,7 +156,7 @@ export function lineOption(categories: string[], values: number[]): ChartOption 
         smooth: 0.25,
         showSymbol: false,
         lineStyle: { color: ACCENT, width: 2 },
-        areaStyle: { color: "rgba(5,150,105,0.10)" },
+        areaStyle: { color: "rgba(16,24,40,0.10)" },
       },
     ],
   };

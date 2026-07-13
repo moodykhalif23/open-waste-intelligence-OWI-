@@ -25,22 +25,22 @@ echarts.use([
 
 type ChartOption = echarts.EChartsCoreOption;
 
-const INK = "#0f172a";
-const MUTED = "#64748b";
-const LINE = "#e8ebf0";
-const ACCENT = "#059669";
-const TRACK = "#eef1f4";
+const INK = "#201a10";
+const MUTED = "#6b6456";
+const LINE = "#eae6dd";
+const ACCENT = "#101828";
+const TRACK = "#f2efe6";
 
 // Risk hues shared with the collect list (status colors, always paired with a
 // text label so meaning never rides on color alone).
 export const RISK_HUE: Record<string, string> = {
-  high: "#dc2626",
-  medium: "#d97706",
-  low: "#059669",
+  high: "#c0392b",
+  medium: "#b4791a",
+  low: "#0e7a55",
 };
 
 // Emerald single-hue ramp, light→dark, for sequential (heatmap) magnitude.
-const SEQUENTIAL = ["#eafaf3", "#a7e3c8", "#5ccf9c", "#10b981", "#047857"];
+const SEQUENTIAL = ["#eceef1", "#c2c7d0", "#3a4256", "#3a4256", "#05070c"];
 
 // Responsive by container, not window: a ResizeObserver keeps the chart fitted
 // to its parent as the phone rotates or the layout reflows.

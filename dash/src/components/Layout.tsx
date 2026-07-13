@@ -63,8 +63,8 @@ export default function Layout() {
   }, [location.pathname]);
 
   const ops = [
-    { count: collectCount, label: t("toCollect"), to: "/collect", bg: "#fef2f2", fg: "#b91c1c" },
-    { count: alerts, label: t("toReview"), to: "/records/review", bg: "#ecfdf5", fg: "#047857" },
+    { count: collectCount, label: t("toCollect"), to: "/collect", bg: "#fef2f2", fg: "#c0392b" },
+    { count: alerts, label: t("toReview"), to: "/records/review", bg: "#eceef1", fg: "#05070c" },
   ];
 
   const isActive = (path: string) =>
@@ -127,7 +127,7 @@ export default function Layout() {
                 borderRadius: "6px",
                 px: 1,
                 py: 0.75,
-                "&:hover": { bgcolor: "#f1f5f4" },
+                "&:hover": { bgcolor: "#f6f4ee" },
               }}
             >
               <Box
@@ -140,7 +140,7 @@ export default function Layout() {
                   borderRadius: "6px",
                   fontWeight: 800,
                   fontSize: "1rem",
-                  bgcolor: zero ? "#f1f5f4" : row.bg,
+                  bgcolor: zero ? "#f6f4ee" : row.bg,
                   color: zero ? "text.secondary" : row.fg,
                 }}
               >

@@ -26,7 +26,7 @@ export default defineConfig({
         name: "OpenWaste Intelligence",
         short_name: "OWI",
         description: "Collector field app",
-        theme_color: "#059669",
+        theme_color: "#101828",
         background_color: "#ffffff",
         display: "standalone",
         icons: [{ src: "icon.svg", sizes: "any", type: "image/svg+xml" }],

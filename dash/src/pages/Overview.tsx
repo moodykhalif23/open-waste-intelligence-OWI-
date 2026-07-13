@@ -92,7 +92,7 @@ export default function Overview() {
           <StatCard label={t("reports7d")} value={week.length} icon={<PhotoCameraOutlined />} />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <StatCard label={t("overflowing7d")} value={overflowing} color="#b91c1c" icon={<WarningAmberOutlined />} />
+          <StatCard label={t("overflowing7d")} value={overflowing} color="#c0392b" icon={<WarningAmberOutlined />} />
         </Grid>
       </Grid>
       <Grid container spacing={{ xs: 2, md: 2.5 }}>

@@ -1,30 +1,34 @@
 import { createTheme } from "@mui/material/styles";
 
-// Emerald, kept flat: solid fills and soft tints, never gradients.
-const emerald = {
-  50: "#ecfdf5",
-  100: "#d1fae5",
-  200: "#a7f3d0",
-  500: "#10b981",
-  600: "#059669",
-  700: "#047857",
-  800: "#065f46",
+// Mimosa: ink primary (actions) + mimosa gold accent + warm neutrals. Flat,
+// solid fills and soft tints, never gradients.
+const ink = {
+  50: "#eceef1",
+  100: "#dfe2e8",
+  200: "#c2c7d0",
+  500: "#3a4256",
+  600: "#101828",
+  700: "#05070c",
+  800: "#05070c",
 };
 
-const border = "#e7ebf0";
+const border = "#eae6dd";
 
 const theme = createTheme({
   palette: {
     mode: "light",
     primary: {
-      main: emerald[600],
-      light: emerald[500],
-      dark: emerald[700],
+      main: ink[600],
+      light: ink[500],
+      dark: ink[700],
       contrastText: "#ffffff",
     },
-    success: { main: emerald[600] },
-    background: { default: "#e6f2ea", paper: "#ffffff" },
-    text: { primary: "#0f172a", secondary: "#64748b" },
+    secondary: { main: "#f2b949", dark: "#835a09", light: "#f7ce77", contrastText: "#3a2a05" },
+    success: { main: "#0e7a55" },
+    warning: { main: "#b4791a" },
+    error: { main: "#c0392b" },
+    background: { default: "#f8f6f0", paper: "#ffffff" },
+    text: { primary: "#201a10", secondary: "#6b6456" },
     divider: border,
   },
   shape: { borderRadius: 4 },
@@ -81,7 +85,7 @@ const theme = createTheme({
           backgroundColor: "rgba(255,255,255,0.82)",
           backdropFilter: "saturate(1.1) blur(8px)",
           borderBottom: `1px solid ${border}`,
-          color: "#0f172a",
+          color: "#201a10",
         },
       },
     },
@@ -101,15 +105,15 @@ const theme = createTheme({
           marginInline: 8,
           paddingBlock: 9,
           "&.Mui-selected": {
-            backgroundColor: emerald[50],
-            color: emerald[700],
-            "&:hover": { backgroundColor: emerald[100] },
-            "& .MuiListItemIcon-root": { color: emerald[700] },
+            backgroundColor: "#fbeecf",
+            color: "#835a09",
+            "&:hover": { backgroundColor: "#f6e0a8" },
+            "& .MuiListItemIcon-root": { color: "#835a09" },
           },
         },
       },
     },
-    MuiListItemIcon: { styleOverrides: { root: { minWidth: 34, color: "#64748b" } } },
+    MuiListItemIcon: { styleOverrides: { root: { minWidth: 34, color: "#6b6456" } } },
     MuiTable: { defaultProps: { size: "small" } },
     MuiTableCell: {
       styleOverrides: {
@@ -119,7 +123,7 @@ const theme = createTheme({
           fontSize: "0.75rem",
           textTransform: "uppercase",
           letterSpacing: "0.04em",
-          backgroundColor: "#f8fafc",
+          backgroundColor: "#f6f4ee",
           whiteSpace: "nowrap",
         },
         root: { borderColor: border, padding: "13px 16px", fontSize: "0.95rem" },
@@ -127,7 +131,7 @@ const theme = createTheme({
     },
     MuiTableRow: {
       styleOverrides: {
-        root: { "&:hover": { backgroundColor: "#f8fafc" }, "&:last-child td": { borderBottom: 0 } },
+        root: { "&:hover": { backgroundColor: "#f6f4ee" }, "&:last-child td": { borderBottom: 0 } },
       },
     },
     MuiTextField: { defaultProps: { size: "small" } },
@@ -149,8 +153,8 @@ const theme = createTheme({
           textTransform: "none",
           fontWeight: 600,
           fontSize: "0.86rem",
-          color: "#64748b",
-          "&.Mui-selected": { color: emerald[700], backgroundColor: emerald[50] },
+          color: "#6b6456",
+          "&.Mui-selected": { color: "#835a09", backgroundColor: "#fbeecf" },
         },
       },
     },

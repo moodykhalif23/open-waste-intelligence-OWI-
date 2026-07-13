@@ -24,9 +24,9 @@ type Load =
   | { kind: "list"; bins: BinHealth[] };
 
 const RISK_COLOR: Record<string, string> = {
-  high: "#dc2626",
-  medium: "#d97706",
-  low: "#059669",
+  high: "#c0392b",
+  medium: "#b4791a",
+  low: "#0e7a55",
 };
 
 export default function CollectList({ lang, token }: { lang: Lang; token: string }) {
@@ -138,7 +138,7 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
                       fontWeight: 650,
                       bgcolor: stop.collected ? "primary.main" : "primary.light",
                       color: stop.collected ? "#fff" : "primary.dark",
-                      ...(stop.collected ? {} : { bgcolor: "#ecfdf5", color: "primary.dark" }),
+                      ...(stop.collected ? {} : { bgcolor: "#eceef1", color: "primary.dark" }),
                     }}
                   >
                     {stop.seq + 1}

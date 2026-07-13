@@ -92,7 +92,7 @@ export default function OpenData() {
                   mt: 0.5,
                   p: 1.5,
                   borderRadius: 2,
-                  bgcolor: "#0f172a",
+                  bgcolor: "#201a10",
                   color: "#e2e8f0",
                   fontFamily: "ui-monospace, Consolas, monospace",
                   fontSize: "0.82rem",

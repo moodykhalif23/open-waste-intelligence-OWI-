@@ -212,8 +212,8 @@ export function StatCard({
                 height: 38,
                 borderRadius: "4px",
                 flexShrink: 0,
-                bgcolor: "#ecfdf5",
-                color: "primary.main",
+                bgcolor: "#fbeecf",
+                color: "#835a09",
                 "& svg": { fontSize: 20 },
               }}
             >

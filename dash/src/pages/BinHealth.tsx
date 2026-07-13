@@ -121,10 +121,10 @@ export default function BinHealth() {
           <StatCard label={t("totalBins")} value={stats.total} />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard label={t("collectToday")} value={stats.collectToday} color="#b91c1c" />
+          <StatCard label={t("collectToday")} value={stats.collectToday} color="#c0392b" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard label={t("riskHigh")} value={stats.high} color="#b91c1c" />
+          <StatCard label={t("riskHigh")} value={stats.high} color="#c0392b" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard label={t("scheduleSoonRec")} value={stats.scheduleSoon} />

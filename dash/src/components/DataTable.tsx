@@ -2,7 +2,7 @@ import { DataGrid, type DataGridProps } from "@mui/x-data-grid";
 
 export type { GridColDef } from "@mui/x-data-grid";
 
-const LINE = "#e7ebf0";
+const LINE = "#eae6dd";
 
 // One styled DataGrid for the whole dashboard: sortable, filterable (quick
 // search + column filters via the toolbar), paginated, flat with 4px corners
@@ -27,7 +27,7 @@ export function DataTable({
         borderRadius: "4px",
         bgcolor: "background.paper",
         fontSize: "0.95rem",
-        "--DataGrid-containerBackground": "#f8fafc",
+        "--DataGrid-containerBackground": "#f6f4ee",
         "--DataGrid-rowBorderColor": LINE,
         "& .MuiDataGrid-columnHeader": { py: 0.5 },
         "& .MuiDataGrid-columnHeaderTitle": {
@@ -50,7 +50,7 @@ export function DataTable({
           display: "flex",
           alignItems: "center",
         },
-        "& .MuiDataGrid-row:hover": { bgcolor: "#f8fafc" },
+        "& .MuiDataGrid-row:hover": { bgcolor: "#f6f4ee" },
         // Keep the resize handle visible so columns can be dragged wider/narrower.
         "& .MuiDataGrid-columnSeparator": { color: LINE },
         "& .MuiDataGrid-footerContainer": { borderColor: LINE, minHeight: 48 },

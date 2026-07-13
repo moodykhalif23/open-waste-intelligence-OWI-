@@ -138,7 +138,7 @@ export default function Insights({ lang, token }: { lang: Lang; token: string })
     return {
       labels: sorted.map((b) => b.qr_code),
       values: sorted.map((b) => Math.round(b.fill_pct)),
-      colors: sorted.map((b) => RISK_HUE[b.overflow_risk] ?? "#059669"),
+      colors: sorted.map((b) => RISK_HUE[b.overflow_risk] ?? "#0e7a55"),
     };
   }, [bins]);
 

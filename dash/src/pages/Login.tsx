@@ -7,7 +7,7 @@ import Typography from "@mui/material/Typography";
 import { login } from "../api";
 import { useI18n } from "../i18n";
 
-function BinMark({ size = 30, color = "#34d399" }: { size?: number; color?: string }) {
+function BinMark({ size = 30, color = "#f2b949" }: { size?: number; color?: string }) {
   return (
     <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden>
       <path d="M22 26h20l-2 24a3 3 0 0 1-3 2.7H27a3 3 0 0 1-3-2.7z" fill={color} />
@@ -46,13 +46,13 @@ export default function Login() {
           justifyContent: "space-between",
           gap: 5,
           p: 6,
-          bgcolor: "#04372b",
+          bgcolor: "#3a2a08",
           color: "#ffffff",
         }}
       >
         {/* Oversized brand mark as a calm watermark - flat, no gradient. */}
         <Box sx={{ position: "absolute", right: -60, bottom: -50, opacity: 0.08, pointerEvents: "none" }}>
-          <BinMark size={420} color="#34d399" />
+          <BinMark size={420} color="#f2b949" />
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.75, zIndex: 1 }}>
           <Box
@@ -75,7 +75,7 @@ export default function Login() {
           <Typography sx={{ color: "#fff", fontWeight: 720, fontSize: "2.4rem", lineHeight: 1.15, letterSpacing: "-0.025em" }}>
             {t("signInSubtitle")}
           </Typography>
-          <Typography sx={{ color: "#a7f3d0", mt: 2.5, fontSize: "1.05rem", lineHeight: 1.6 }}>
+          <Typography sx={{ color: "#c2c7d0", mt: 2.5, fontSize: "1.05rem", lineHeight: 1.6 }}>
             {t("signInTagline")}
           </Typography>
         </Box>
@@ -94,7 +94,7 @@ export default function Login() {
                 width: 44,
                 height: 44,
                 borderRadius: "8px",
-                bgcolor: "#ecfdf5",
+                bgcolor: "#eceef1",
               }}
             >
               <Box component="img" src="/icon.svg" alt="" sx={{ width: 30, height: 30, display: "block" }} />

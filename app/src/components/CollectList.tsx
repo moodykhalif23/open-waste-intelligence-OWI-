@@ -1,4 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Divider from "@mui/material/Divider";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import CheckCircle from "@mui/icons-material/CheckCircle";
 import { t, type Lang, type StringKey } from "../i18n";
 import {
   collectStop,
@@ -14,6 +21,12 @@ type Load =
   | { kind: "error" }
   | { kind: "routes"; routes: Route[] }
   | { kind: "list"; bins: BinHealth[] };
+
+const RISK_COLOR: Record<string, string> = {
+  high: "#dc2626",
+  medium: "#d97706",
+  low: "#059669",
+};
 
 export default function CollectList({ lang, token }: { lang: Lang; token: string }) {
   const tr = (key: StringKey, vars?: Record<string, string | number>) => t(lang, key, vars);
@@ -45,66 +58,106 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
     await reload();
   }
 
-  if (state.kind === "loading") return <p className="gps">{tr("loading")}</p>;
-  if (state.kind === "error") return <p className="warning">{tr("collectOffline")}</p>;
+  if (state.kind === "loading")
+    return <Typography variant="body2" color="text.secondary">{tr("loading")}</Typography>;
+  if (state.kind === "error") return <Alert severity="warning">{tr("collectOffline")}</Alert>;
 
   if (state.kind === "list") {
-    if (state.bins.length === 0) return <p className="gps">{tr("collectNone")}</p>;
+    if (state.bins.length === 0)
+      return <Typography variant="body2" color="text.secondary">{tr("collectNone")}</Typography>;
     return (
-      <ul className="collect-list">
+      <Stack divider={<Divider />}>
         {state.bins.map((bin) => (
-          <li key={bin.bin_id} className="collect-row">
-            <div className="collect-info">
-              <span className="collect-bin">
-                <span className={`ring ring-${bin.overflow_risk}`} aria-hidden />
-                {bin.site_name} · {bin.qr_code}
-              </span>
-              <span className="collect-sub">
+          <Stack
+            key={bin.bin_id}
+            direction="row"
+            spacing={1.5}
+            sx={{ alignItems: "center", py: 1.5 }}
+          >
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                <Box
+                  sx={{ width: 9, height: 9, borderRadius: "50%", flexShrink: 0, bgcolor: RISK_COLOR[bin.overflow_risk] }}
+                  aria-hidden
+                />
+                <Typography sx={{ fontWeight: 600, fontSize: "0.92rem" }} noWrap>
+                  {bin.site_name} · {bin.qr_code}
+                </Typography>
+              </Stack>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
                 {Math.round(bin.fill_pct)}% ·{" "}
                 {bin.recommendation === "collect_today" ? tr("collectNow") : tr("collectSoon")}
-              </span>
-            </div>
-            <button className="primary collect-btn" onClick={() => void doBin(bin.bin_id)}>
+              </Typography>
+            </Box>
+            <Button variant="contained" size="small" onClick={() => void doBin(bin.bin_id)}>
               {tr("done")}
-            </button>
-          </li>
+            </Button>
+          </Stack>
         ))}
-      </ul>
+      </Stack>
     );
   }
 
   return (
-    <div className="routes">
+    <Stack spacing={2.5}>
       {state.routes.map((route) => {
         const done = route.stops.filter((s) => s.collected).length;
         return (
-          <section key={route.id} className="route-block">
-            <div className="route-title">
-              <strong>{route.truck_name}</strong>
-              <span className="collect-sub">
+          <Box key={route.id}>
+            <Stack
+              direction="row"
+              sx={{ alignItems: "baseline", justifyContent: "space-between", pb: 1, mb: 1, borderBottom: "1px solid", borderColor: "divider" }}
+            >
+              <Typography sx={{ fontWeight: 660 }}>{route.truck_name}</Typography>
+              <Typography variant="body2" color="text.secondary">
                 {done}/{route.stops.length} · {route.planned_km} km
-              </span>
-            </div>
-            <ol className="stop-seq">
+              </Typography>
+            </Stack>
+            <Stack spacing={1}>
               {route.stops.map((stop) => (
-                <li key={stop.id} className={stop.collected ? "stop done" : "stop"}>
-                  <span className="stop-num">{stop.seq + 1}</span>
-                  <span className="stop-code mono">{stop.qr_code}</span>
+                <Stack key={stop.id} direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                  <Box
+                    sx={{
+                      width: 26,
+                      height: 26,
+                      flexShrink: 0,
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "0.82rem",
+                      fontWeight: 650,
+                      bgcolor: stop.collected ? "primary.main" : "primary.light",
+                      color: stop.collected ? "#fff" : "primary.dark",
+                      ...(stop.collected ? {} : { bgcolor: "#ecfdf5", color: "primary.dark" }),
+                    }}
+                  >
+                    {stop.seq + 1}
+                  </Box>
+                  <Typography
+                    sx={{
+                      flex: 1,
+                      fontFamily: "ui-monospace, Consolas, monospace",
+                      fontSize: "0.9rem",
+                      color: stop.collected ? "text.secondary" : "text.primary",
+                      textDecoration: stop.collected ? "line-through" : "none",
+                    }}
+                  >
+                    {stop.qr_code}
+                  </Typography>
                   {stop.collected ? (
-                    <span className="stop-check" aria-label={tr("done")}>
-                      ✓
-                    </span>
+                    <CheckCircle color="primary" aria-label={tr("done")} />
                   ) : (
-                    <button className="primary stop-btn" onClick={() => void doStop(stop.id)}>
+                    <Button variant="contained" size="small" onClick={() => void doStop(stop.id)}>
                       {tr("done")}
-                    </button>
+                    </Button>
                   )}
-                </li>
+                </Stack>
               ))}
-            </ol>
-          </section>
+            </Stack>
+          </Box>
         );
       })}
-    </div>
+    </Stack>
   );
 }

@@ -1,9 +1,12 @@
 import { lazy, Suspense } from "react";
+import CssBaseline from "@mui/material/CssBaseline";
+import { ThemeProvider } from "@mui/material/styles";
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { getToken } from "./api";
 import Layout from "./components/Layout";
 import { I18nProvider } from "./i18n";
 import Login from "./pages/Login";
+import theme from "./theme";
 
 const Overview = lazy(() => import("./pages/Overview"));
 const Composition = lazy(() => import("./pages/Composition"));
@@ -25,7 +28,9 @@ function RequireAuth() {
 
 export default function App() {
   return (
-    <I18nProvider>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <I18nProvider>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Suspense fallback={null}>
           <Routes>
@@ -50,6 +55,7 @@ export default function App() {
           </Routes>
         </Suspense>
       </BrowserRouter>
-    </I18nProvider>
+      </I18nProvider>
+    </ThemeProvider>
   );
 }

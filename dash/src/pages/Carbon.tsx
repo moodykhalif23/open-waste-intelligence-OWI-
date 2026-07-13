@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
+import Alert from "@mui/material/Alert";
+import Grid from "@mui/material/Grid";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
 import { api } from "../api";
+import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
 interface MaterialCarbon {
@@ -29,61 +38,58 @@ export default function Carbon() {
     void api<Carbon>("/api/v1/carbon?days=30").then(setData);
   }, []);
 
-  if (data === null) return <p className="muted">{t("loading")}</p>;
+  if (data === null) return <Muted>{t("loading")}</Muted>;
   const label = (m: string) => t(m as StringKey);
   const range = `${Math.round(data.co2e_low_kg)}–${Math.round(data.co2e_high_kg)}`;
 
   return (
-    <>
-      <section className="composition-head">
-        <div className="comp-tile">
-          <span className="comp-pct">{range}</span>
-          <span className="comp-label">{t("co2eAvoided")}</span>
-        </div>
-        <div className="comp-tile">
-          <span className="comp-pct">{data.landfill_m3_saved}</span>
-          <span className="comp-label">{t("landfillSaved")}</span>
-        </div>
-        <div className="comp-tile">
-          <span className="comp-pct">{Math.round(data.plastic_diverted_kg)}</span>
-          <span className="comp-label">{t("plasticDiverted")}</span>
-        </div>
-        <div className="comp-tile">
-          <span className="comp-pct">≈{data.trees_equivalent}</span>
-          <span className="comp-label">{t("treesEquiv")}</span>
-        </div>
-      </section>
+    <PageStack>
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard label={t("co2eAvoided")} value={range} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard label={t("landfillSaved")} value={data.landfill_m3_saved} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard label={t("plasticDiverted")} value={Math.round(data.plastic_diverted_kg)} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard label={t("treesEquiv")} value={`≈${data.trees_equivalent}`} />
+        </Grid>
+      </Grid>
 
       {data.co2e_avoided_kg === 0 ? (
-        <p className="muted">{t("noCarbonYet")}</p>
+        <Muted>{t("noCarbonYet")}</Muted>
       ) : (
-        <div className="card">
-          <h2>{t("co2eByMaterial")}</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>{t("material")}</th>
-                <th>{t("kgEst")}</th>
-                <th>{t("co2eKg")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.materials.map((m) => (
-                <tr key={m.material}>
-                  <td>{label(m.material)}</td>
-                  <td>{m.kg.toLocaleString()}</td>
-                  <td>{m.co2e_kg.toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <SectionCard title={t("co2eByMaterial")}>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t("material")}</TableCell>
+                  <TableCell align="right">{t("kgEst")}</TableCell>
+                  <TableCell align="right">{t("co2eKg")}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {data.materials.map((m) => (
+                  <TableRow key={m.material}>
+                    <TableCell>{label(m.material)}</TableCell>
+                    <TableCell align="right">{m.kg.toLocaleString()}</TableCell>
+                    <TableCell align="right">{m.co2e_kg.toLocaleString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </SectionCard>
       )}
 
-      <p className="notice">
+      <Alert severity="info">
         {t("carbonNotOffsets")} ({t("methodology")}: {data.method_version}, ≈{t("carEquiv")}{" "}
         {data.car_km_equivalent.toLocaleString()} km)
-      </p>
-    </>
+      </Alert>
+    </PageStack>
   );
 }

@@ -1,5 +1,23 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Grid from "@mui/material/Grid";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemText from "@mui/material/ListItemText";
+import Stack from "@mui/material/Stack";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
+import BuildIcon from "@mui/icons-material/Build";
 import { api } from "../api";
+import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
 import { useI18n } from "../i18n";
 
 interface Truck {
@@ -111,166 +129,213 @@ export default function Routes() {
     }
   }
 
-  if (trucks === null) return <p className="muted">{t("loading")}</p>;
+  if (trucks === null) return <Muted>{t("loading")}</Muted>;
 
   const totalKm = routes.reduce((s, r) => s + r.planned_km, 0);
   const totalFuel = routes.reduce((s, r) => s + r.planned_fuel_l, 0);
 
-  return (
-    <>
-      <section className="tiles">
-        <Tile value={routes.reduce((s, r) => s + r.bins_served, 0)} label={t("binsToCollect")} />
-        <Tile value={Math.round(totalKm * 10) / 10} label={t("plannedKm")} />
-        <Tile value={Math.round(totalFuel * 10) / 10} label={t("plannedFuelL")} />
-      </section>
+  const routesAction = (
+    <Stack direction="row" spacing={1.5}>
+      {routes.length > 0 && (
+        <Button variant="outlined" size="small" disabled={planning} onClick={() => void replan()}>
+          {t("replan")}
+        </Button>
+      )}
+      <Button
+        variant="contained"
+        size="small"
+        color="primary"
+        disabled={planning}
+        onClick={() => void planToday()}
+      >
+        {planning ? t("planning") : t("planToday")}
+      </Button>
+    </Stack>
+  );
 
-      <section>
-        <div className="section-head">
-          <h2>{t("todaysRoutes")}</h2>
-          <div className="head-actions">
-            {routes.length > 0 && (
-              <button className="secondary" disabled={planning} onClick={() => void replan()}>
-                {t("replan")}
-              </button>
-            )}
-            <button className="primary" disabled={planning} onClick={() => void planToday()}>
-              {planning ? t("planning") : t("planToday")}
-            </button>
-          </div>
-        </div>
-        {error && <p className="error">{error}</p>}
+  const savingsAction = (
+    <Button variant="outlined" size="small" disabled={savingsBusy} onClick={() => void loadSavings()}>
+      {savingsBusy ? t("calculating") : t("calcSavings")}
+    </Button>
+  );
+
+  return (
+    <PageStack>
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatCard
+            label={t("binsToCollect")}
+            value={routes.reduce((s, r) => s + r.bins_served, 0)}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatCard label={t("plannedKm")} value={Math.round(totalKm * 10) / 10} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatCard label={t("plannedFuelL")} value={Math.round(totalFuel * 10) / 10} />
+        </Grid>
+      </Grid>
+
+      <SectionCard title={t("todaysRoutes")} action={routesAction}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2.5 }}>
+            {error}
+          </Alert>
+        )}
         {routes.length === 0 ? (
-          <p className="muted">{t("noRoutes")}</p>
+          <Muted>{t("noRoutes")}</Muted>
         ) : (
-          <div className="route-grid">
+          <Grid container spacing={3}>
             {routes.map((route) => (
-              <div className="route-card" key={route.id}>
-                <div className="route-head">
-                  <div className="route-head-top">
-                    <strong>{route.truck_name}</strong>
-                    <button
-                      className="linklike"
+              <Grid size={{ xs: 12, md: 6 }} key={route.id}>
+                <SectionCard
+                  title={
+                    <Box>
+                      <Typography variant="h6">{route.truck_name}</Typography>
+                      <Muted>
+                        {route.bins_served} {t("stops")} · {route.planned_km} km ·{" "}
+                        {route.planned_fuel_l} L · {Math.round(route.demand_kg)} kg
+                      </Muted>
+                    </Box>
+                  }
+                  action={
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      color="warning"
+                      startIcon={<BuildIcon />}
                       disabled={planning}
                       title={t("breakdownHint")}
                       onClick={() => void replan(route.truck_id)}
                     >
                       {t("breakdown")}
-                    </button>
-                  </div>
-                  <span className="muted">
-                    {route.bins_served} {t("stops")} · {route.planned_km} km ·{" "}
-                    {route.planned_fuel_l} L · {Math.round(route.demand_kg)} kg
-                  </span>
-                </div>
-                {route.stops.length === 0 ? (
-                  <p className="muted">{t("noStops")}</p>
-                ) : (
-                  <ol className="stop-list">
-                    {route.stops.map((s) => (
-                      <li key={s.bin_id}>
-                        <span className="mono">{s.qr_code}</span>
-                        <span className="muted">
-                          {s.lat.toFixed(4)}, {s.lng.toFixed(4)}
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-              </div>
+                    </Button>
+                  }
+                >
+                  {route.stops.length === 0 ? (
+                    <Muted>{t("noStops")}</Muted>
+                  ) : (
+                    <List dense disablePadding>
+                      {route.stops.map((s) => (
+                        <ListItem key={s.bin_id} disableGutters>
+                          <Box
+                            sx={{
+                              minWidth: 28,
+                              fontWeight: 700,
+                              color: "text.secondary",
+                              fontVariantNumeric: "tabular-nums",
+                            }}
+                          >
+                            {s.seq}
+                          </Box>
+                          <ListItemText
+                            primary={
+                              <Typography sx={{ fontFamily: "monospace" }}>{s.qr_code}</Typography>
+                            }
+                            secondary={`${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}`}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  )}
+                </SectionCard>
+              </Grid>
             ))}
-          </div>
+          </Grid>
         )}
-      </section>
+      </SectionCard>
 
-      <section>
-        <div className="section-head">
-          <h2>{t("savingsTitle")}</h2>
-          <button className="secondary" disabled={savingsBusy} onClick={() => void loadSavings()}>
-            {savingsBusy ? t("calculating") : t("calcSavings")}
-          </button>
-        </div>
+      <SectionCard title={t("savingsTitle")} action={savingsAction}>
         {savings === null ? (
-          <p className="muted">{t("savingsHint")}</p>
+          <Muted>{t("savingsHint")}</Muted>
         ) : savings.km_per_tonne_reduction_pct === null ? (
-          <p className="muted">{t("savingsNoData")}</p>
+          <Muted>{t("savingsNoData")}</Muted>
         ) : (
-          <div className="savings">
-            <div className="savings-headline">
-              <span className="savings-pct">−{savings.km_per_tonne_reduction_pct}%</span>
-              <span className="savings-label">{t("kmPerTonneCut")}</span>
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th />
-                  <th>{t("fixedSweep")}</th>
-                  <th>{t("needDriven")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>{t("binsVisited")}</td>
-                  <td>{savings.baseline.bins}</td>
-                  <td>{savings.optimized.bins}</td>
-                </tr>
-                <tr>
-                  <td>{t("distanceKm")}</td>
-                  <td>{savings.baseline.km}</td>
-                  <td>{savings.optimized.km}</td>
-                </tr>
-                <tr>
-                  <td>{t("kmPerTonne")}</td>
-                  <td>{savings.baseline_km_per_tonne}</td>
-                  <td>{savings.optimized_km_per_tonne}</td>
-                </tr>
-              </tbody>
-            </table>
-            <p className="muted savings-note">
+          <Stack spacing={2.5}>
+            <Box>
+              <Typography
+                sx={{
+                  fontWeight: 720,
+                  letterSpacing: "-0.02em",
+                  fontSize: "2.6rem",
+                  lineHeight: 1.05,
+                  color: "primary.main",
+                }}
+              >
+                −{savings.km_per_tonne_reduction_pct}%
+              </Typography>
+              <Muted>{t("kmPerTonneCut")}</Muted>
+            </Box>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell />
+                    <TableCell>{t("fixedSweep")}</TableCell>
+                    <TableCell>{t("needDriven")}</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>{t("binsVisited")}</TableCell>
+                    <TableCell>{savings.baseline.bins}</TableCell>
+                    <TableCell>{savings.optimized.bins}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>{t("distanceKm")}</TableCell>
+                    <TableCell>{savings.baseline.km}</TableCell>
+                    <TableCell>{savings.optimized.km}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>{t("kmPerTonne")}</TableCell>
+                    <TableCell>{savings.baseline_km_per_tonne}</TableCell>
+                    <TableCell>{savings.optimized_km_per_tonne}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Muted>
               {t("fuelSaved")}: {savings.fuel_l_saved} L
               {savings.kes_saved !== null ? ` · ~KES ${savings.kes_saved}` : ""}. {t("savingsMethod")}
-            </p>
-          </div>
+            </Muted>
+          </Stack>
         )}
-      </section>
+      </SectionCard>
 
-      <section className="cards">
-        <TruckForm onCreated={reload} />
-        <div className="card">
-          <h2>{t("trucks")}</h2>
-          {trucks.length === 0 ? (
-            <p className="muted">{t("noTrucks")}</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("name")}</th>
-                  <th>{t("capacityKg")}</th>
-                  <th>{t("fuelUse")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {trucks.map((tk) => (
-                  <tr key={tk.id}>
-                    <td>{tk.name}</td>
-                    <td>{tk.capacity_kg}</td>
-                    <td>{tk.fuel_l_per_100km} L/100km</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </section>
-    </>
-  );
-}
-
-function Tile({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="tile">
-      <span className="tile-value">{value}</span>
-      <span className="tile-label">{label}</span>
-    </div>
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <TruckForm onCreated={reload} />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <SectionCard title={t("trucks")}>
+            {trucks.length === 0 ? (
+              <Muted>{t("noTrucks")}</Muted>
+            ) : (
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{t("name")}</TableCell>
+                      <TableCell>{t("capacityKg")}</TableCell>
+                      <TableCell>{t("fuelUse")}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {trucks.map((tk) => (
+                      <TableRow key={tk.id} hover>
+                        <TableCell>{tk.name}</TableCell>
+                        <TableCell>{tk.capacity_kg}</TableCell>
+                        <TableCell>{tk.fuel_l_per_100km} L/100km</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </SectionCard>
+        </Grid>
+      </Grid>
+    </PageStack>
   );
 }
 
@@ -301,37 +366,60 @@ function TruckForm({ onCreated }: { onCreated: () => Promise<void> }) {
   }
 
   return (
-    <form className="card form" onSubmit={(e) => void onSubmit(e)}>
-      <h2>{t("addTruck")}</h2>
-      <label>
-        {t("name")}
-        <input value={name} onChange={(e) => setName(e.target.value)} required />
-      </label>
-      <label>
-        {t("capacityKg")}
-        <input
-          type="number"
-          min="1"
-          value={capacity}
-          onChange={(e) => setCapacity(e.target.value)}
-          required
-        />
-      </label>
-      <label>
-        {t("fuelUse")}
-        <input type="number" min="1" step="0.1" value={fuel} onChange={(e) => setFuel(e.target.value)} required />
-      </label>
-      <label>
-        {t("depotLat")}
-        <input value={lat} onChange={(e) => setLat(e.target.value)} required inputMode="decimal" />
-      </label>
-      <label>
-        {t("depotLng")}
-        <input value={lng} onChange={(e) => setLng(e.target.value)} required inputMode="decimal" />
-      </label>
-      <button className="primary" type="submit">
-        {t("addTruck")}
-      </button>
-    </form>
+    <SectionCard title={t("addTruck")}>
+      <Box component="form" onSubmit={(e) => void onSubmit(e)}>
+        <Stack spacing={2}>
+          <TextField
+            size="small"
+            fullWidth
+            label={t("name")}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+          <TextField
+            size="small"
+            fullWidth
+            type="number"
+            label={t("capacityKg")}
+            value={capacity}
+            onChange={(e) => setCapacity(e.target.value)}
+            required
+            slotProps={{ htmlInput: { min: 1 } }}
+          />
+          <TextField
+            size="small"
+            fullWidth
+            type="number"
+            label={t("fuelUse")}
+            value={fuel}
+            onChange={(e) => setFuel(e.target.value)}
+            required
+            slotProps={{ htmlInput: { min: 1, step: 0.1 } }}
+          />
+          <TextField
+            size="small"
+            fullWidth
+            label={t("depotLat")}
+            value={lat}
+            onChange={(e) => setLat(e.target.value)}
+            required
+            slotProps={{ htmlInput: { inputMode: "decimal" } }}
+          />
+          <TextField
+            size="small"
+            fullWidth
+            label={t("depotLng")}
+            value={lng}
+            onChange={(e) => setLng(e.target.value)}
+            required
+            slotProps={{ htmlInput: { inputMode: "decimal" } }}
+          />
+          <Button variant="contained" color="primary" type="submit">
+            {t("addTruck")}
+          </Button>
+        </Stack>
+      </Box>
+    </SectionCard>
   );
 }

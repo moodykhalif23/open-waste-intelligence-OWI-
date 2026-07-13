@@ -1,5 +1,22 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
+import Checkbox from "@mui/material/Checkbox";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import FormGroup from "@mui/material/FormGroup";
+import FormLabel from "@mui/material/FormLabel";
+import Grid from "@mui/material/Grid";
+import MenuItem from "@mui/material/MenuItem";
+import Stack from "@mui/material/Stack";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import TextField from "@mui/material/TextField";
 import { api } from "../api";
+import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
 const MATERIALS = ["plastic", "glass", "metal", "paper", "organic", "e_waste", "textile"] as const;
@@ -56,114 +73,129 @@ export default function Recycling() {
   }, [reload]);
 
   const label = (m: string) => t(m as StringKey);
-  if (value === null) return <p className="muted">{t("loading")}</p>;
+  if (value === null) return <Muted>{t("loading")}</Muted>;
 
   return (
-    <>
-      <section className="tiles">
-        <div className="tile">
-          <span className="tile-value">{Math.round(value.total_kg).toLocaleString()}</span>
-          <span className="tile-label">{t("kgCollected30")}</span>
-        </div>
-        <div className="tile">
-          <span className="tile-value">KES {Math.round(value.total_value_kes).toLocaleString()}</span>
-          <span className="tile-label">{t("estValue30")}</span>
-        </div>
-        <div className="tile">
-          <span className="tile-value">{partners.length}</span>
-          <span className="tile-label">{t("partnersRegistered")}</span>
-        </div>
-      </section>
+    <PageStack>
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatCard label={t("kgCollected30")} value={Math.round(value.total_kg).toLocaleString()} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatCard
+            label={t("estValue30")}
+            value={`KES ${Math.round(value.total_value_kes).toLocaleString()}`}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatCard label={t("partnersRegistered")} value={partners.length} />
+        </Grid>
+      </Grid>
 
-      <section>
-        <h2>{t("recoverableValue")}</h2>
+      <SectionCard title={t("recoverableValue")}>
         {value.materials.length === 0 ? (
-          <p className="muted">{t("noValueYet")}</p>
+          <Muted>{t("noValueYet")}</Muted>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>{t("material")}</th>
-                <th>{t("kgEst")}</th>
-                <th>{t("pricePerKg")}</th>
-                <th>{t("valueKes")}</th>
-                <th>{t("matchingPartners")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {value.materials.map((m) => (
-                <tr key={m.material}>
-                  <td>{label(m.material)}</td>
-                  <td>{m.kg.toLocaleString()}</td>
-                  <td>{m.kes_per_kg === null ? "—" : `KES ${m.kes_per_kg}`}</td>
-                  <td>{m.value_kes ? `KES ${Math.round(m.value_kes).toLocaleString()}` : "—"}</td>
-                  <td>{m.partners}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t("material")}</TableCell>
+                  <TableCell>{t("kgEst")}</TableCell>
+                  <TableCell>{t("pricePerKg")}</TableCell>
+                  <TableCell>{t("valueKes")}</TableCell>
+                  <TableCell>{t("matchingPartners")}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {value.materials.map((m) => (
+                  <TableRow key={m.material}>
+                    <TableCell>{label(m.material)}</TableCell>
+                    <TableCell>{m.kg.toLocaleString()}</TableCell>
+                    <TableCell>{m.kes_per_kg === null ? "—" : `KES ${m.kes_per_kg}`}</TableCell>
+                    <TableCell>
+                      {m.value_kes ? `KES ${Math.round(m.value_kes).toLocaleString()}` : "—"}
+                    </TableCell>
+                    <TableCell>{m.partners}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
-        <p className="muted savings-note">{t("valueMethod")}</p>
-      </section>
+        <Alert severity="info" sx={{ mt: 2.5 }}>
+          {t("valueMethod")}
+        </Alert>
+      </SectionCard>
 
-      <section className="cards">
-        <PriceForm onSaved={reload} />
-        <PartnerForm onSaved={reload} />
-      </section>
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <PriceForm onSaved={reload} />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <PartnerForm onSaved={reload} />
+        </Grid>
+      </Grid>
 
-      <section className="cards">
-        <div className="card">
-          <h2>{t("priceTable")}</h2>
-          {prices.length === 0 ? (
-            <p className="muted">{t("noPrices")}</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("material")}</th>
-                  <th>{t("pricePerKg")}</th>
-                  <th>{t("effectiveDate")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {prices.map((p) => (
-                  <tr key={p.id}>
-                    <td>{label(p.material)}</td>
-                    <td>KES {p.kes_per_kg}</td>
-                    <td>{p.effective_date}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-        <div className="card">
-          <h2>{t("partners")}</h2>
-          {partners.length === 0 ? (
-            <p className="muted">{t("noPartners")}</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("name")}</th>
-                  <th>{t("accepts")}</th>
-                  <th>{t("minKg")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {partners.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.name}</td>
-                    <td>{p.materials_accepted.map(label).join(", ")}</td>
-                    <td>{p.min_kg_per_month}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </section>
-    </>
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <SectionCard title={t("priceTable")}>
+            {prices.length === 0 ? (
+              <Muted>{t("noPrices")}</Muted>
+            ) : (
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{t("material")}</TableCell>
+                      <TableCell>{t("pricePerKg")}</TableCell>
+                      <TableCell>{t("effectiveDate")}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {prices.map((p) => (
+                      <TableRow key={p.id}>
+                        <TableCell>{label(p.material)}</TableCell>
+                        <TableCell>KES {p.kes_per_kg}</TableCell>
+                        <TableCell>{p.effective_date}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </SectionCard>
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <SectionCard title={t("partners")}>
+            {partners.length === 0 ? (
+              <Muted>{t("noPartners")}</Muted>
+            ) : (
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{t("name")}</TableCell>
+                      <TableCell>{t("accepts")}</TableCell>
+                      <TableCell>{t("minKg")}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {partners.map((p) => (
+                      <TableRow key={p.id}>
+                        <TableCell>{p.name}</TableCell>
+                        <TableCell>{p.materials_accepted.map(label).join(", ")}</TableCell>
+                        <TableCell>{p.min_kg_per_month}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </SectionCard>
+        </Grid>
+      </Grid>
+    </PageStack>
   );
 }
 
@@ -188,37 +220,42 @@ function PriceForm({ onSaved }: { onSaved: () => Promise<void> }) {
   }
 
   return (
-    <form className="card form" onSubmit={(e) => void onSubmit(e)}>
-      <h2>{t("setPrice")}</h2>
-      <label>
-        {t("material")}
-        <select value={material} onChange={(e) => setMaterial(e.target.value)}>
-          {MATERIALS.map((m) => (
-            <option key={m} value={m}>
-              {t(m as StringKey)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        {t("pricePerKg")}
-        <input
-          type="number"
-          min="0"
-          step="0.5"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          required
-        />
-      </label>
-      <label>
-        {t("effectiveDate")}
-        <input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} />
-      </label>
-      <button className="primary" type="submit">
-        {t("setPrice")}
-      </button>
-    </form>
+    <SectionCard title={t("setPrice")}>
+      <form onSubmit={(e) => void onSubmit(e)}>
+        <Stack spacing={2}>
+          <TextField
+            select
+            label={t("material")}
+            value={material}
+            onChange={(e) => setMaterial(e.target.value)}
+          >
+            {MATERIALS.map((m) => (
+              <MenuItem key={m} value={m}>
+                {t(m as StringKey)}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            type="number"
+            label={t("pricePerKg")}
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            required
+            slotProps={{ htmlInput: { min: 0, step: 0.5 } }}
+          />
+          <TextField
+            type="date"
+            label={t("effectiveDate")}
+            value={effectiveDate}
+            onChange={(e) => setEffectiveDate(e.target.value)}
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+          <Button variant="contained" type="submit">
+            {t("setPrice")}
+          </Button>
+        </Stack>
+      </form>
+    </SectionCard>
   );
 }
 
@@ -252,32 +289,52 @@ function PartnerForm({ onSaved }: { onSaved: () => Promise<void> }) {
   }
 
   return (
-    <form className="card form" onSubmit={(e) => void onSubmit(e)}>
-      <h2>{t("addPartner")}</h2>
-      <label>
-        {t("name")}
-        <input value={name} onChange={(e) => setName(e.target.value)} required />
-      </label>
-      <fieldset className="materials">
-        <legend>{t("accepts")}</legend>
-        {MATERIALS.map((m) => (
-          <label key={m} className="material-input">
-            <input type="checkbox" checked={accepts.includes(m)} onChange={() => toggle(m)} />
-            {t(m as StringKey)}
-          </label>
-        ))}
-      </fieldset>
-      <label>
-        {t("minKg")}
-        <input type="number" min="0" value={minKg} onChange={(e) => setMinKg(e.target.value)} />
-      </label>
-      <label>
-        {t("contact")}
-        <input value={contact} onChange={(e) => setContact(e.target.value)} />
-      </label>
-      <button className="primary" type="submit">
-        {t("addPartner")}
-      </button>
-    </form>
+    <SectionCard title={t("addPartner")}>
+      <form onSubmit={(e) => void onSubmit(e)}>
+        <Stack spacing={2}>
+          <TextField
+            label={t("name")}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+          <div>
+            <FormLabel component="legend" sx={{ mb: 1 }}>
+              {t("accepts")}
+            </FormLabel>
+            <FormGroup row>
+              {MATERIALS.map((m) => (
+                <FormControlLabel
+                  key={m}
+                  control={
+                    <Checkbox
+                      color="primary"
+                      checked={accepts.includes(m)}
+                      onChange={() => toggle(m)}
+                    />
+                  }
+                  label={t(m as StringKey)}
+                />
+              ))}
+            </FormGroup>
+          </div>
+          <TextField
+            type="number"
+            label={t("minKg")}
+            value={minKg}
+            onChange={(e) => setMinKg(e.target.value)}
+            slotProps={{ htmlInput: { min: 0 } }}
+          />
+          <TextField
+            label={t("contact")}
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
+          />
+          <Button variant="contained" type="submit">
+            {t("addPartner")}
+          </Button>
+        </Stack>
+      </form>
+    </SectionCard>
   );
 }

@@ -1,6 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import CloseIcon from "@mui/icons-material/Close";
+import PhotoOutlinedIcon from "@mui/icons-material/PhotoOutlined";
 import { api, apiBlob, type Bin, type Observation } from "../api";
+import { Muted, PageStack, SectionCard } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
 export default function Reports() {
@@ -25,52 +36,77 @@ export default function Reports() {
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
-  if (observations === null) return <p className="muted">{t("loading")}</p>;
+  if (observations === null) return <Muted>{t("loading")}</Muted>;
   const binCode = (id: string | null) =>
     id === null ? t("noBin") : (bins.find((b) => b.id === id)?.qr_code ?? id.slice(0, 8));
 
   return (
-    <div className="card">
-      <div className="section-head">
-        <h2>{t("reports")}</h2>
-        {material && (
-          <button className="secondary" onClick={() => navigate("/reports")}>
-            {t("filteredBy")}: {t(material as StringKey)} ✕
-          </button>
+    <PageStack>
+      <SectionCard
+        title={t("reports")}
+        action={
+          material && (
+            <Button
+              variant="outlined"
+              size="small"
+              endIcon={<CloseIcon />}
+              onClick={() => navigate("/reports")}
+            >
+              {t("filteredBy")}: {t(material as StringKey)}
+            </Button>
+          )
+        }
+      >
+        {observations.length === 0 ? (
+          <Muted>{t("noData")}</Muted>
+        ) : (
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t("capturedAt")}</TableCell>
+                  <TableCell>{t("bin")}</TableCell>
+                  <TableCell>{t("fillTap")}</TableCell>
+                  <TableCell>{t("source")}</TableCell>
+                  <TableCell>{t("privacy")}</TableCell>
+                  <TableCell>{t("photo")}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {observations.map((obs) => (
+                  <TableRow key={obs.id} hover>
+                    <TableCell>{new Date(obs.captured_at).toLocaleString()}</TableCell>
+                    <TableCell sx={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
+                      {binCode(obs.bin_id)}
+                    </TableCell>
+                    <TableCell>
+                      {obs.fill_tap ? (
+                        <Chip size="small" label={t(obs.fill_tap as StringKey)} />
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell>{obs.location_source}</TableCell>
+                    <TableCell>
+                      <Chip size="small" variant="outlined" label={obs.privacy_status} />
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="text"
+                        size="small"
+                        startIcon={<PhotoOutlinedIcon />}
+                        onClick={() => void viewPhoto(obs.id)}
+                      >
+                        {t("view")}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
-      </div>
-      {observations.length === 0 ? (
-        <p className="muted">{t("noData")}</p>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>{t("capturedAt")}</th>
-              <th>{t("bin")}</th>
-              <th>{t("fillTap")}</th>
-              <th>{t("source")}</th>
-              <th>{t("privacy")}</th>
-              <th>{t("photo")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {observations.map((obs) => (
-              <tr key={obs.id}>
-                <td>{new Date(obs.captured_at).toLocaleString()}</td>
-                <td className="mono">{binCode(obs.bin_id)}</td>
-                <td>{obs.fill_tap ? t(obs.fill_tap as StringKey) : "—"}</td>
-                <td>{obs.location_source}</td>
-                <td>{obs.privacy_status}</td>
-                <td>
-                  <button className="secondary" onClick={() => void viewPhoto(obs.id)}>
-                    {t("view")}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+      </SectionCard>
+    </PageStack>
   );
 }

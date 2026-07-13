@@ -1,7 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Grid from "@mui/material/Grid";
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { api } from "../api";
 import EChart, { barOption } from "../components/EChart";
+import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
 interface MaterialShare {
@@ -36,89 +53,112 @@ export default function Composition() {
 
   const label = (m: string) => t(m as StringKey);
 
+  const periodSelect = (
+    <TextField
+      select
+      size="small"
+      value={days}
+      onChange={(e) => setDays(Number(e.target.value))}
+      sx={{ minWidth: 180 }}
+    >
+      {PERIODS.map((p) => (
+        <MenuItem key={p} value={p}>
+          {t("lastNDays").replace("{n}", String(p))}
+        </MenuItem>
+      ))}
+    </TextField>
+  );
+
   return (
-    <>
-      <div className="section-head">
-        <h2>{t("wasteComposition")}</h2>
-        <div className="head-actions">
-          {PERIODS.map((p) => (
-            <button
-              key={p}
-              className={p === days ? "primary" : "secondary"}
-              onClick={() => setDays(p)}
-            >
-              {t("lastNDays").replace("{n}", String(p))}
-            </button>
-          ))}
-        </div>
-      </div>
+    <PageStack>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 2,
+          flexWrap: "wrap",
+        }}
+      >
+        <Typography variant="h5">{t("wasteComposition")}</Typography>
+        {periodSelect}
+      </Box>
 
       {data === null ? (
-        <p className="muted">{t("loading")}</p>
+        <Muted>{t("loading")}</Muted>
       ) : data.total === 0 ? (
-        <p className="muted">{t("noComposition")}</p>
+        <Muted>{t("noComposition")}</Muted>
       ) : (
         <>
           {!data.sufficient && (
-            <p className="notice">{t("insufficientData").replace("{n}", String(data.total))}</p>
+            <Alert severity="warning">
+              {t("insufficientData").replace("{n}", String(data.total))}
+            </Alert>
           )}
-          <section className="composition-head">
+
+          <Grid container spacing={3}>
             {data.materials.slice(0, 5).map((m) => (
-              <div className="comp-tile" key={m.material}>
-                <span className="comp-pct">{Math.round(m.share_pct)}%</span>
-                <span className="comp-label">{label(m.material)}</span>
-              </div>
+              <Grid key={m.material} size={{ xs: 6, sm: 4, md: 2.4 }}>
+                <StatCard label={label(m.material)} value={`${Math.round(m.share_pct)}%`} />
+              </Grid>
             ))}
-          </section>
-          <section>
+          </Grid>
+
+          <SectionCard>
             <EChart
               option={barOption(
                 data.materials.map((m) => label(m.material)),
                 data.materials.map((m) => m.share_pct),
               )}
             />
-          </section>
-          <div className="card">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("material")}</th>
-                  <th>{t("share")}</th>
-                  <th>{t("change")}</th>
-                  <th>{t("observationsCol")}</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {data.materials.map((m) => (
-                  <tr key={m.material}>
-                    <td>{label(m.material)}</td>
-                    <td>{m.share_pct}%</td>
-                    <td>
-                      {m.delta_pct === null ? (
-                        "—"
-                      ) : (
-                        <span className={m.delta_pct >= 0 ? "delta-up" : "delta-down"}>
-                          {m.delta_pct >= 0 ? "▲" : "▼"} {Math.abs(m.delta_pct)}
-                        </span>
-                      )}
-                    </td>
-                    <td>{m.count}</td>
-                    <td>
-                      <button
-                        className="secondary"
-                        onClick={() => navigate(`/reports?material=${m.material}`)}
-                      >
-                        {t("view")}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          </SectionCard>
+
+          <SectionCard>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>{t("material")}</TableCell>
+                    <TableCell>{t("share")}</TableCell>
+                    <TableCell>{t("change")}</TableCell>
+                    <TableCell>{t("observationsCol")}</TableCell>
+                    <TableCell />
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {data.materials.map((m) => (
+                    <TableRow key={m.material}>
+                      <TableCell>{label(m.material)}</TableCell>
+                      <TableCell>{m.share_pct}%</TableCell>
+                      <TableCell>
+                        {m.delta_pct === null ? (
+                          "—"
+                        ) : (
+                          <Chip
+                            size="small"
+                            color={m.delta_pct >= 0 ? "success" : "error"}
+                            label={`${m.delta_pct >= 0 ? "▲" : "▼"} ${Math.abs(m.delta_pct)}`}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell>{m.count}</TableCell>
+                      <TableCell align="right">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => navigate(`/reports?material=${m.material}`)}
+                        >
+                          {t("view")}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </SectionCard>
         </>
       )}
-    </>
+    </PageStack>
   );
 }

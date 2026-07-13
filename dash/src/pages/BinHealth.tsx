@@ -1,5 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import Grid from "@mui/material/Grid";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import { api } from "../api";
+import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
 import { useI18n } from "../i18n";
 
 interface HealthRow {
@@ -13,6 +24,12 @@ interface HealthRow {
   overflow_risk: "low" | "medium" | "high";
   recommendation: "collect_today" | "schedule_soon" | "no_action";
 }
+
+const RISK_COLOR = {
+  high: "error",
+  medium: "warning",
+  low: "success",
+} as const;
 
 export default function BinHealth() {
   const { t } = useI18n();
@@ -45,64 +62,109 @@ export default function BinHealth() {
     await reload();
   }
 
-  if (rows === null) return <p className="muted">{t("loading")}</p>;
+  const stats = useMemo(() => {
+    const list = rows ?? [];
+    return {
+      total: list.length,
+      high: list.filter((r) => r.overflow_risk === "high").length,
+      collectToday: list.filter((r) => r.recommendation === "collect_today").length,
+      scheduleSoon: list.filter((r) => r.recommendation === "schedule_soon").length,
+    };
+  }, [rows]);
+
+  if (rows === null) return <Muted>{t("loading")}</Muted>;
+
+  const refreshAction = (
+    <Button
+      variant="outlined"
+      size="small"
+      startIcon={<RefreshIcon />}
+      onClick={() => void refresh()}
+      disabled={busy}
+    >
+      {busy ? t("refreshing") : t("refresh")}
+    </Button>
+  );
 
   return (
-    <div className="card">
-      <div className="section-head">
-        <h2>{t("collectToday")}</h2>
-        <button className="secondary" onClick={() => void refresh()} disabled={busy}>
-          {busy ? t("refreshing") : t("refresh")}
-        </button>
-      </div>
-      {rows.length === 0 ? (
-        <p className="muted">{t("noHealthData")}</p>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>{t("bin")}</th>
-              <th>{t("site")}</th>
-              <th>{t("fillLevel")}</th>
-              <th>{t("daysToFull")}</th>
-              <th>{t("sinceCollection")}</th>
-              <th>{t("risk")}</th>
-              <th>{t("recommendation")}</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.bin_id}>
-                <td className="mono">{row.qr_code}</td>
-                <td>{row.site_name}</td>
-                <td>{Math.round(row.fill_pct)}%</td>
-                <td>{row.days_to_full === null ? "—" : row.days_to_full.toFixed(1)}</td>
-                <td>
-                  {row.days_since_collection === null
-                    ? "—"
-                    : row.days_since_collection.toFixed(1)}
-                </td>
-                <td>
-                  <span className={`badge badge-${row.overflow_risk}`}>
-                    {t(row.overflow_risk === "high" ? "riskHigh" : row.overflow_risk === "medium" ? "riskMedium" : "riskLow")}
-                  </span>
-                </td>
-                <td>
-                  {row.recommendation === "collect_today" && t("collectTodayRec")}
-                  {row.recommendation === "schedule_soon" && t("scheduleSoonRec")}
-                  {row.recommendation === "no_action" && "—"}
-                </td>
-                <td>
-                  <button className="secondary" onClick={() => void markCollected(row)}>
-                    {t("markCollected")}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+    <PageStack>
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard label={t("totalBins")} value={stats.total} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard label={t("collectToday")} value={stats.collectToday} color="#b91c1c" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard label={t("riskHigh")} value={stats.high} color="#b91c1c" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard label={t("scheduleSoonRec")} value={stats.scheduleSoon} />
+        </Grid>
+      </Grid>
+
+      <SectionCard title={t("collectToday")} action={refreshAction}>
+        {rows.length === 0 ? (
+          <Muted>{t("noHealthData")}</Muted>
+        ) : (
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t("bin")}</TableCell>
+                  <TableCell>{t("site")}</TableCell>
+                  <TableCell>{t("fillLevel")}</TableCell>
+                  <TableCell>{t("daysToFull")}</TableCell>
+                  <TableCell>{t("sinceCollection")}</TableCell>
+                  <TableCell>{t("risk")}</TableCell>
+                  <TableCell>{t("recommendation")}</TableCell>
+                  <TableCell />
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow key={row.bin_id} hover>
+                    <TableCell sx={{ fontFamily: "monospace" }}>{row.qr_code}</TableCell>
+                    <TableCell>{row.site_name}</TableCell>
+                    <TableCell>{Math.round(row.fill_pct)}%</TableCell>
+                    <TableCell>
+                      {row.days_to_full === null ? "—" : row.days_to_full.toFixed(1)}
+                    </TableCell>
+                    <TableCell>
+                      {row.days_since_collection === null
+                        ? "—"
+                        : row.days_since_collection.toFixed(1)}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        color={RISK_COLOR[row.overflow_risk]}
+                        label={t(
+                          row.overflow_risk === "high"
+                            ? "riskHigh"
+                            : row.overflow_risk === "medium"
+                              ? "riskMedium"
+                              : "riskLow",
+                        )}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {row.recommendation === "collect_today" && t("collectTodayRec")}
+                      {row.recommendation === "schedule_soon" && t("scheduleSoonRec")}
+                      {row.recommendation === "no_action" && "—"}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button variant="contained" size="small" onClick={() => void markCollected(row)}>
+                        {t("markCollected")}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </SectionCard>
+    </PageStack>
   );
 }

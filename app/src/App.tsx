@@ -1,4 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import Alert from "@mui/material/Alert";
+import AppBar from "@mui/material/AppBar";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import Collapse from "@mui/material/Collapse";
+import IconButton from "@mui/material/IconButton";
+import MenuItem from "@mui/material/MenuItem";
+import Paper from "@mui/material/Paper";
+import Snackbar from "@mui/material/Snackbar";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+import Toolbar from "@mui/material/Toolbar";
+import Typography from "@mui/material/Typography";
+import BottomNavigation from "@mui/material/BottomNavigation";
+import BottomNavigationAction from "@mui/material/BottomNavigationAction";
+import PhotoCameraOutlined from "@mui/icons-material/PhotoCameraOutlined";
+import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
+import QrCodeScannerOutlined from "@mui/icons-material/QrCodeScannerOutlined";
+import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
 import CollectList from "./components/CollectList";
 import QrScan from "./components/QrScan";
 import { t, type Lang, type StringKey } from "./i18n";
@@ -119,180 +141,209 @@ export default function App() {
     saveSettings(next);
   }
 
+  const qualityText =
+    warning === "dark"
+      ? tr("qualityDark")
+      : warning === "bright"
+        ? tr("qualityBright")
+        : warning === "blurry"
+          ? tr("qualityBlurry")
+          : null;
+
   return (
-    <main className="shell">
-      <header className="topbar">
-        <h1>{tr("title")}</h1>
-        <span className={online ? "pill pill-on" : "pill pill-off"}>
-          <span className="dot" aria-hidden />
-          {online ? tr("online") : tr("offline")}
-        </span>
-      </header>
+    <Box
+      sx={{
+        width: "100%",
+        maxWidth: 480,
+        mx: "auto",
+        minHeight: "100dvh",
+        display: "flex",
+        flexDirection: "column",
+        overflowX: "hidden",
+        bgcolor: "background.default",
+      }}
+    >
+      <AppBar position="sticky">
+        <Toolbar sx={{ gap: 1 }}>
+          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+            {tr("title")}
+          </Typography>
+          <Chip
+            size="small"
+            color={online ? "success" : "error"}
+            variant={online ? "filled" : "outlined"}
+            label={online ? tr("online") : tr("offline")}
+          />
+          <IconButton
+            aria-label={tr("settings")}
+            onClick={() => setShowSettings((v) => !v)}
+            color={showSettings ? "primary" : "default"}
+          >
+            <SettingsOutlined />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
 
-      {tab === "collect" && <CollectList lang={lang} token={settings.token} />}
+      <Collapse in={showSettings}>
+        <Box sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider", bgcolor: "background.paper" }}>
+          <Stack spacing={2}>
+            <TextField
+              size="small"
+              fullWidth
+              label={tr("deviceToken")}
+              value={settings.token}
+              onChange={(e) => updateSettings({ token: e.target.value })}
+            />
+            <TextField
+              select
+              size="small"
+              fullWidth
+              label={tr("language")}
+              value={lang}
+              onChange={(e) => updateSettings({ lang: e.target.value as Lang })}
+            >
+              <MenuItem value="en">English</MenuItem>
+              <MenuItem value="sw">Kiswahili</MenuItem>
+            </TextField>
+          </Stack>
+        </Box>
+      </Collapse>
 
-      {tab === "report" && (
-        <>
-      <input
-        ref={fileInput}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        hidden
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) void onPhotoPicked(file);
-          e.target.value = "";
-        }}
-      />
+      <Box sx={{ flex: 1, p: 2, pb: 10, display: "flex", flexDirection: "column", gap: 2 }}>
+        {tab === "collect" && <CollectList lang={lang} token={settings.token} />}
 
-      {scanning && (
-        <QrScan
-          onResult={(code) => {
-            setBinQr(code);
-            setScanning(false);
-          }}
-          onCancel={() => setScanning(false)}
-          labels={{
-            manual: tr("manualCode"),
-            cancel: tr("cancel"),
-            ok: tr("ok"),
-            cameraDenied: tr("cameraDenied"),
-          }}
-        />
-      )}
+        {tab === "report" && (
+          <>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void onPhotoPicked(file);
+                e.target.value = "";
+              }}
+            />
 
-      {!scanning && (
-        <div className="binbar">
-          <button className="secondary" onClick={() => setScanning(true)}>
-            <QrIcon />
-            {tr("scanBin")}
-          </button>
-          {binQr && <span className="chip">{tr("binLinked", { code: binQr })}</span>}
-        </div>
-      )}
-
-      {!scanning && previewUrl ? (
-        <section className="capture">
-          <img src={previewUrl} alt="" className="preview" />
-          {warning && (
-            <p className="warning">
-              {warning === "dark" && tr("qualityDark")}
-              {warning === "bright" && tr("qualityBright")}
-              {warning === "blurry" && tr("qualityBlurry")}
-            </p>
-          )}
-          <p className="gps">
-            {gps.kind === "waiting" && tr("gpsWaiting")}
-            {gps.kind === "fix" && tr("gpsAccuracy", { m: Math.round(gps.fix.accuracyM) })}
-            {gps.kind === "failed" && tr("gpsFailed")}
-          </p>
-          <p className="label">{tr("fillLevel")}</p>
-          <div className="bands">
-            {FILL_BANDS.map((band) => (
-              <button
-                key={band}
-                className={fillTap === band ? "band band-active" : "band"}
-                onClick={() => setFillTap(band)}
-              >
-                {tr(band)}
-              </button>
-            ))}
-          </div>
-          <div className="actions">
-            <button className="secondary" onClick={() => fileInput.current?.click()}>
-              {tr("retake")}
-            </button>
-            <button className="primary" onClick={() => void onSave()}>
-              {tr("save")}
-            </button>
-          </div>
-        </section>
-      ) : (
-        !scanning && (
-          <button className="primary big" onClick={() => fileInput.current?.click()}>
-            <CameraIcon />
-            {tr("takePhoto")}
-          </button>
-        )
-      )}
-
-      {queueCount > 0 && (
-        <section className="queue">
-          <span>{tr("queued", { n: queueCount })}</span>
-          <button className="secondary" onClick={() => void runSync()} disabled={!online}>
-            {tr("syncNow")}
-          </button>
-        </section>
-      )}
-        </>
-      )}
-
-      {toast && <p className="toast">{toast}</p>}
-
-      <nav className="tabbar">
-        <button
-          className={tab === "report" ? "tab tab-active" : "tab"}
-          onClick={() => setTab("report")}
-        >
-          {tr("tabReport")}
-        </button>
-        <button
-          className={tab === "collect" ? "tab tab-active" : "tab"}
-          onClick={() => setTab("collect")}
-        >
-          {tr("tabCollect")}
-        </button>
-      </nav>
-
-      <footer>
-        <button className="linklike" onClick={() => setShowSettings((v) => !v)}>
-          {tr("settings")}
-        </button>
-        {showSettings && (
-          <div className="settings">
-            <label>
-              {tr("deviceToken")}
-              <input
-                value={settings.token}
-                onChange={(e) => updateSettings({ token: e.target.value })}
+            {scanning && (
+              <QrScan
+                onResult={(code) => {
+                  setBinQr(code);
+                  setScanning(false);
+                }}
+                onCancel={() => setScanning(false)}
+                labels={{
+                  manual: tr("manualCode"),
+                  cancel: tr("cancel"),
+                  ok: tr("ok"),
+                  cameraDenied: tr("cameraDenied"),
+                }}
               />
-            </label>
-            <label>
-              {tr("language")}
-              <select
-                value={lang}
-                onChange={(e) => updateSettings({ lang: e.target.value as Lang })}
+            )}
+
+            {!scanning && (
+              <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<QrCodeScannerOutlined />}
+                  onClick={() => setScanning(true)}
+                >
+                  {tr("scanBin")}
+                </Button>
+                {binQr && <Chip color="success" variant="outlined" label={tr("binLinked", { code: binQr })} />}
+              </Stack>
+            )}
+
+            {!scanning && previewUrl ? (
+              <Stack spacing={2}>
+                <Box
+                  component="img"
+                  src={previewUrl}
+                  alt=""
+                  sx={{ width: "100%", borderRadius: 3, display: "block" }}
+                />
+                {qualityText && <Alert severity="warning">{qualityText}</Alert>}
+                <Typography variant="body2" color="text.secondary">
+                  {gps.kind === "waiting" && tr("gpsWaiting")}
+                  {gps.kind === "fix" && tr("gpsAccuracy", { m: Math.round(gps.fix.accuracyM) })}
+                  {gps.kind === "failed" && tr("gpsFailed")}
+                </Typography>
+                <Typography sx={{ fontWeight: 620 }}>{tr("fillLevel")}</Typography>
+                <ToggleButtonGroup
+                  fullWidth
+                  exclusive
+                  value={fillTap}
+                  onChange={(_, val: FillBand | null) => val && setFillTap(val)}
+                  sx={{ gap: 1, "& .MuiToggleButtonGroup-grouped": { border: "1px solid", borderColor: "divider", borderRadius: "12px !important", minHeight: 54 } }}
+                >
+                  {FILL_BANDS.map((band) => (
+                    <ToggleButton key={band} value={band}>
+                      {tr(band)}
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+                <Stack direction="row" spacing={1.5}>
+                  <Button variant="outlined" sx={{ flex: 1 }} onClick={() => fileInput.current?.click()}>
+                    {tr("retake")}
+                  </Button>
+                  <Button variant="contained" sx={{ flex: 2 }} onClick={() => void onSave()}>
+                    {tr("save")}
+                  </Button>
+                </Stack>
+              </Stack>
+            ) : (
+              !scanning && (
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<PhotoCameraOutlined />}
+                  onClick={() => fileInput.current?.click()}
+                  sx={{ minHeight: 140, fontSize: "1.15rem", borderRadius: 4 }}
+                >
+                  {tr("takePhoto")}
+                </Button>
+              )
+            )}
+
+            {queueCount > 0 && (
+              <Stack
+                direction="row"
+                sx={{ alignItems: "center", justifyContent: "space-between", pt: 2, borderTop: "1px solid", borderColor: "divider" }}
               >
-                <option value="en">English</option>
-                <option value="sw">Kiswahili</option>
-              </select>
-            </label>
-          </div>
+                <Typography variant="body2" sx={{ fontWeight: 550 }} color="text.secondary">
+                  {tr("queued", { n: queueCount })}
+                </Typography>
+                <Button variant="outlined" size="small" onClick={() => void runSync()} disabled={!online}>
+                  {tr("syncNow")}
+                </Button>
+              </Stack>
+            )}
+          </>
         )}
-      </footer>
-    </main>
-  );
-}
+      </Box>
 
-function CameraIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor"
-      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M4 7h3l2-2.5h6L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" />
-      <circle cx="12" cy="13" r="3.5" />
-    </svg>
-  );
-}
+      <Paper
+        elevation={0}
+        sx={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, mx: "auto", borderTop: "1px solid", borderColor: "divider" }}
+      >
+        <BottomNavigation
+          showLabels
+          value={tab}
+          onChange={(_, val: "report" | "collect") => setTab(val)}
+        >
+          <BottomNavigationAction value="report" label={tr("tabReport")} icon={<PhotoCameraOutlined />} />
+          <BottomNavigationAction value="collect" label={tr("tabCollect")} icon={<LocalShippingOutlined />} />
+        </BottomNavigation>
+      </Paper>
 
-function QrIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-      strokeWidth="1.8" strokeLinecap="round" aria-hidden>
-      <rect x="4" y="4" width="6" height="6" rx="1" />
-      <rect x="14" y="4" width="6" height="6" rx="1" />
-      <rect x="4" y="14" width="6" height="6" rx="1" />
-      <path d="M14 14h3v3h3v3h-6z" />
-    </svg>
+      <Snackbar
+        open={!!toast}
+        message={toast}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        sx={{ bottom: { xs: 80 } }}
+      />
+    </Box>
   );
 }

@@ -15,10 +15,10 @@ type ChartOption = echarts.ComposeOption<
   BarSeriesOption | GridComponentOption | TooltipComponentOption
 >;
 
-export const INK = "#111827";
-export const MUTED = "#6b7280";
-export const LINE = "#e5e7eb";
-export const ACCENT = "#15803d";
+export const INK = "#0f172a";
+export const MUTED = "#64748b";
+export const LINE = "#e8ebf0";
+export const ACCENT = "#059669";
 
 export default function EChart({ option, height = 280 }: { option: ChartOption; height?: number }) {
   const ref = useRef<HTMLDivElement>(null);

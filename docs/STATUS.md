@@ -22,6 +22,15 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 
 ## Done
 
+### UI/UX overhaul — Material UI + emerald theme (2026-07-13)
+
+- **Both frontends rebuilt on Material UI (MUI v9)** with a single emerald design system, kept flat (solid fills + soft tints + light elevation, no gradients/glassmorphism). Charts stay on Apache ECharts (accent re-tuned to emerald); MUI covers layout, cards, grid, forms, tables, chips, icons.
+- Shared emerald theme per app (`dash/src/theme.ts`, `app/src/theme.ts`): primary emerald `#059669`, neutral slate ink/muted, rounded surfaces, `CssBaseline`. Reusable page primitives in `dash/src/components/ui.tsx` (`PageStack`, `SectionCard`, `StatCard`, `Muted`) keep all 14 pages consistent.
+- **Dashboard shell**: MUI `AppBar` (page title + language + sign-out) over a permanent light left `Drawer` with grouped icon nav (Operations / Intelligence / Records / Admin) and an emerald selected state; collapses to a temporary drawer on mobile. Airy `Container` content in card/grid layouts. **Split MUI sign-in** (brand panel + focused form).
+- All 14 dashboard pages converted (Overview, Composition, Collect today, Routes, Recycling, Carbon, Cleanliness, Dumping, Bins, Reports, Review, Volunteers, Users) — behavior/i18n preserved, presentation-only. The dead hand-rolled `dash/src/styles.css` was deleted.
+- **Field app** rebuilt on MUI too: `AppBar` + online `Chip` + settings, `BottomNavigation` (Report / Collect) with icons, `ToggleButtonGroup` fill picker, `Snackbar` toast, MUI forms — capture/GPS/offline-queue/sync logic untouched; old `app/src/styles.css` deleted, `theme-color` → emerald.
+- Screenshots in `screens/` (`dashboard-{login,overview,recycling,routes,users}`, `fieldapp-report`). Both apps build green (tsc strict + eslint + vite); MUI adds ~140 KB gzip to each shell bundle.
+
 ### Backend (`/api`) — Python 3.12, FastAPI, Postgres 16 + PostGIS
 
 - Monorepo scaffolding, CI (ruff, mypy strict, pytest × app/dash tsc, eslint, build), uv tooling

@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { api, apiBlob } from "../api";
+import { Muted, PageStack, SectionCard } from "../components/ui";
 import { useI18n } from "../i18n";
 
 const FILL_BANDS = ["empty", "low", "half", "high", "overflowing"] as const;
@@ -45,29 +51,32 @@ export default function Review() {
     await reload();
   }
 
-  if (queue === null) return <p className="muted">{t("loading")}</p>;
+  if (queue === null) return <Muted>{t("loading")}</Muted>;
 
   return (
-    <div className="card">
-      <div className="section-head">
-        <h2>{t("reviewQueue")}</h2>
-        <span className="muted">{t("pendingCount").replace("{n}", String(queue.unreviewed))}</span>
-      </div>
-      {queue.items.length === 0 ? (
-        <p className="muted">{t("reviewEmpty")}</p>
-      ) : (
-        <ul className="review-list">
-          {queue.items.map((p) => (
-            <ReviewItem
-              key={p.id}
-              prediction={p}
-              onConfirm={() => void confirm(p)}
-              onCorrect={(band) => void correctFill(p, band)}
-            />
-          ))}
-        </ul>
-      )}
-    </div>
+    <PageStack>
+      <SectionCard
+        title={t("reviewQueue")}
+        action={
+          <Chip size="small" label={t("pendingCount").replace("{n}", String(queue.unreviewed))} />
+        }
+      >
+        {queue.items.length === 0 ? (
+          <Muted>{t("reviewEmpty")}</Muted>
+        ) : (
+          <Stack spacing={2.5} divider={<Box sx={{ borderTop: "1px solid", borderColor: "divider" }} />}>
+            {queue.items.map((p) => (
+              <ReviewItem
+                key={p.id}
+                prediction={p}
+                onConfirm={() => void confirm(p)}
+                onCorrect={(band) => void correctFill(p, band)}
+              />
+            ))}
+          </Stack>
+        )}
+      </SectionCard>
+    </PageStack>
   );
 }
 
@@ -100,30 +109,42 @@ function ReviewItem({
   const predicted = String(prediction.payload.fill_band ?? "");
 
   return (
-    <li className="review-item">
-      {imageUrl && <img src={imageUrl} alt="" className="review-thumb" />}
-      <div className="review-body">
-        <p className="review-meta">
-          {prediction.task} · {t("predicted")}: <strong>{predicted || "—"}</strong>
-        </p>
+    <Stack direction={{ xs: "column", sm: "row" }} spacing={2.5} sx={{ alignItems: { sm: "center" } }}>
+      {imageUrl && (
+        <Box
+          component="img"
+          src={imageUrl}
+          alt=""
+          sx={{ width: 96, height: 96, borderRadius: 2, objectFit: "cover", flexShrink: 0 }}
+        />
+      )}
+      <Box sx={{ flexGrow: 1 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          {prediction.task} · {t("predicted")}:{" "}
+          <Box component="strong" sx={{ color: "text.primary" }}>
+            {predicted || "—"}
+          </Box>
+        </Typography>
         {prediction.task === "fill" ? (
-          <div className="bands">
+          <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
             {FILL_BANDS.map((band) => (
-              <button
+              <Button
                 key={band}
-                className="band-pick"
+                size="small"
+                variant={band === predicted ? "contained" : "outlined"}
+                color="primary"
                 onClick={() => (band === predicted ? onConfirm() : onCorrect(band))}
               >
                 {t(band)}
-              </button>
+              </Button>
             ))}
-          </div>
+          </Stack>
         ) : (
-          <button className="primary" onClick={onConfirm}>
+          <Button variant="contained" color="primary" onClick={onConfirm}>
             {t("confirm")}
-          </button>
+          </Button>
         )}
-      </div>
-    </li>
+      </Box>
+    </Stack>
   );
 }

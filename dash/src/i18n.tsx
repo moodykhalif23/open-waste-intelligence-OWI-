@@ -3,6 +3,12 @@ import { createContext, useCallback, useContext, useState, type ReactNode } from
 const strings = {
   en: {
     appName: "OpenWaste Intelligence",
+    navOperations: "Operations",
+    navIntelligence: "Intelligence",
+    navRecords: "Records",
+    navAdmin: "Admin",
+    signInSubtitle: "Waste operations intelligence",
+    signInTagline: "Turn field photos into collection decisions, recovered value, and reporting your funders can trust.",
     login: "Sign in",
     phone: "Phone",
     password: "Password",
@@ -214,6 +220,12 @@ const strings = {
   },
   sw: {
     appName: "OpenWaste Intelligence",
+    navOperations: "Uendeshaji",
+    navIntelligence: "Uchambuzi",
+    navRecords: "Kumbukumbu",
+    navAdmin: "Usimamizi",
+    signInSubtitle: "Uchambuzi wa uendeshaji wa taka",
+    signInTagline: "Geuza picha za uwandani kuwa maamuzi ya ukusanyaji, thamani iliyorejeshwa, na ripoti wafadhili wako wanazoamini.",
     login: "Ingia",
     phone: "Simu",
     password: "Nenosiri",

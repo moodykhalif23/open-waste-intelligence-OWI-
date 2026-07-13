@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import Grid from "@mui/material/Grid";
 import { api, type Bin, type FillBand, type Observation } from "../api";
 import EChart, { barOption } from "../components/EChart";
+import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
 const BANDS: FillBand[] = ["empty", "low", "half", "high", "overflowing"];
@@ -49,40 +51,39 @@ export default function Overview() {
     };
   }, [week, t]);
 
-  if (observations === null || bins === null) return <p className="muted">{t("loading")}</p>;
+  if (observations === null || bins === null) return <Muted>{t("loading")}</Muted>;
 
   const overflowing = week.filter((o) => o.fill_tap === "overflowing").length;
 
   return (
-    <>
-      <section className="tiles">
-        <Tile label={t("totalBins")} value={bins.length} />
-        <Tile label={t("reports7d")} value={week.length} />
-        <Tile label={t("overflowing7d")} value={overflowing} />
-      </section>
-      <section className="cards">
-        <div className="card">
-          <h2>{t("reportsPerDay")}</h2>
-          <EChart option={barOption(perDay.categories, perDay.values)} />
-        </div>
-        <div className="card">
-          <h2>{t("fillDistribution")}</h2>
-          {week.some((o) => o.fill_tap) ? (
-            <EChart option={barOption(fillDist.categories, fillDist.values)} />
-          ) : (
-            <p className="muted">{t("noData")}</p>
-          )}
-        </div>
-      </section>
-    </>
-  );
-}
-
-function Tile({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="tile">
-      <span className="tile-value">{value}</span>
-      <span className="tile-label">{label}</span>
-    </div>
+    <PageStack>
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatCard label={t("totalBins")} value={bins.length} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatCard label={t("reports7d")} value={week.length} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatCard label={t("overflowing7d")} value={overflowing} color="#b91c1c" />
+        </Grid>
+      </Grid>
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <SectionCard title={t("reportsPerDay")}>
+            <EChart option={barOption(perDay.categories, perDay.values)} />
+          </SectionCard>
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <SectionCard title={t("fillDistribution")}>
+            {week.some((o) => o.fill_tap) ? (
+              <EChart option={barOption(fillDist.categories, fillDist.values)} />
+            ) : (
+              <Muted>{t("noData")}</Muted>
+            )}
+          </SectionCard>
+        </Grid>
+      </Grid>
+    </PageStack>
   );
 }

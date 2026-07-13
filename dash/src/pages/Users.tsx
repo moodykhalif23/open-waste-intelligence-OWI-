@@ -1,5 +1,20 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import MenuItem from "@mui/material/MenuItem";
+import Stack from "@mui/material/Stack";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { api, type Role, type User } from "../api";
+import { Muted, PageStack, SectionCard } from "../components/ui";
 import { useI18n } from "../i18n";
 
 const ROLES: Role[] = ["collector", "coordinator", "viewer", "admin"];
@@ -38,55 +53,90 @@ export default function Users() {
     setCopied(true);
   }
 
-  if (users === null) return <p className="muted">{t("loading")}</p>;
+  if (users === null) return <Muted>{t("loading")}</Muted>;
 
   return (
-    <>
-      <section className="cards">
+    <PageStack>
+      <SectionCard title={t("newUser")}>
         <UserForm onCreated={reload} />
-      </section>
-      <div className="card">
-        <h2>{t("users")}</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>{t("name")}</th>
-              <th>{t("phone")}</th>
-              <th>{t("role")}</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id}>
-                <td>{user.name}</td>
-                <td className="mono">{user.phone ?? "—"}</td>
-                <td>{user.role}</td>
-                <td className="row-actions">
-                  {user.role === "collector" && (
-                    <button className="secondary" onClick={() => void issueToken(user)}>
-                      {t("issueToken")}
-                    </button>
-                  )}
-                  <button className="secondary" onClick={() => void revoke(user)}>
-                    {t("revokeTokens")}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      </SectionCard>
+
+      <SectionCard title={t("users")}>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>{t("name")}</TableCell>
+                <TableCell>{t("phone")}</TableCell>
+                <TableCell>{t("role")}</TableCell>
+                <TableCell align="right" />
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id} hover>
+                  <TableCell>{user.name}</TableCell>
+                  <TableCell sx={{ fontFamily: "ui-monospace, monospace" }}>
+                    {user.phone ?? "—"}
+                  </TableCell>
+                  <TableCell>{user.role}</TableCell>
+                  <TableCell align="right">
+                    <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+                      {user.role === "collector" && (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => void issueToken(user)}
+                        >
+                          {t("issueToken")}
+                        </Button>
+                      )}
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        color="error"
+                        onClick={() => void revoke(user)}
+                      >
+                        {t("revokeTokens")}
+                      </Button>
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
         {issued && (
-          <div className="token-panel">
-            <p className="muted">{t("tokenIssuedHint")}</p>
-            <code className="token">{issued.token}</code>
-            <button className="primary" onClick={() => void copyToken()}>
-              {copied ? t("copied") : t("copy")}
-            </button>
-          </div>
+          <Alert severity="success" icon={false} sx={{ mt: 2.5 }}>
+            <Stack spacing={1.5}>
+              <Typography variant="body2">{t("tokenIssuedHint")}</Typography>
+              <TextField
+                value={issued.token}
+                fullWidth
+                size="small"
+                slotProps={{
+                  input: {
+                    readOnly: true,
+                    sx: { fontFamily: "ui-monospace, monospace", fontSize: "0.85rem" },
+                  },
+                }}
+              />
+              <Box>
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<ContentCopyIcon />}
+                  onClick={() => void copyToken()}
+                >
+                  {copied ? t("copied") : t("copy")}
+                </Button>
+              </Box>
+            </Stack>
+          </Alert>
         )}
-      </div>
-    </>
+      </SectionCard>
+    </PageStack>
   );
 }
 
@@ -117,37 +167,54 @@ function UserForm({ onCreated }: { onCreated: () => Promise<void> }) {
   }
 
   return (
-    <form className="card form" onSubmit={(e) => void onSubmit(e)}>
-      <h2>{t("newUser")}</h2>
-      <label>
-        {t("name")}
-        <input value={name} onChange={(e) => setName(e.target.value)} required />
-      </label>
-      <label>
-        {t("phone")}
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} required />
-      </label>
-      <label>
-        {t("role")}
-        <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
+    <Box component="form" onSubmit={(e) => void onSubmit(e)}>
+      <Stack spacing={2.5}>
+        <TextField
+          label={t("name")}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          size="small"
+          fullWidth
+        />
+        <TextField
+          label={t("phone")}
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          required
+          size="small"
+          fullWidth
+        />
+        <TextField
+          select
+          label={t("role")}
+          value={role}
+          onChange={(e) => setRole(e.target.value as Role)}
+          size="small"
+          fullWidth
+        >
           {ROLES.map((value) => (
-            <option key={value}>{value}</option>
+            <MenuItem key={value} value={value}>
+              {value}
+            </MenuItem>
           ))}
-        </select>
-      </label>
-      <label>
-        {t("passwordOptional")}
-        <input
+        </TextField>
+        <TextField
+          label={t("passwordOptional")}
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"
+          size="small"
+          fullWidth
         />
-      </label>
-      {error && <p className="error">{error}</p>}
-      <button className="primary" type="submit">
-        {t("create")}
-      </button>
-    </form>
+        {error && <Alert severity="error">{error}</Alert>}
+        <Box>
+          <Button variant="contained" type="submit">
+            {t("create")}
+          </Button>
+        </Box>
+      </Stack>
+    </Box>
   );
 }

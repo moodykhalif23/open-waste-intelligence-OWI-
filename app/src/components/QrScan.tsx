@@ -1,4 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 
 interface DetectedBarcode {
   rawValue: string;
@@ -61,33 +66,41 @@ export default function QrScan({ onResult, onCancel, labels }: Props) {
   }, [cameraFailed, onResult]);
 
   return (
-    <div className="scanner">
+    <Stack spacing={2}>
       {cameraFailed ? (
-        <p className="gps">{labels.cameraDenied}</p>
+        <Typography variant="body2" color="text.secondary">
+          {labels.cameraDenied}
+        </Typography>
       ) : (
-        <video ref={videoRef} className="scanner-video" muted playsInline />
-      )}
-      <label className="manual">
-        {labels.manual}
-        <input
-          value={manualCode}
-          onChange={(e) => setManualCode(e.target.value)}
-          autoCapitalize="none"
-          autoCorrect="off"
+        <Box
+          component="video"
+          ref={videoRef}
+          muted
+          playsInline
+          sx={{ width: "100%", borderRadius: 3, bgcolor: "#000", aspectRatio: "3 / 4", objectFit: "cover" }}
         />
-      </label>
-      <div className="actions">
-        <button className="secondary" onClick={onCancel}>
+      )}
+      <TextField
+        size="small"
+        fullWidth
+        label={labels.manual}
+        value={manualCode}
+        onChange={(e) => setManualCode(e.target.value)}
+        slotProps={{ htmlInput: { autoCapitalize: "none", autoCorrect: "off" } }}
+      />
+      <Stack direction="row" spacing={1.5}>
+        <Button variant="outlined" sx={{ flex: 1 }} onClick={onCancel}>
           {labels.cancel}
-        </button>
-        <button
-          className="primary"
+        </Button>
+        <Button
+          variant="contained"
+          sx={{ flex: 2 }}
           disabled={!manualCode.trim()}
           onClick={() => onResult(manualCode.trim())}
         >
           {labels.ok}
-        </button>
-      </div>
-    </div>
+        </Button>
+      </Stack>
+    </Stack>
   );
 }

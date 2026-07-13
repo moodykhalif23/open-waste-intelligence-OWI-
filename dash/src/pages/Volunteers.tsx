@@ -1,6 +1,20 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import Button from "@mui/material/Button";
+import Grid from "@mui/material/Grid";
+import MenuItem from "@mui/material/MenuItem";
+import Stack from "@mui/material/Stack";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import { api, getToken } from "../api";
 import EChart, { barOption } from "../components/EChart";
+import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
 import { useI18n } from "../i18n";
 
 const EVENT_TYPES = ["cleanup", "education", "sorting"] as const;
@@ -61,7 +75,7 @@ export default function Volunteers() {
     window.open(URL.createObjectURL(blob), "_blank", "noopener");
   }
 
-  if (summary === null) return <p className="muted">{t("loading")}</p>;
+  if (summary === null) return <Muted>{t("loading")}</Muted>;
 
   const trend = {
     categories: summary.monthly.map((m) => m.month),
@@ -69,73 +83,77 @@ export default function Volunteers() {
   };
 
   return (
-    <>
-      <section className="tiles">
-        <Tile value={summary.events} label={t("eventsHeld")} />
-        <Tile value={summary.participants} label={t("participants")} />
-        <Tile value={summary.hours} label={t("volunteerHours")} />
-        <Tile value={summary.kg_total} label={t("kgCollected")} />
-      </section>
+    <PageStack>
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard label={t("eventsHeld")} value={summary.events} />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard label={t("participants")} value={summary.participants} />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard label={t("volunteerHours")} value={summary.hours} />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard label={t("kgCollected")} value={summary.kg_total} />
+        </Grid>
+      </Grid>
 
-      <section>
-        <div className="section-head">
-          <h2>{t("hoursByMonth")}</h2>
-          <button className="primary" onClick={() => void openReport()}>
+      <SectionCard
+        title={t("hoursByMonth")}
+        action={
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<DescriptionOutlinedIcon />}
+            onClick={() => void openReport()}
+          >
             {t("grantReport")}
-          </button>
-        </div>
+          </Button>
+        }
+      >
         {summary.monthly.length > 0 ? (
           <EChart option={barOption(trend.categories, trend.values)} />
         ) : (
-          <p className="muted">{t("noData")}</p>
+          <Muted>{t("noData")}</Muted>
         )}
-      </section>
+      </SectionCard>
 
-      <section className="cards">
-        <EventForm onCreated={reload} />
-      </section>
+      <EventForm onCreated={reload} />
 
-      <section>
-        <h2>{t("events")}</h2>
+      <SectionCard title={t("events")}>
         {events.length === 0 ? (
-          <p className="muted">{t("noData")}</p>
+          <Muted>{t("noData")}</Muted>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>{t("date")}</th>
-                <th>{t("type")}</th>
-                <th>{t("area")}</th>
-                <th>{t("organizer")}</th>
-                <th>{t("participants")}</th>
-                <th>{t("hours")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((e) => (
-                <tr key={e.id}>
-                  <td>{e.occurred_on}</td>
-                  <td>{t(e.event_type as "cleanup")}</td>
-                  <td>{e.area}</td>
-                  <td>{e.organizer}</td>
-                  <td>{e.participant_count}</td>
-                  <td>{e.hours_total}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t("date")}</TableCell>
+                  <TableCell>{t("type")}</TableCell>
+                  <TableCell>{t("area")}</TableCell>
+                  <TableCell>{t("organizer")}</TableCell>
+                  <TableCell align="right">{t("participants")}</TableCell>
+                  <TableCell align="right">{t("hours")}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {events.map((e) => (
+                  <TableRow key={e.id}>
+                    <TableCell>{e.occurred_on}</TableCell>
+                    <TableCell>{t(e.event_type as "cleanup")}</TableCell>
+                    <TableCell>{e.area}</TableCell>
+                    <TableCell>{e.organizer}</TableCell>
+                    <TableCell align="right">{e.participant_count}</TableCell>
+                    <TableCell align="right">{e.hours_total}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
-      </section>
-    </>
-  );
-}
-
-function Tile({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="tile">
-      <span className="tile-value">{value}</span>
-      <span className="tile-label">{label}</span>
-    </div>
+      </SectionCard>
+    </PageStack>
   );
 }
 
@@ -177,69 +195,107 @@ function EventForm({ onCreated }: { onCreated: () => Promise<void> }) {
   }
 
   return (
-    <form className="card form" onSubmit={(e) => void onSubmit(e)}>
-      <h2>{t("logEvent")}</h2>
-      <label>
-        {t("date")}
-        <input type="date" value={occurredOn} onChange={(e) => setOccurredOn(e.target.value)} />
-      </label>
-      <label>
-        {t("type")}
-        <select value={eventType} onChange={(e) => setEventType(e.target.value)}>
-          {EVENT_TYPES.map((v) => (
-            <option key={v} value={v}>
-              {t(v)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        {t("area")}
-        <input value={area} onChange={(e) => setArea(e.target.value)} required />
-      </label>
-      <label>
-        {t("organizer")}
-        <input value={organizer} onChange={(e) => setOrganizer(e.target.value)} required />
-      </label>
-      <label>
-        {t("participants")}
-        <input
-          type="number"
-          min="0"
-          value={participants}
-          onChange={(e) => setParticipants(e.target.value)}
-          required
-        />
-      </label>
-      <label>
-        {t("volunteerHours")}
-        <input
-          type="number"
-          min="0"
-          step="0.5"
-          value={hours}
-          onChange={(e) => setHours(e.target.value)}
-          required
-        />
-      </label>
-      <fieldset className="materials">
-        <legend>{t("materialsKg")}</legend>
-        {MATERIALS.map((m) => (
-          <label key={m} className="material-input">
-            {t(m)}
-            <input
-              type="number"
-              min="0"
-              step="0.1"
-              value={materials[m] ?? ""}
-              onChange={(e) => setMaterials((prev) => ({ ...prev, [m]: e.target.value }))}
+    <SectionCard title={t("logEvent")}>
+      <Stack component="form" spacing={2.5} onSubmit={(e) => void onSubmit(e)}>
+        <Grid container spacing={2.5}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <TextField
+              fullWidth
+              size="small"
+              type="date"
+              label={t("date")}
+              value={occurredOn}
+              onChange={(e) => setOccurredOn(e.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }}
             />
-          </label>
-        ))}
-      </fieldset>
-      <button className="primary" type="submit">
-        {t("logEvent")}
-      </button>
-    </form>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label={t("type")}
+              value={eventType}
+              onChange={(e) => setEventType(e.target.value)}
+            >
+              {EVENT_TYPES.map((v) => (
+                <MenuItem key={v} value={v}>
+                  {t(v)}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <TextField
+              fullWidth
+              size="small"
+              label={t("area")}
+              value={area}
+              onChange={(e) => setArea(e.target.value)}
+              required
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <TextField
+              fullWidth
+              size="small"
+              label={t("organizer")}
+              value={organizer}
+              onChange={(e) => setOrganizer(e.target.value)}
+              required
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <TextField
+              fullWidth
+              size="small"
+              type="number"
+              label={t("participants")}
+              value={participants}
+              onChange={(e) => setParticipants(e.target.value)}
+              slotProps={{ htmlInput: { min: 0 } }}
+              required
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <TextField
+              fullWidth
+              size="small"
+              type="number"
+              label={t("volunteerHours")}
+              value={hours}
+              onChange={(e) => setHours(e.target.value)}
+              slotProps={{ htmlInput: { min: 0, step: 0.5 } }}
+              required
+            />
+          </Grid>
+        </Grid>
+
+        <Typography variant="subtitle2" color="text.secondary">
+          {t("materialsKg")}
+        </Typography>
+        <Grid container spacing={2}>
+          {MATERIALS.map((m) => (
+            <Grid key={m} size={{ xs: 6, sm: 4, md: 2.4 }}>
+              <TextField
+                fullWidth
+                size="small"
+                type="number"
+                label={t(m)}
+                value={materials[m] ?? ""}
+                onChange={(e) => setMaterials((prev) => ({ ...prev, [m]: e.target.value }))}
+                slotProps={{ htmlInput: { min: 0, step: 0.1 } }}
+              />
+            </Grid>
+          ))}
+        </Grid>
+
+        <Stack direction="row">
+          <Button variant="contained" type="submit">
+            {t("logEvent")}
+          </Button>
+        </Stack>
+      </Stack>
+    </SectionCard>
   );
 }

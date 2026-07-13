@@ -19,11 +19,14 @@ export default defineConfig({
     basicSsl(),
     VitePWA({
       registerType: "autoUpdate",
+      // We register the SW ourselves (guarded) so an untrusted-cert failure on a
+      // LAN pilot degrades to "no offline" instead of an uncaught SecurityError.
+      injectRegister: false,
       manifest: {
         name: "OpenWaste Intelligence",
         short_name: "OWI",
         description: "Collector field app",
-        theme_color: "#15803d",
+        theme_color: "#059669",
         background_color: "#ffffff",
         display: "standalone",
         icons: [{ src: "icon.svg", sizes: "any", type: "image/svg+xml" }],

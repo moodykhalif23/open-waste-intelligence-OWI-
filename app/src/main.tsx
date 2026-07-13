@@ -13,3 +13,15 @@ createRoot(document.getElementById("root")!).render(
     </ThemeProvider>
   </StrictMode>,
 );
+
+// Offline caching is best-effort: a self-signed cert on a LAN pilot blocks SW
+// registration, so we swallow the failure instead of crashing the console.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/sw.js")
+      .catch((err: unknown) =>
+        console.warn("Service worker not registered (offline disabled):", String(err)),
+      );
+  });
+}

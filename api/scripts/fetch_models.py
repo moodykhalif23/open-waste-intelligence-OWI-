@@ -2,6 +2,8 @@
 
 import hashlib
 import sys
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -12,6 +14,23 @@ MODELS = {
     ),
 }
 
+MAX_ATTEMPTS = 5
+
+
+def _download(url: str) -> bytes:
+    # Builds run on flaky networks; a single transient failure must not break the image.
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(url, timeout=60) as response:
+                return bytes(response.read())
+        except (urllib.error.URLError, TimeoutError) as exc:
+            if attempt == MAX_ATTEMPTS:
+                raise
+            wait = 2**attempt
+            print(f"  attempt {attempt} failed ({exc}); retrying in {wait}s")
+            time.sleep(wait)
+    raise RuntimeError("unreachable")
+
 
 def main() -> None:
     for path_str, (url, expected_sha) in MODELS.items():
@@ -21,8 +40,7 @@ def main() -> None:
             continue
         print(f"fetching {path} ...")
         path.parent.mkdir(parents=True, exist_ok=True)
-        with urllib.request.urlopen(url) as response:
-            data = response.read()
+        data = _download(url)
         actual_sha = hashlib.sha256(data).hexdigest()
         if actual_sha != expected_sha:
             sys.exit(f"CHECKSUM MISMATCH for {url}: got {actual_sha}")

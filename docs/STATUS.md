@@ -58,6 +58,15 @@
 - Field app now has a **Collect** tab (bottom tab bar): driver sees the ranked collect-today list with risk rings and marks bins collected on the spot — closes the M4 driver loop ahead of routing
 - Verified live in containers: 33/33 smoke checks (review queue reachable + reviewer-only); driver device token retrieves 9 scored bins and can mark collected; both frontends served through Caddy
 
+### M8 Volunteer Analytics — grant-ready reporting (2026-07-13)
+- Volunteer events (migration 0006): date, type (cleanup/education/sorting), area, organizer, participant count, hours, per-material kg, notes — aggregate-first, no PII
+- Aggregation engine: totals (events, participants, hours, kg), kg-by-material, monthly trend — pure function with 4 unit tests (grant figures are published numbers)
+- Endpoints: event create/list, `/summary`, and `/report` (date-range **branded HTML grant report**, print-to-PDF ready; WeasyPrint server-side PDF is a later hardening step)
+- Dashboard **Volunteers** page: stat tiles, hours-by-month chart, fast event-entry form with per-material kg, event table, one-click grant report
+- Verified live in containers: event → aggregated summary → rendered report (visually checked — Safi-branded, four headline tiles, material + monthly breakdown); 36/36 smoke checks
+- Build robustness fix (proved in a real flaky-network build): `scripts/fetch_models.py` now retries model download with backoff, so a transient GitHub failure no longer breaks the image build
+- New product logo: person lifting the lid of a standalone green bin, no background — applied to field app + dashboard
+
 ## In progress / blocked on a human
 
 - **Phone test of the PWA spike** (Android 10 / 2 GB) — validates the PWA-over-Flutter decision; the project's #1 risk. Owner: Brian.
@@ -67,5 +76,6 @@
 1. Train the first models (T1/T2/T3) on Phase 0 data → activate in the registry → predictions flow into the review queue (needs the labeled dataset)
 2. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
 3. M1 composition views + M5 recycling value on the dashboard (arrive with the classification model)
+4. Grant report hardening: WeasyPrint server-side PDF; fold in composition (M1) + carbon (M7) sections once those land
 
 With all six Phase 0 engineering tasks delivered, the remaining Phase 0 work is operational, not code: partner kickoff, bin registry data entry, collector training, capture-rate tracking (gate G0).

@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session
 
 from owi_api.analytics.osrm import get_distance_matrix
 from owi_api.analytics.refresh import refresh_bin
-from owi_api.analytics.routing import Stop, TruckSpec, solve_routes
+from owi_api.analytics.routing import DistanceMatrix, GeoPoint, Stop, TruckSpec, solve_routes
+from owi_api.analytics.savings import Scenario, compute_savings
 from owi_api.config import settings
 from owi_api.db import get_session
 from owi_api.models.enums import OverflowRisk, RouteStatus, UserRole
@@ -66,6 +67,23 @@ class RouteOut(BaseModel):
 class OptimizeIn(BaseModel):
     # Omit bin_ids to auto-select every bin currently recommended for collection.
     bin_ids: list[uuid.UUID] | None = None
+
+
+class ScenarioOut(BaseModel):
+    km: float
+    tonnes: float
+    fuel_l: float
+    bins: int
+
+
+class SavingsOut(BaseModel):
+    baseline: ScenarioOut
+    optimized: ScenarioOut
+    baseline_km_per_tonne: float | None
+    optimized_km_per_tonne: float | None
+    km_per_tonne_reduction_pct: float | None
+    fuel_l_saved: float
+    kes_saved: float | None
 
 
 @router.post("/trucks", response_model=TruckOut, status_code=201)
@@ -185,6 +203,90 @@ def list_routes(
         )
     ).all()
     return [_route_out(session, route, name) for route, name in rows]
+
+
+def _scenario(
+    stops: list[Stop], n_trucks: int, depot: GeoPoint, matrix: DistanceMatrix, fuel_rate: float
+) -> Scenario:
+    if not stops:
+        return Scenario(km=0.0, kg=0.0, fuel_l=0.0)
+    # Savings is a distance-per-tonne analysis, so give every truck ample capacity
+    # (real capacity planning lives in /routes/optimize); we just want minimal sweep distance.
+    total = sum(s.demand_kg for s in stops)
+    specs = [TruckSpec(str(i), total) for i in range(n_trucks)]
+    plan = solve_routes(depot, stops, specs, matrix, time_limit_s=settings.route_time_limit_s)
+    km = plan.total_km
+    return Scenario(km=km, kg=total, fuel_l=round(km * fuel_rate / 100, 2))
+
+
+@router.get("/routes/savings", response_model=SavingsOut)
+def routes_savings(
+    requester: Annotated[TokenClaims, require_roles(*PLANNERS)],
+    session: Annotated[Session, Depends(get_session)],
+) -> SavingsOut:
+    trucks = list(
+        session.scalars(
+            select(Truck).where(
+                Truck.org_id == requester.org_id,
+                Truck.deleted_at.is_(None),
+                Truck.active.is_(True),
+            )
+        )
+    )
+    if not trucks:
+        raise HTTPException(status_code=400, detail="no active trucks — add one first")
+
+    fuel_rate = sum(t.fuel_l_per_100km for t in trucks) / len(trucks)
+    depot_row = session.execute(
+        select(func.ST_Y(Truck.depot), func.ST_X(Truck.depot)).where(Truck.id == trucks[0].id)
+    ).one()
+    depot = (depot_row[1], depot_row[0])
+    matrix = get_distance_matrix(settings.osrm_url or None)
+
+    all_bins = list(
+        session.scalars(
+            select(Bin.id).where(Bin.org_id == requester.org_id, Bin.deleted_at.is_(None))
+        )
+    )
+    today_bins = list(
+        session.scalars(
+            select(BinHealthDaily.bin_id)
+            .where(
+                BinHealthDaily.org_id == requester.org_id,
+                BinHealthDaily.overflow_risk != OverflowRisk.LOW,
+            )
+            .order_by(BinHealthDaily.bin_id, BinHealthDaily.date.desc())
+            .distinct(BinHealthDaily.bin_id)
+        )
+    )
+
+    baseline = _scenario(
+        _bin_demand(session, requester.org_id, all_bins), len(trucks), depot, matrix, fuel_rate
+    )
+    optimized = _scenario(
+        _bin_demand(session, requester.org_id, today_bins), len(trucks), depot, matrix, fuel_rate
+    )
+    report = compute_savings(baseline, optimized, settings.fuel_price_kes_per_l)
+
+    return SavingsOut(
+        baseline=ScenarioOut(
+            km=baseline.km,
+            tonnes=round(baseline.kg / 1000, 3),
+            fuel_l=baseline.fuel_l,
+            bins=len(all_bins),
+        ),
+        optimized=ScenarioOut(
+            km=optimized.km,
+            tonnes=round(optimized.kg / 1000, 3),
+            fuel_l=optimized.fuel_l,
+            bins=len(today_bins),
+        ),
+        baseline_km_per_tonne=report.baseline_km_per_tonne,
+        optimized_km_per_tonne=report.optimized_km_per_tonne,
+        km_per_tonne_reduction_pct=report.km_per_tonne_reduction_pct,
+        fuel_l_saved=report.fuel_l_saved,
+        kes_saved=report.kes_saved,
+    )
 
 
 @router.post("/routes/stops/{stop_id}/collect", status_code=204)

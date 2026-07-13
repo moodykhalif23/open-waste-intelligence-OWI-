@@ -27,12 +27,31 @@ interface Route {
   stops: Stop[];
 }
 
+interface ScenarioFacts {
+  km: number;
+  tonnes: number;
+  fuel_l: number;
+  bins: number;
+}
+
+interface Savings {
+  baseline: ScenarioFacts;
+  optimized: ScenarioFacts;
+  baseline_km_per_tonne: number | null;
+  optimized_km_per_tonne: number | null;
+  km_per_tonne_reduction_pct: number | null;
+  fuel_l_saved: number;
+  kes_saved: number | null;
+}
+
 export default function Routes() {
   const { t } = useI18n();
   const [trucks, setTrucks] = useState<Truck[] | null>(null);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [planning, setPlanning] = useState(false);
+  const [savings, setSavings] = useState<Savings | null>(null);
+  const [savingsBusy, setSavingsBusy] = useState(false);
 
   const reload = useCallback(async () => {
     const [tk, rt] = await Promise.all([
@@ -60,6 +79,18 @@ export default function Routes() {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setPlanning(false);
+    }
+  }
+
+  async function loadSavings() {
+    setSavingsBusy(true);
+    setError(null);
+    try {
+      setSavings(await api<Savings>("/api/v1/routes/savings"));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSavingsBusy(false);
     }
   }
 
@@ -113,6 +144,57 @@ export default function Routes() {
                 )}
               </div>
             ))}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <div className="section-head">
+          <h2>{t("savingsTitle")}</h2>
+          <button className="secondary" disabled={savingsBusy} onClick={() => void loadSavings()}>
+            {savingsBusy ? t("calculating") : t("calcSavings")}
+          </button>
+        </div>
+        {savings === null ? (
+          <p className="muted">{t("savingsHint")}</p>
+        ) : savings.km_per_tonne_reduction_pct === null ? (
+          <p className="muted">{t("savingsNoData")}</p>
+        ) : (
+          <div className="savings">
+            <div className="savings-headline">
+              <span className="savings-pct">−{savings.km_per_tonne_reduction_pct}%</span>
+              <span className="savings-label">{t("kmPerTonneCut")}</span>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th />
+                  <th>{t("fixedSweep")}</th>
+                  <th>{t("needDriven")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{t("binsVisited")}</td>
+                  <td>{savings.baseline.bins}</td>
+                  <td>{savings.optimized.bins}</td>
+                </tr>
+                <tr>
+                  <td>{t("distanceKm")}</td>
+                  <td>{savings.baseline.km}</td>
+                  <td>{savings.optimized.km}</td>
+                </tr>
+                <tr>
+                  <td>{t("kmPerTonne")}</td>
+                  <td>{savings.baseline_km_per_tonne}</td>
+                  <td>{savings.optimized_km_per_tonne}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="muted savings-note">
+              {t("fuelSaved")}: {savings.fuel_l_saved} L
+              {savings.kes_saved !== null ? ` · ~KES ${savings.kes_saved}` : ""}. {t("savingsMethod")}
+            </p>
           </div>
         )}
       </section>

@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     route_time_limit_s: int = 5
     # Loose municipal waste ~0.1 kg/L; turns fill-band x bin volume into a demand estimate.
     waste_density_kg_per_l: float = 0.1
+    # Set to the org's diesel price to show KES saved in the savings report; 0 hides it.
+    fuel_price_kes_per_l: float = 0.0
 
     def assert_production_safe(self) -> None:
         """Refusing to boot beats silently running a public API on dev credentials."""

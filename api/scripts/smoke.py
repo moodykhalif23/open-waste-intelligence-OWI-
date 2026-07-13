@@ -231,10 +231,17 @@ def main() -> None:
         done = client.post(f"/api/v1/routes/stops/{first['id']}/collect", headers=device_auth)
         check("driver marks a stop collected", done.status_code == 204)
         after = client.get("/api/v1/routes", headers=device_auth).json()
-        marked = next(
-            (s for r in after for s in r["stops"] if s["id"] == first["id"]), None
-        )
+        marked = next((s for r in after for s in r["stops"] if s["id"] == first["id"]), None)
         check("stop shows collected after marking", marked is not None and marked["collected"])
+
+    savings = client.get("/api/v1/routes/savings", headers=admin)
+    check("savings report computes", savings.status_code == 200, savings.text[:150])
+    if savings.status_code == 200:
+        s = savings.json()
+        check(
+            "savings compares fixed sweep vs need-driven",
+            s["baseline"]["bins"] >= s["optimized"]["bins"] and "fuel_l_saved" in s,
+        )
 
     ev = client.post(
         "/api/v1/volunteers",

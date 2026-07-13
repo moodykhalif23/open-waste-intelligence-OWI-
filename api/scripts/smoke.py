@@ -302,6 +302,30 @@ def main() -> None:
         == 403,
     )
 
+    price = client.post(
+        "/api/v1/recycling/prices",
+        headers=admin,
+        json={"material": "plastic", "kes_per_kg": 50, "effective_date": "2026-01-01"},
+    )
+    check("material price set", price.status_code == 201)
+    partner = client.post(
+        "/api/v1/recycling/partners",
+        headers=admin,
+        json={"name": "PET Buyer", "materials_accepted": ["plastic"], "min_kg_per_month": 100},
+    )
+    check("recycling partner added", partner.status_code == 201)
+    rvalue = client.get("/api/v1/recycling/value?days=30", headers=admin)
+    check(
+        "recycling value computes",
+        rvalue.status_code == 200 and "total_value_kes" in rvalue.json(),
+    )
+    match_resp = client.get(
+        "/api/v1/recycling/partners/match",
+        headers=admin,
+        params={"material": "plastic", "kg_per_month": 500},
+    )
+    check("partner matching works", "PET Buyer" in match_resp.json()["partners"])
+
     comp = client.get("/api/v1/analytics/composition?days=30", headers=admin)
     check("composition endpoint", comp.status_code == 200 and "materials" in comp.json())
     check(

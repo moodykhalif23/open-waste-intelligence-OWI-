@@ -9,6 +9,7 @@ const Overview = lazy(() => import("./pages/Overview"));
 const Composition = lazy(() => import("./pages/Composition"));
 const BinHealth = lazy(() => import("./pages/BinHealth"));
 const RoutesPage = lazy(() => import("./pages/Routes"));
+const Recycling = lazy(() => import("./pages/Recycling"));
 const Bins = lazy(() => import("./pages/Bins"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Review = lazy(() => import("./pages/Review"));
@@ -32,6 +33,7 @@ export default function App() {
                 <Route path="composition" element={<Composition />} />
                 <Route path="collect" element={<BinHealth />} />
                 <Route path="routes" element={<RoutesPage />} />
+                <Route path="recycling" element={<Recycling />} />
                 <Route path="bins" element={<Bins />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="review" element={<Review />} />

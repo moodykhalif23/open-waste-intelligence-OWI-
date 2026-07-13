@@ -15,6 +15,7 @@ from owi_api.routers import (
     models,
     observations,
     operations,
+    public,
     recycling,
     review,
     routes,
@@ -33,7 +34,7 @@ def create_app() -> FastAPI:
             CORSMiddleware,
             allow_origins=settings.cors_origins,
             allow_methods=["*"],
-            allow_headers=["Authorization", "Content-Type"],
+            allow_headers=["Authorization", "Content-Type", "X-API-Key"],
         )
 
     @app.middleware("http")
@@ -62,6 +63,8 @@ def create_app() -> FastAPI:
     app.include_router(cleanliness.router)
     app.include_router(dumping.router)
     app.include_router(volunteers.router)
+    app.include_router(public.router)
+    app.include_router(public.keys_router)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:

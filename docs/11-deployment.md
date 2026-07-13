@@ -13,7 +13,7 @@ One `docker compose` runs the whole platform: Postgres+PostGIS, Redis, MinIO, La
 ```sh
 git clone <repo> owi && cd owi
 
-# 1. Secrets — everything lives in the single repo-root .env (never committed):
+# 1. Secrets :
 cat > .env <<'EOF'
 POSTGRES_USER=owi
 POSTGRES_PASSWORD=<random>
@@ -41,14 +41,14 @@ Migrations run automatically when the `api` container starts. Model weights are 
 
 ## What runs where
 
-| Service | Role | Exposed |
-|---|---|---|
-| `web` (Caddy) | dashboard + field PWA statics, `/api` reverse proxy, TLS | 80/443 (domains) or 8443/8444 (LAN, self-signed) |
-| `api` | FastAPI: ingestion, registry, auth, analytics | 8000 (behind the proxy in production) |
-| `worker` | RQ batch inference jobs | — |
-| `scheduler` | hourly maintenance (quarantine purge) | — |
-| `db` / `redis` / `minio` | Postgres+PostGIS / queue / object store | internal (+ dev ports) |
-| `labelstudio` | labeling UI for the Safi Waste Dataset | 8080 |
+| Service                        | Role                                                      | Exposed                                          |
+| ------------------------------ | --------------------------------------------------------- | ------------------------------------------------ |
+| `web` (Caddy)                | dashboard + field PWA statics,`/api` reverse proxy, TLS | 80/443 (domains) or 8443/8444 (LAN, self-signed) |
+| `api`                        | FastAPI: ingestion, registry, auth, analytics             | 8000 (behind the proxy in production)            |
+| `worker`                     | RQ batch inference jobs                                   | —                                               |
+| `scheduler`                  | hourly maintenance (quarantine purge)                     | —                                               |
+| `db` / `redis` / `minio` | Postgres+PostGIS / queue / object store                   | internal (+ dev ports)                           |
+| `labelstudio`                | labeling UI for the Safi Waste Dataset                    | 8080                                             |
 
 LAN mode (no domains): open `https://<server-ip>:8443` (dashboard) and `https://<server-ip>:8444` (field app) and accept the self-signed certificate once per device.
 

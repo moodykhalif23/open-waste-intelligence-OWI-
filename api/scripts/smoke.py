@@ -416,6 +416,59 @@ def main() -> None:
         client.post("/api/v1/admin/quarantine/purge", headers=device_auth).status_code == 403,
     )
 
+    # --- Open Data API (aggregates only, keyed, suppressed, 7-day delayed) ---
+    pmeta = client.get("/api/v1/public/meta")
+    check(
+        "open-data meta is public + CC-BY",
+        pmeta.status_code == 200 and pmeta.json()["license"] == "CC-BY-4.0",
+    )
+    check(
+        "open-data endpoint rejects missing key",
+        client.get("/api/v1/public/composition").status_code == 401,
+    )
+    check(
+        "api-key creation is admin-only",
+        client.post(
+            "/api/v1/admin/api-keys", headers=device_auth, json={"label": "x"}
+        ).status_code
+        == 403,
+    )
+    made = client.post("/api/v1/admin/api-keys", headers=admin, json={"label": "researcher"})
+    check(
+        "api key issued (shown once, owi-prefixed)",
+        made.status_code == 200 and made.json()["api_key"].startswith("owi_"),
+    )
+    key_headers = {"X-API-Key": made.json()["api_key"]}
+    key_id, key_prefix = made.json()["id"], made.json()["key_prefix"]
+    listed_keys = client.get("/api/v1/admin/api-keys", headers=admin).json()
+    check(
+        "api key listed by prefix",
+        any(k["key_prefix"] == key_prefix for k in listed_keys),
+    )
+    coll = client.get("/api/v1/public/collections", headers=key_headers)
+    check(
+        "public collections aggregate returns",
+        coll.status_code == 200
+        and "cells" in coll.json()
+        and isinstance(coll.json()["suppressed_cells"], int),
+    )
+    check(
+        "public composition + cleanliness reachable with key",
+        client.get("/api/v1/public/composition", headers=key_headers).status_code == 200
+        and client.get("/api/v1/public/cleanliness", headers=key_headers).status_code == 200,
+    )
+    csv_resp = client.get("/api/v1/public/collections?format=csv", headers=key_headers)
+    check(
+        "public CSV export",
+        csv_resp.status_code == 200 and "text/csv" in csv_resp.headers.get("content-type", ""),
+    )
+    revoke_key = client.post(f"/api/v1/admin/api-keys/{key_id}/revoke", headers=admin)
+    check("api key revocable", revoke_key.status_code == 200)
+    check(
+        "revoked key is rejected",
+        client.get("/api/v1/public/collections", headers=key_headers).status_code == 401,
+    )
+
     revoke = client.post(f"/api/v1/users/{collector.json()['id']}/revoke-tokens", headers=admin)
     check("revoke tokens", revoke.status_code == 204)
     check(

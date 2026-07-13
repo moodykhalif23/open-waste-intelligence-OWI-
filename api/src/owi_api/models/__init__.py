@@ -1,3 +1,4 @@
+from owi_api.models.api_key import ApiKey
 from owi_api.models.base import Base
 from owi_api.models.cleanliness import CleanlinessDaily
 from owi_api.models.dumping import (
@@ -15,6 +16,7 @@ from owi_api.models.route import Route, RouteStop, Truck
 from owi_api.models.volunteer import VolunteerEvent
 
 __all__ = [
+    "ApiKey",
     "Base",
     "Bin",
     "BinHealthDaily",

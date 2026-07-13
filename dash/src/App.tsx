@@ -21,6 +21,7 @@ const Reports = lazy(() => import("./pages/Reports"));
 const Review = lazy(() => import("./pages/Review"));
 const Volunteers = lazy(() => import("./pages/Volunteers"));
 const Users = lazy(() => import("./pages/Users"));
+const OpenData = lazy(() => import("./pages/OpenData"));
 
 function RequireAuth() {
   return getToken() ? <Outlet /> : <Navigate to="/login" replace />;
@@ -50,6 +51,7 @@ export default function App() {
                 <Route path="review" element={<Review />} />
                 <Route path="volunteers" element={<Volunteers />} />
                 <Route path="users" element={<Users />} />
+                <Route path="open-data" element={<OpenData />} />
               </Route>
             </Route>
           </Routes>

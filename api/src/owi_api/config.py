@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     # Set to the org's diesel price to show KES saved in the savings report; 0 hides it.
     fuel_price_kes_per_l: float = 0.0
 
+    # Open Data API: public aggregates lag reality (governance hard line) and are keyed + throttled.
+    public_api_delay_days: int = 7
+    public_api_rate_per_min: int = 60
+
     def assert_production_safe(self) -> None:
         """Refusing to boot beats silently running a public API on dev credentials."""
         if self.environment != "production":

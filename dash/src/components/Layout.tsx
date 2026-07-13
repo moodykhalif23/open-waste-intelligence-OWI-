@@ -33,6 +33,7 @@ import ArticleOutlined from "@mui/icons-material/ArticleOutlined";
 import FactCheckOutlined from "@mui/icons-material/FactCheckOutlined";
 import VolunteerActivismOutlined from "@mui/icons-material/VolunteerActivismOutlined";
 import ManageAccountsOutlined from "@mui/icons-material/ManageAccountsOutlined";
+import PublicOutlined from "@mui/icons-material/PublicOutlined";
 import LogoutOutlined from "@mui/icons-material/LogoutOutlined";
 import MenuOutlined from "@mui/icons-material/MenuOutlined";
 import { clearToken } from "../api";
@@ -80,7 +81,10 @@ const NAV: NavGroup[] = [
   },
   {
     label: "navAdmin",
-    items: [{ to: "/users", key: "users", icon: <ManageAccountsOutlined fontSize="small" /> }],
+    items: [
+      { to: "/users", key: "users", icon: <ManageAccountsOutlined fontSize="small" /> },
+      { to: "/open-data", key: "openData", icon: <PublicOutlined fontSize="small" /> },
+    ],
   },
 ];
 
@@ -98,6 +102,7 @@ const TITLES: Record<string, StringKey> = {
   "/review": "review",
   "/volunteers": "volunteers",
   "/users": "users",
+  "/open-data": "openData",
 };
 
 function BinMark() {

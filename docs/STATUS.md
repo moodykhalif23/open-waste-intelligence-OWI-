@@ -16,9 +16,9 @@ Platform foundation (ingestion, privacy gate, image-quality gate, auth + RBAC, b
 | M5 Recycling Intelligence | **done** (calibration pending data) | material kg tracking, dated KES price table, value dashboard, partner registry + matching, supply-profile export all live. Only remaining: sorting-site reconciliation (M5-F5) — needs real sorted weights from the pilot |
 | M6 Cleanliness Index      | **done** (litter + public page later) | daily 0–100 per-area score from overflow + dumping + reliability signals, decomposable component breakdown, data-sufficiency guard, versioned methodology, stored daily for trends. Remaining: litter-density component (needs detection model), GeoJSON area boundaries + opt-in public page |
 | M7 Carbon Impact          | **done** (external review pending) | cited factor table (`carbon-factors-v1.csv`), calc engine over M5 weights with method version + uncertainty ranges, dashboard, grant-report carbon block. Only remaining: external methodology review + Kenyan-context factors (governance ask, needs a reviewer) |
-| Open Data API             | **not started** | aggregates-only public endpoints, small-cell suppression, API keys, 7-day delay                                                                                                                    |
+| Open Data API             | **done** | keyed aggregates-only public API (composition/cleanliness/collections by ward x week, JSON + CSV), small-cell suppression (< 3 bins or < 20 obs), 7-day delay, CC-BY-4.0, rate-limited; dashboard key management. Remaining: per-area publish opt-in (data-sovereignty gate) and a scrubbed dataset snapshot with the re-scan checklist |
 
-These are tracked so we complete them **one module at a time, fully** — not half-built across the board. Order follows the roadmap: M1 composition views next (once the classifier trains), then M5/M3 (Phase 2), then M6/M7/Open API (Phase 3).
+These are tracked so we complete them **one module at a time, fully** — not half-built across the board. **All eight modules plus the Open Data API are now built.** What remains per module is data-gated calibration and governance follow-ups (real Safi sorting weights, external carbon review, litter-density model + public cleanliness page, per-area publish opt-in) — no unbuilt core features.
 
 ## Done
 
@@ -30,6 +30,15 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 - All 14 dashboard pages converted (Overview, Composition, Collect today, Routes, Recycling, Carbon, Cleanliness, Dumping, Bins, Reports, Review, Volunteers, Users) — behavior/i18n preserved, presentation-only. The dead hand-rolled `dash/src/styles.css` was deleted.
 - **Field app** rebuilt on MUI too: `AppBar` + online `Chip` + settings, `BottomNavigation` (Report / Collect) with icons, `ToggleButtonGroup` fill picker, `Snackbar` toast, MUI forms — capture/GPS/offline-queue/sync logic untouched; old `app/src/styles.css` deleted, `theme-color` → emerald.
 - Screenshots in `screens/` (`dashboard-{login,overview,recycling,routes,users}`, `fieldapp-report`). Both apps build green (tsc strict + eslint + vite); MUI adds ~140 KB gzip to each shell bundle.
+
+### Open Data API (2026-07-13)
+
+- Public, read-only, **aggregates-only** API under `/api/v1/public` — the hard governance boundary: no raw images, no coordinates, no bin identifiers ever leave it. Endpoints: `composition`, `cleanliness`, `collections`, each **ward x ISO-week**, plus a key-free `/meta` (license, delay, suppression rule, endpoints).
+- **Small-cell suppression** (pure, unit-tested `analytics/public_data.py`): any ward-week cell backed by `< 3 bins` or `< 20 observations` is withheld, and the response reports `suppressed_cells`. **7-day delay**: nothing captured within the delay window is exposed. **CC-BY-4.0** attribution on every payload.
+- **API keys** (`api_keys` table, migration 0012): admin mints a key (shown once, stored as an argon2 hash + lookup prefix), consumers pass it as `X-API-Key`; per-key sliding-window rate limit (60/min default). `api_consumer` role still can never reach raw observations. Keys are consumer identifiers, not tenants; per-area publish opt-in is a tracked follow-up.
+- **JSON + CSV** responses (`?format=csv`) so counties/researchers can pull tables directly.
+- Dashboard **Open Data** admin page: create/revoke keys (shown-once copy), key table (prefix, created, last used, status), and live public-API docs with an example request.
+- Verified live: full smoke suite green including 11 new Open Data checks (meta public, missing-key 401, admin-only key creation, issue/list/query/CSV, revoke, revoked-key 401); 91 api unit tests (+3 public-data). **Open Data API is complete — all product modules are now done.**
 
 ### Backend (`/api`) — Python 3.12, FastAPI, Postgres 16 + PostGIS
 

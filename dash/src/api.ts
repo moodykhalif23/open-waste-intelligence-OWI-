@@ -81,3 +81,25 @@ export interface Observation {
   fill_tap: FillBand | null;
   privacy_status: string;
 }
+
+export interface ApiKey {
+  id: string;
+  label: string;
+  key_prefix: string;
+  created_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+}
+
+export interface ApiKeyCreated extends ApiKey {
+  api_key: string;
+}
+
+export interface PublicMeta {
+  dataset_version: string;
+  license: string;
+  attribution: string;
+  delay_days: number;
+  suppression: string;
+  endpoints: string[];
+}

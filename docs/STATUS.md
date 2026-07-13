@@ -6,23 +6,24 @@
 
 Platform foundation (ingestion, privacy gate, image-quality gate, auth + RBAC, bin registry, object store, batch queue, model registry, review queue, deploy, ML training harness) is **done**. Per-module against the docs:
 
-| Module | State | Remaining to be "fully featured" |
-|---|---|---|
-| M2 Bin Health | **done** | overflow WhatsApp/SMS digest (M2-F5); bin history page with fill curve (M2-F7) |
-| M4 Route Optimization | **done** | plan-vs-actual from GPS breadcrumbs (M4-F4); what-if scenario runner (M4-F6) |
-| M8 Volunteer Analytics | **done** | spreadsheet bulk import (M8-F2); volunteer certificates (M8-F6); WeasyPrint PDF |
-| M1 Waste Classification | **partial** | model (baseline training now); composition aggregates + headline view (M1-F2); comparison/trend views (M1-F3); sorting-ground-truth calibration (M1-F4); aggregate→observation drill-down (M1-F6) |
-| M3 Illegal Dumping | **not started** | candidate flagging + review queue, hotspot map, per-site timeline, intervention tracking |
-| M5 Recycling Intelligence | **not started** | material volume + kg tracking, KES price table, value dashboard, partner registry, sorting reconciliation |
-| M6 Cleanliness Index | **not started** | area boundaries, daily 0–100 score + components, trends, data-sufficiency guard, methodology page |
-| M7 Carbon Impact | **not started** | factor table (carbon-factors-v1.csv), calc engine, dashboard, uncertainty ranges |
-| Open Data API | **not started** | aggregates-only public endpoints, small-cell suppression, API keys, 7-day delay |
+| Module                    | State                 | Remaining to be "fully featured"                                                                                                                                                                   |
+| ------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M2 Bin Health             | **done**        | overflow WhatsApp/SMS digest (M2-F5); bin history page with fill curve (M2-F7)                                                                                                                     |
+| M4 Route Optimization     | **done**        | plan-vs-actual from GPS breadcrumbs (M4-F4); what-if scenario runner (M4-F6)                                                                                                                       |
+| M8 Volunteer Analytics    | **done**        | spreadsheet bulk import (M8-F2); volunteer certificates (M8-F6); WeasyPrint PDF.                                                                                                                   |
+| M1 Waste Classification   | **partial**     | model (baseline training now); composition aggregates + headline view (M1-F2); comparison/trend views (M1-F3); sorting-ground-truth calibration (M1-F4); aggregate→observation drill-down (M1-F6) |
+| M3 Illegal Dumping        | **not started** | candidate flagging + review queue, hotspot map, per-site timeline, intervention tracking                                                                                                           |
+| M5 Recycling Intelligence | **not started** | material volume + kg tracking, KES price table, value dashboard, partner registry, sorting reconciliation                                                                                          |
+| M6 Cleanliness Index      | **not started** | area boundaries, daily 0–100 score + components, trends, data-sufficiency guard, methodology page                                                                                                 |
+| M7 Carbon Impact          | **not started** | factor table (carbon-factors-v1.csv), calc engine, dashboard, uncertainty ranges                                                                                                                   |
+| Open Data API             | **not started** | aggregates-only public endpoints, small-cell suppression, API keys, 7-day delay                                                                                                                    |
 
 These are tracked so we complete them **one module at a time, fully** — not half-built across the board. Order follows the roadmap: M1 composition views next (once the classifier trains), then M5/M3 (Phase 2), then M6/M7/Open API (Phase 3).
 
 ## Done
 
 ### Backend (`/api`) — Python 3.12, FastAPI, Postgres 16 + PostGIS
+
 - Monorepo scaffolding, CI (ruff, mypy strict, pytest × app/dash tsc, eslint, build), uv tooling
 - Data model v1 (migrations 0001–0002): organizations, users, sites, bins, observations — `org_id` on every table, soft deletes, UTC, PostGIS points, content-hash dedupe constraint
 - Ingestion service: batch upload → dedupe → privacy gate (person blur before storage, quarantine of originals) → object store (MinIO/local) → inference queue (Redis + RQ, placeholder job)
@@ -37,11 +38,13 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 - **Verified live** (2026-07-13): migrations 0001–0003 on real PostGIS, 25/25 E2E smoke checks (`api/scripts/smoke.py`, rerunnable back-to-back) against Postgres + Redis + MinIO, 27 unit tests
 
 ### Field PWA spike (`/app`) — Vite + React + TS
+
 - Photo via native camera → client-side compression to ~300 KB → GPS (10 s timeout, never blocks) → fill tap → IndexedDB offline queue → auto-sync
 - Bin QR scanning (`BarcodeDetector` + manual entry fallback); QR-only reports sync without GPS
 - EN + SW from first screen; on-screen per-report timer (≤ 20 s target); installable PWA; HTTPS dev server for phone-on-LAN testing
 
 ### Dashboard skeleton (`/dash`) — Vite + React + TS + Apache ECharts
+
 - Login (JWT), flat no-gradient UI, EN/SW toggle, lazy-loaded routes (57 KB gzip shell; ECharts only on Overview)
 - Overview: stat tiles + reports-per-day and fill-distribution charts (palette validated)
 - Bins: site/bin creation, registry table, printable QR sticker download
@@ -49,6 +52,7 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 - Users (2026-07-13): create users, issue collector device tokens (shown once, copy-to-clipboard), revoke tokens — phone provisioning without a terminal
 
 ### Labeling pipeline (`/ml`) — Label Studio + COCO export (2026-07-13)
+
 - Label Studio in compose (UI at `:8080`, credentials + legacy API token in `.env`, `LABEL_STUDIO_LEGACY_API_TOKENS_ENABLED` for scripted access)
 - `python -m owi_ml.labeling.setup_project` (idempotent): creates the "OWI Waste Detection" project with the 8-class taxonomy, attaches MinIO as S3 source storage (proxied — browser never touches MinIO), syncs new images into the labeling queue
 - `python -m owi_ml.labeling.export_coco`: COCO snapshot zip → `ml/datasets/snapshots/` (gitignored)
@@ -56,11 +60,13 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 - **Phase 0 engineering tasks (roadmap build order 1–6) are now all delivered**
 
 ### Infra & deployment
+
 - `docker-compose.yml` at repo root (Postgres+PostGIS, Redis, MinIO, Label Studio); all secrets and URLs in the single gitignored repo-root `.env`; frontends are same-origin (`/api` proxied in dev, reverse proxy in production) with zero hardcoded URLs
 - `make web` one-command launcher (Makefile at repo root: web / up / down / logs / ps / smoke / bootstrap / clean); screenshots live in the gitignored `screens/`
 - Production deploy (2026-07-13): compose `prod` profile runs the whole platform — one `api` image (model weights baked in, SHA256-verified at build; migrations auto-run on start; non-root) serving as api / worker / scheduler, plus a `web` image (both frontends built and served by Caddy, `/api` reverse-proxied, auto-TLS with domains or self-signed for LAN pilots); healthchecked dependencies; deploy guide in `docs/11-deployment.md`. Verified live: full containerized stack (8 services) passes all 25 smoke checks; Caddy serves both frontends and proxies `/api`; worker executed a real queued job; scheduler ran its purge cycle in-container
 
 ### Phase 1 start — Bin health & collect-today (M2, 2026-07-13)
+
 - Collection events (`POST /api/v1/collections`) and daily `bin_health_daily` analytics (migration 0004)
 - Bin health engine: fill % from collector taps (band midpoints), fill-velocity regression, days-to-full, days-since-collection, overflow risk + recommendation per the v1 formula — pure function, 9 unit tests (published numbers are tested, per CONTRIBUTING)
 - Recomputed hourly by the scheduler, on demand via `POST /api/v1/admin/analytics/refresh`, and immediately when a collection is recorded; ranked `GET /api/v1/bins/health`
@@ -70,6 +76,7 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 - Docker fixes from the live run: model fetch layer moved before source copy (code edits no longer re-download weights); `UV_NO_SYNC` so containers never install packages at runtime
 
 ### Active-learning scaffolding + driver collect list (2026-07-13)
+
 - Prediction data model (migration 0005): `ml_models` registry (task, version, git commit, dataset hash, metrics, active flag — full traceability) + `predictions` (payload, review_status, corrected_payload, reviewed_by)
 - Review queue: `GET /api/v1/predictions` (reviewer-only, unreviewed count + items) and `POST /api/v1/predictions/{id}/review` (confirm / correct); transition logic is a pure function with 6 unit tests — a confirmed prediction's payload and a correction both become training ground truth
 - Worker is now registry-aware: looks up active models and loops per task (no-op with a clear log until the first model activates, but the real contract is in place)
@@ -78,6 +85,7 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 - Verified live in containers: 33/33 smoke checks (review queue reachable + reviewer-only); driver device token retrieves 9 scored bins and can mark collected; both frontends served through Caddy
 
 ### M8 Volunteer Analytics — grant-ready reporting (2026-07-13)
+
 - Volunteer events (migration 0006): date, type (cleanup/education/sorting), area, organizer, participant count, hours, per-material kg, notes — aggregate-first, no PII
 - Aggregation engine: totals (events, participants, hours, kg), kg-by-material, monthly trend — pure function with 4 unit tests (grant figures are published numbers)
 - Endpoints: event create/list, `/summary`, and `/report` (date-range **branded HTML grant report**, print-to-PDF ready; WeasyPrint server-side PDF is a later hardening step)
@@ -87,6 +95,7 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 - New product logo: person lifting the lid of a standalone green bin, no background — applied to field app + dashboard
 
 ### M4 Collection Route Optimization (2026-07-13)
+
 - CVRP engine (OR-Tools, Apache-2.0): cheapest set of routes collecting every due bin within truck capacity; bin demand estimated from latest fill % x volume x waste density; 7 unit tests (haversine correctness, all-served, capacity split, infeasible-demand rejection, matrix-agnostic)
 - **Distance-provider abstraction**: pure `HaversineMatrix` default (zero infra) + `OsrmMatrix` road-distance upgrade — set `OWI_OSRM_URL` to switch, nothing else changes
 - Trucks + routes + route_stops (migration 0007); endpoints: truck CRUD, `POST /routes/optimize` (auto-selects collect-today bins or takes an explicit set), `GET /routes`
@@ -99,6 +108,7 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 - Mid-day replan (M4-F3, 2026-07-13): `POST /routes/replan` recomputes the **uncollected** stops (plus any added bins, minus broken-down trucks) over the remaining fleet, superseding today's plan while keeping collected stops as history (collections are recorded independently). Dashboard: "Replan remaining" button + per-truck "Breakdown" action on each route card. Optimize/replan share one `_plan_and_persist` helper. Verified live (46/46 smoke checks) — **M4 is complete**
 
 ### ML training/eval harness (`/ml`, 2026-07-13)
+
 - **Public-data strategy is built in**: `data/taxonomy_map.py` folds public-set categories (TACO/TrashNet/Roboflow) into the OWI 8 classes → pretrain on public data, fine-tune on the local export. `data/coco.py` loads + merges COCO exports (local wins on conflict); `data/split.py` freezes a deterministic golden set by image-name hash so it never leaks into training
 - `eval/metrics.py`: macro-F1 + per-class precision/recall/F1 — the frozen-golden-set go/no-go gate (≥ 0.80); 6 unit tests
 - `train/classify.py`: T2 pipeline entrypoint — data prep/split/golden run today; the model fit is behind an optional `train` dep group + real images (documented). `registry.py` publishes a trained model to the API
@@ -113,8 +123,8 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 ## Next up (rough order)
 
 1. Train the first models (T1/T2/T3): pretrain T1/T2 on public data now for a baseline, fine-tune on the labeled Safi export when it exists; needs the optional `train` dep group + images. Harness, golden gate, and registry activation are ready
-3. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
-4. M1 composition views + M5 recycling value on the dashboard (arrive with the classification model)
-5. Grant report hardening: WeasyPrint server-side PDF; fold in composition (M1) + carbon (M7) sections once those land
+2. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
+3. M1 composition views + M5 recycling value on the dashboard (arrive with the classification model)
+4. Grant report hardening: WeasyPrint server-side PDF; fold in composition (M1) + carbon (M7) sections once those land
 
 With all six Phase 0 engineering tasks delivered, the remaining Phase 0 work is operational, not code: partner kickoff, bin registry data entry, collector training, capture-rate tracking (gate G0).

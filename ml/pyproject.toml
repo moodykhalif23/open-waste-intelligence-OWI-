@@ -23,6 +23,7 @@ train = [
     "pyarrow>=16.0",
     "numpy>=1.26",
     "onnx>=1.16",
+    "onnxscript>=0.1",
 ]
 
 [build-system]

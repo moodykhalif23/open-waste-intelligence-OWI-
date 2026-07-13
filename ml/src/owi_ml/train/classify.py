@@ -126,6 +126,7 @@ def main() -> None:
         output_names=["logits"],
         dynamic_axes={"image": {0: "batch"}, "logits": {0: "batch"}},
         opset_version=17,
+        dynamo=False,  # legacy exporter: clean dynamic axes, no onnxscript/console-emoji issues
     )
     (args.out / "labels.json").write_text(json.dumps(labels))
     (args.out / "metrics.json").write_text(

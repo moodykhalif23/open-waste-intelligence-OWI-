@@ -20,8 +20,10 @@ import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import PhotoCameraOutlined from "@mui/icons-material/PhotoCameraOutlined";
 import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
 import QrCodeScannerOutlined from "@mui/icons-material/QrCodeScannerOutlined";
+import InsightsOutlined from "@mui/icons-material/InsightsOutlined";
 import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
 import CollectList from "./components/CollectList";
+import Insights from "./components/Insights";
 import QrScan from "./components/QrScan";
 import { t, type Lang, type StringKey } from "./i18n";
 import { compressImage, type QualityWarning } from "./lib/compress";
@@ -47,7 +49,7 @@ export default function App() {
   const [online, setOnline] = useState(navigator.onLine);
   const [toast, setToast] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [tab, setTab] = useState<"report" | "collect">("report");
+  const [tab, setTab] = useState<"report" | "collect" | "insights">("report");
   const startedAt = useRef<number>(0);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -211,6 +213,7 @@ export default function App() {
 
       <Box sx={{ flex: 1, p: 2, pb: 10, display: "flex", flexDirection: "column", gap: 2 }}>
         {tab === "collect" && <CollectList lang={lang} token={settings.token} />}
+        {tab === "insights" && <Insights lang={lang} token={settings.token} />}
 
         {tab === "report" && (
           <>
@@ -262,7 +265,7 @@ export default function App() {
                   component="img"
                   src={previewUrl}
                   alt=""
-                  sx={{ width: "100%", borderRadius: 3, display: "block" }}
+                  sx={{ width: "100%", borderRadius: "4px", display: "block" }}
                 />
                 {qualityText && <Alert severity="warning">{qualityText}</Alert>}
                 <Typography variant="body2" color="text.secondary">
@@ -276,7 +279,7 @@ export default function App() {
                   exclusive
                   value={fillTap}
                   onChange={(_, val: FillBand | null) => val && setFillTap(val)}
-                  sx={{ gap: 1, "& .MuiToggleButtonGroup-grouped": { border: "1px solid", borderColor: "divider", borderRadius: "12px !important", minHeight: 54 } }}
+                  sx={{ gap: 1, "& .MuiToggleButtonGroup-grouped": { border: "1px solid", borderColor: "divider", borderRadius: "4px !important", minHeight: 54 } }}
                 >
                   {FILL_BANDS.map((band) => (
                     <ToggleButton key={band} value={band}>
@@ -300,7 +303,7 @@ export default function App() {
                   size="large"
                   startIcon={<PhotoCameraOutlined />}
                   onClick={() => fileInput.current?.click()}
-                  sx={{ minHeight: 140, fontSize: "1.15rem", borderRadius: 4 }}
+                  sx={{ minHeight: 140, fontSize: "1.15rem", borderRadius: "4px" }}
                 >
                   {tr("takePhoto")}
                 </Button>
@@ -331,10 +334,11 @@ export default function App() {
         <BottomNavigation
           showLabels
           value={tab}
-          onChange={(_, val: "report" | "collect") => setTab(val)}
+          onChange={(_, val: "report" | "collect" | "insights") => setTab(val)}
         >
           <BottomNavigationAction value="report" label={tr("tabReport")} icon={<PhotoCameraOutlined />} />
           <BottomNavigationAction value="collect" label={tr("tabCollect")} icon={<LocalShippingOutlined />} />
+          <BottomNavigationAction value="insights" label={tr("tabInsights")} icon={<InsightsOutlined />} />
         </BottomNavigation>
       </Paper>
 

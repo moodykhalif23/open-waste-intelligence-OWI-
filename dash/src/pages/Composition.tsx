@@ -17,7 +17,7 @@ import {
   Typography,
 } from "@mui/material";
 import { api } from "../api";
-import EChart, { barOption } from "../components/EChart";
+import EChart, { donutOption, MATERIAL_COLORS } from "../components/EChart";
 import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
@@ -104,11 +104,15 @@ export default function Composition() {
             ))}
           </Grid>
 
-          <SectionCard>
+          <SectionCard title={t("share")}>
             <EChart
-              option={barOption(
-                data.materials.map((m) => label(m.material)),
-                data.materials.map((m) => m.share_pct),
+              height={300}
+              option={donutOption(
+                data.materials.map((m) => ({
+                  name: label(m.material),
+                  value: m.share_pct,
+                  color: MATERIAL_COLORS[m.material],
+                })),
               )}
             />
           </SectionCard>
@@ -146,7 +150,7 @@ export default function Composition() {
                         <Button
                           size="small"
                           variant="outlined"
-                          onClick={() => navigate(`/reports?material=${m.material}`)}
+                          onClick={() => navigate(`/records/reports?material=${m.material}`)}
                         >
                           {t("view")}
                         </Button>

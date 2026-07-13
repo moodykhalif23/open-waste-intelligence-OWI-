@@ -4,7 +4,9 @@ import { ThemeProvider } from "@mui/material/styles";
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { getToken } from "./api";
 import Layout from "./components/Layout";
+import SectionNav from "./components/SectionNav";
 import { I18nProvider } from "./i18n";
+import { LEGACY_REDIRECTS, NAV } from "./nav";
 import Login from "./pages/Login";
 import theme from "./theme";
 
@@ -23,6 +25,8 @@ const Volunteers = lazy(() => import("./pages/Volunteers"));
 const Users = lazy(() => import("./pages/Users"));
 const OpenData = lazy(() => import("./pages/OpenData"));
 
+const kids = (path: string) => NAV.find((e) => e.path === path)!.children!;
+
 function RequireAuth() {
   return getToken() ? <Outlet /> : <Navigate to="/login" replace />;
 }
@@ -32,31 +36,74 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <I18nProvider>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Suspense fallback={null}>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route element={<RequireAuth />}>
-              <Route element={<Layout />}>
-                <Route index element={<Overview />} />
-                <Route path="composition" element={<Composition />} />
-                <Route path="collect" element={<BinHealth />} />
-                <Route path="routes" element={<RoutesPage />} />
-                <Route path="recycling" element={<Recycling />} />
-                <Route path="dumping" element={<Dumping />} />
-                <Route path="carbon" element={<Carbon />} />
-                <Route path="cleanliness" element={<Cleanliness />} />
-                <Route path="bins" element={<Bins />} />
-                <Route path="reports" element={<Reports />} />
-                <Route path="review" element={<Review />} />
-                <Route path="volunteers" element={<Volunteers />} />
-                <Route path="users" element={<Users />} />
-                <Route path="open-data" element={<OpenData />} />
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <Suspense fallback={null}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route element={<RequireAuth />}>
+                <Route element={<Layout />}>
+                  <Route index element={<Overview />} />
+                  <Route path="collect" element={<BinHealth />} />
+                  <Route path="routes" element={<RoutesPage />} />
+
+                  <Route
+                    path="intelligence"
+                    element={
+                      <SectionNav
+                        title="navIntelligence"
+                        description="navIntelligenceDesc"
+                        items={kids("/intelligence")}
+                      />
+                    }
+                  >
+                    <Route index element={<Navigate to="composition" replace />} />
+                    <Route path="composition" element={<Composition />} />
+                    <Route path="recycling" element={<Recycling />} />
+                    <Route path="carbon" element={<Carbon />} />
+                    <Route path="cleanliness" element={<Cleanliness />} />
+                    <Route path="dumping" element={<Dumping />} />
+                  </Route>
+
+                  <Route
+                    path="records"
+                    element={
+                      <SectionNav
+                        title="navRecords"
+                        description="navRecordsDesc"
+                        items={kids("/records")}
+                      />
+                    }
+                  >
+                    <Route index element={<Navigate to="bins" replace />} />
+                    <Route path="bins" element={<Bins />} />
+                    <Route path="reports" element={<Reports />} />
+                    <Route path="review" element={<Review />} />
+                    <Route path="volunteers" element={<Volunteers />} />
+                  </Route>
+
+                  <Route
+                    path="admin"
+                    element={
+                      <SectionNav
+                        title="navAdmin"
+                        description="navAdminDesc"
+                        items={kids("/admin")}
+                      />
+                    }
+                  >
+                    <Route index element={<Navigate to="users" replace />} />
+                    <Route path="users" element={<Users />} />
+                    <Route path="open-data" element={<OpenData />} />
+                  </Route>
+
+                  {Object.entries(LEGACY_REDIRECTS).map(([from, to]) => (
+                    <Route key={from} path={from.slice(1)} element={<Navigate to={to} replace />} />
+                  ))}
+                </Route>
               </Route>
-            </Route>
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
       </I18nProvider>
     </ThemeProvider>
   );

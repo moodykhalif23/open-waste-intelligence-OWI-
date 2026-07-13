@@ -6,6 +6,7 @@ import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import CheckCircle from "@mui/icons-material/CheckCircle";
+import EChart, { ringOption } from "./EChart";
 import { t, type Lang, type StringKey } from "../i18n";
 import {
   collectStop,
@@ -106,12 +107,20 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
           <Box key={route.id}>
             <Stack
               direction="row"
-              sx={{ alignItems: "baseline", justifyContent: "space-between", pb: 1, mb: 1, borderBottom: "1px solid", borderColor: "divider" }}
+              spacing={1.5}
+              sx={{ alignItems: "center", justifyContent: "space-between", pb: 1.25, mb: 1.25, borderBottom: "1px solid", borderColor: "divider" }}
             >
-              <Typography sx={{ fontWeight: 660 }}>{route.truck_name}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {done}/{route.stops.length} · {route.planned_km} km
-              </Typography>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 660 }} noWrap>
+                  {route.truck_name}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {route.planned_km} km · {route.stops.length} {tr("stopsShort")}
+                </Typography>
+              </Box>
+              <Box sx={{ width: 54, height: 54, flexShrink: 0 }}>
+                <EChart height={54} option={ringOption(done, route.stops.length)} />
+              </Box>
             </Stack>
             <Stack spacing={1}>
               {route.stops.map((stop) => (

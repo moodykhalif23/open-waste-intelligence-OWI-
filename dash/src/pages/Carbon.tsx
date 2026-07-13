@@ -8,7 +8,8 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import { api } from "../api";
-import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
+import EChart, { hbarOption } from "../components/EChart";
+import { Muted, PageStack, Panel, SectionCard, StatCard } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
 interface MaterialCarbon {
@@ -41,10 +42,11 @@ export default function Carbon() {
   if (data === null) return <Muted>{t("loading")}</Muted>;
   const label = (m: string) => t(m as StringKey);
   const range = `${Math.round(data.co2e_low_kg)}–${Math.round(data.co2e_high_kg)}`;
+  const ranked = [...data.materials].sort((a, b) => b.co2e_kg - a.co2e_kg);
 
   return (
     <PageStack>
-      <Grid container spacing={3}>
+      <Grid container spacing={{ xs: 2, md: 2.5 }}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard label={t("co2eAvoided")} value={range} />
         </Grid>
@@ -63,26 +65,41 @@ export default function Carbon() {
         <Muted>{t("noCarbonYet")}</Muted>
       ) : (
         <SectionCard title={t("co2eByMaterial")}>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{t("material")}</TableCell>
-                  <TableCell align="right">{t("kgEst")}</TableCell>
-                  <TableCell align="right">{t("co2eKg")}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.materials.map((m) => (
-                  <TableRow key={m.material}>
-                    <TableCell>{label(m.material)}</TableCell>
-                    <TableCell align="right">{m.kg.toLocaleString()}</TableCell>
-                    <TableCell align="right">{m.co2e_kg.toLocaleString()}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <Grid container spacing={{ xs: 2, md: 2.5 }}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Panel>
+                <EChart
+                  height={Math.max(180, ranked.length * 34)}
+                  option={hbarOption(
+                    ranked.map((m) => label(m.material)),
+                    ranked.map((m) => m.co2e_kg),
+                  )}
+                />
+              </Panel>
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{t("material")}</TableCell>
+                      <TableCell align="right">{t("kgEst")}</TableCell>
+                      <TableCell align="right">{t("co2eKg")}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {ranked.map((m) => (
+                      <TableRow key={m.material}>
+                        <TableCell>{label(m.material)}</TableCell>
+                        <TableCell align="right">{m.kg.toLocaleString()}</TableCell>
+                        <TableCell align="right">{m.co2e_kg.toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Grid>
+          </Grid>
         </SectionCard>
       )}
 

@@ -3,9 +3,6 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -16,8 +13,11 @@ import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import BuildIcon from "@mui/icons-material/Build";
+import DeleteOutlineOutlined from "@mui/icons-material/DeleteOutlineOutlined";
+import RouteOutlined from "@mui/icons-material/RouteOutlined";
+import LocalGasStationOutlined from "@mui/icons-material/LocalGasStationOutlined";
 import { api } from "../api";
-import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
+import { Muted, PageHeader, PageStack, Panel, SectionCard, StatCard } from "../components/ui";
 import { useI18n } from "../i18n";
 
 interface Truck {
@@ -161,34 +161,37 @@ export default function Routes() {
 
   return (
     <PageStack>
-      <Grid container spacing={3}>
+      <PageHeader title={t("routes")} description={t("savingsHint")} action={routesAction} />
+
+      <Grid container spacing={{ xs: 2, md: 2.5 }}>
         <Grid size={{ xs: 12, sm: 4 }}>
           <StatCard
             label={t("binsToCollect")}
             value={routes.reduce((s, r) => s + r.bins_served, 0)}
+            icon={<DeleteOutlineOutlined />}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <StatCard label={t("plannedKm")} value={Math.round(totalKm * 10) / 10} />
+          <StatCard label={t("plannedKm")} value={Math.round(totalKm * 10) / 10} icon={<RouteOutlined />} />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <StatCard label={t("plannedFuelL")} value={Math.round(totalFuel * 10) / 10} />
+          <StatCard label={t("plannedFuelL")} value={Math.round(totalFuel * 10) / 10} icon={<LocalGasStationOutlined />} />
         </Grid>
       </Grid>
 
-      <SectionCard title={t("todaysRoutes")} action={routesAction}>
+      <SectionCard title={t("todaysRoutes")}>
         {error && (
-          <Alert severity="error" sx={{ mb: 2.5 }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
         {routes.length === 0 ? (
           <Muted>{t("noRoutes")}</Muted>
         ) : (
-          <Grid container spacing={3}>
+          <Grid container spacing={{ xs: 2, md: 2.5 }}>
             {routes.map((route) => (
               <Grid size={{ xs: 12, md: 6 }} key={route.id}>
-                <SectionCard
+                <Panel
                   title={
                     <Box>
                       <Typography variant="h6">{route.truck_name}</Typography>
@@ -215,30 +218,50 @@ export default function Routes() {
                   {route.stops.length === 0 ? (
                     <Muted>{t("noStops")}</Muted>
                   ) : (
-                    <List dense disablePadding>
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                        columnGap: 2,
+                      }}
+                    >
                       {route.stops.map((s) => (
-                        <ListItem key={s.bin_id} disableGutters>
+                        <Box
+                          key={s.bin_id}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1.25,
+                            py: 0.75,
+                            borderBottom: "1px solid",
+                            borderColor: "divider",
+                          }}
+                        >
                           <Box
                             sx={{
-                              minWidth: 28,
+                              minWidth: 22,
+                              textAlign: "right",
                               fontWeight: 700,
+                              fontSize: "0.8rem",
                               color: "text.secondary",
                               fontVariantNumeric: "tabular-nums",
                             }}
                           >
                             {s.seq}
                           </Box>
-                          <ListItemText
-                            primary={
-                              <Typography sx={{ fontFamily: "monospace" }}>{s.qr_code}</Typography>
-                            }
-                            secondary={`${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}`}
-                          />
-                        </ListItem>
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography sx={{ fontFamily: "ui-monospace, monospace", fontSize: "0.85rem" }} noWrap>
+                              {s.qr_code}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {s.lat.toFixed(4)}, {s.lng.toFixed(4)}
+                            </Typography>
+                          </Box>
+                        </Box>
                       ))}
-                    </List>
+                    </Box>
                   )}
-                </SectionCard>
+                </Panel>
               </Grid>
             ))}
           </Grid>

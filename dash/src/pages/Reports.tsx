@@ -50,7 +50,7 @@ export default function Reports() {
               variant="outlined"
               size="small"
               endIcon={<CloseIcon />}
-              onClick={() => navigate("/reports")}
+              onClick={() => navigate("/records/reports")}
             >
               {t("filteredBy")}: {t(material as StringKey)}
             </Button>

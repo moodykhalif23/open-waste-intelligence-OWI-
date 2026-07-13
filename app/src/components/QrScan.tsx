@@ -77,7 +77,7 @@ export default function QrScan({ onResult, onCancel, labels }: Props) {
           ref={videoRef}
           muted
           playsInline
-          sx={{ width: "100%", borderRadius: 3, bgcolor: "#000", aspectRatio: "3 / 4", objectFit: "cover" }}
+          sx={{ width: "100%", borderRadius: "4px", bgcolor: "#000", aspectRatio: "3 / 4", objectFit: "cover" }}
         />
       )}
       <TextField

@@ -13,7 +13,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import { api, getToken } from "../api";
-import EChart, { barOption } from "../components/EChart";
+import EChart, { lineOption } from "../components/EChart";
 import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
 import { useI18n } from "../i18n";
 
@@ -113,7 +113,7 @@ export default function Volunteers() {
         }
       >
         {summary.monthly.length > 0 ? (
-          <EChart option={barOption(trend.categories, trend.values)} />
+          <EChart option={lineOption(trend.categories, trend.values)} />
         ) : (
           <Muted>{t("noData")}</Muted>
         )}

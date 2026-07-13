@@ -47,9 +47,12 @@ export async function collectStop(token: string, stopId: string): Promise<void> 
   await authed(`/api/v1/routes/stops/${stopId}/collect`, token, { method: "POST" });
 }
 
+export async function fetchBinHealth(token: string): Promise<BinHealth[]> {
+  return (await authed("/api/v1/bins/health", token).then((r) => r.json())) as BinHealth[];
+}
+
 export async function fetchCollectList(token: string): Promise<BinHealth[]> {
-  const all = (await authed("/api/v1/bins/health", token).then((r) => r.json())) as BinHealth[];
-  return all.filter((b) => b.recommendation !== "no_action");
+  return (await fetchBinHealth(token)).filter((b) => b.recommendation !== "no_action");
 }
 
 export async function markCollected(token: string, binId: string): Promise<void> {

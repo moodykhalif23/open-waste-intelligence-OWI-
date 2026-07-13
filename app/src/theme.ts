@@ -13,7 +13,7 @@ const theme = createTheme({
     text: { primary: "#0f172a", secondary: "#64748b" },
     divider: "#e8ebf0",
   },
-  shape: { borderRadius: 12 },
+  shape: { borderRadius: 4 },
   typography: {
     fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
     h6: { fontWeight: 660, letterSpacing: "-0.01em" },
@@ -23,11 +23,11 @@ const theme = createTheme({
     MuiCssBaseline: { styleOverrides: { body: { WebkitFontSmoothing: "antialiased" } } },
     MuiCard: {
       defaultProps: { elevation: 0 },
-      styleOverrides: { root: { border: "1px solid #e8ebf0", borderRadius: 16 } },
+      styleOverrides: { root: { border: "1px solid #e8ebf0", borderRadius: 4 } },
     },
     MuiButton: {
       defaultProps: { disableElevation: true },
-      styleOverrides: { root: { borderRadius: 12, minHeight: 48, paddingInline: 18 } },
+      styleOverrides: { root: { borderRadius: 4, minHeight: 48, paddingInline: 18 } },
     },
     MuiAppBar: {
       defaultProps: { elevation: 0, color: "inherit" },
@@ -35,11 +35,11 @@ const theme = createTheme({
         root: { backgroundColor: "#ffffff", borderBottom: "1px solid #e8ebf0", color: "#0f172a" },
       },
     },
-    MuiOutlinedInput: { styleOverrides: { root: { borderRadius: 12 } } },
+    MuiOutlinedInput: { styleOverrides: { root: { borderRadius: 4 } } },
     MuiToggleButton: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
+          borderRadius: 4,
           textTransform: "none",
           fontWeight: 550,
           "&.Mui-selected": {

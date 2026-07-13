@@ -36,7 +36,7 @@ export default function NavSearch() {
       }}
       blurOnSelect
       size="small"
-      sx={{ width: { xs: 150, sm: 220, md: 260 } }}
+      sx={{ width: { xs: 180, sm: 300, md: 380 } }}
       renderInput={(params) => (
         <TextField
           {...params}
@@ -45,12 +45,15 @@ export default function NavSearch() {
             ...params.slotProps,
             input: {
               ...params.slotProps.input,
-              startAdornment: <SearchIcon sx={{ fontSize: 18, color: "text.secondary", mx: 0.5 }} />,
+              startAdornment: <SearchIcon sx={{ fontSize: 21, color: "primary.main", mx: 0.5 }} />,
             },
           }}
           sx={{
-            "& .MuiOutlinedInput-root": { bgcolor: "#f1f5f4", borderRadius: "4px", py: 0.25 },
-            "& fieldset": { border: "none" },
+            "& .MuiOutlinedInput-root": { bgcolor: "#ffffff", borderRadius: "6px" },
+            "& .MuiOutlinedInput-input": { fontWeight: 560, fontSize: "0.98rem" },
+            "& .MuiOutlinedInput-input::placeholder": { fontWeight: 560, opacity: 0.7 },
+            "& fieldset": { borderColor: "divider", borderWidth: "1.5px" },
+            "&:hover fieldset": { borderColor: "primary.light" },
           }}
         />
       )}

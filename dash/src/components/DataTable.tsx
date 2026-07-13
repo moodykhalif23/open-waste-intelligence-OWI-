@@ -15,32 +15,33 @@ export function DataTable({
 }: DataGridProps & { pageSize?: number; toolbar?: boolean }) {
   return (
     <DataGrid
-      density="compact"
       autoHeight
       showToolbar={toolbar}
       disableRowSelectionOnClick
-      columnHeaderHeight={40}
+      rowHeight={54}
+      columnHeaderHeight={50}
       initialState={{ pagination: { paginationModel: { page: 0, pageSize } } }}
       pageSizeOptions={[pageSize, pageSize * 2, 50]}
       sx={{
         border: `1px solid ${LINE}`,
         borderRadius: "4px",
         bgcolor: "background.paper",
-        fontSize: "0.85rem",
+        fontSize: "0.95rem",
         "--DataGrid-containerBackground": "#f8fafc",
         "--DataGrid-rowBorderColor": LINE,
+        "& .MuiDataGrid-columnHeader": { py: 0.5 },
         "& .MuiDataGrid-columnHeaderTitle": {
           fontWeight: 700,
-          fontSize: "0.7rem",
+          fontSize: "0.76rem",
           textTransform: "uppercase",
           letterSpacing: "0.04em",
           color: "text.secondary",
         },
-        "& .MuiDataGrid-cell": { borderColor: LINE },
+        "& .MuiDataGrid-cell": { borderColor: LINE, py: 0.75 },
         "& .MuiDataGrid-row:hover": { bgcolor: "#f8fafc" },
         "& .MuiDataGrid-columnSeparator": { display: "none" },
-        "& .MuiDataGrid-footerContainer": { borderColor: LINE, minHeight: 44 },
-        "& .MuiDataGrid-toolbarContainer": { p: 1, gap: 1 },
+        "& .MuiDataGrid-footerContainer": { borderColor: LINE, minHeight: 48 },
+        "& .MuiDataGrid-toolbarContainer": { p: 1.25, gap: 1 },
       }}
       {...rest}
     />

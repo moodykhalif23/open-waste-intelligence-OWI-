@@ -37,7 +37,7 @@ const DRAWER_WIDTH = 232;
 
 function BinMark() {
   // Same mark as the favicon (public/icon.svg) so the brand reads consistently.
-  return <Box component="img" src="/icon.svg" alt="OpenWaste" sx={{ width: 26, height: 26, display: "block" }} />;
+  return <Box component="img" src="/icon.svg" alt="OpenWaste" sx={{ width: 36, height: 36, display: "block" }} />;
 }
 
 export default function Layout() {
@@ -67,9 +67,11 @@ export default function Layout() {
 
   const drawer = (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <Toolbar sx={{ gap: 1.25, px: 2.5 }} disableGutters>
+      <Toolbar sx={{ gap: 1.5, px: 2.5, minHeight: { xs: 72 } }} disableGutters>
         <BinMark />
-        <Typography sx={{ fontWeight: 700, letterSpacing: "-0.01em" }}>OpenWaste</Typography>
+        <Typography sx={{ fontWeight: 760, fontSize: "1.28rem", letterSpacing: "-0.02em" }}>
+          OpenWaste
+        </Typography>
       </Toolbar>
       <List sx={{ flex: 1, py: 1 }}>
         {NAV.map((entry) => (
@@ -79,12 +81,12 @@ export default function Layout() {
             to={entry.path}
             selected={isActive(entry.path)}
             onClick={() => setMobileOpen(false)}
-            sx={{ mb: 0.25 }}
+            sx={{ mb: 0.5 }}
           >
-            <ListItemIcon sx={{ "& svg": { fontSize: 21 } }}>{entry.icon}</ListItemIcon>
+            <ListItemIcon sx={{ "& svg": { fontSize: 23 } }}>{entry.icon}</ListItemIcon>
             <ListItemText
               primary={t(entry.key)}
-              slotProps={{ primary: { sx: { fontSize: "0.92rem", fontWeight: 570 } } }}
+              slotProps={{ primary: { sx: { fontSize: "1rem", fontWeight: 600 } } }}
             />
           </ListItemButton>
         ))}
@@ -104,9 +106,10 @@ export default function Layout() {
           >
             <MenuOutlined />
           </IconButton>
-          <Typography sx={{ fontWeight: 620, fontSize: "0.98rem", display: { xs: "none", sm: "block" } }} noWrap>
+          <Typography sx={{ fontWeight: 680, fontSize: "1.05rem", display: { xs: "none", sm: "block" } }} noWrap>
             {barTitle}
           </Typography>
+          <Box sx={{ flexGrow: 1 }} />
           <NavSearch />
           <Box sx={{ flexGrow: 1 }} />
           <Tooltip title={t("notifications")}>

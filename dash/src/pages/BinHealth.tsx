@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Grid from "@mui/material/Grid";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { api } from "../api";
+import { DataTable, type GridColDef } from "../components/DataTable";
 import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
 import { useI18n } from "../i18n";
 
@@ -86,6 +82,38 @@ export default function BinHealth() {
     </Button>
   );
 
+  const riskLabel = (r: HealthRow["overflow_risk"]) =>
+    t(r === "high" ? "riskHigh" : r === "medium" ? "riskMedium" : "riskLow");
+
+  const columns: GridColDef<HealthRow>[] = [
+    { field: "qr_code", headerName: t("bin"), flex: 1, minWidth: 140, renderCell: (p) => <Box sx={{ fontFamily: "ui-monospace, monospace" }}>{p.value as string}</Box> },
+    { field: "site_name", headerName: t("site"), flex: 1, minWidth: 130 },
+    { field: "fill_pct", headerName: t("fillLevel"), type: "number", width: 120, valueFormatter: (v) => `${Math.round(Number(v))}%` },
+    { field: "days_to_full", headerName: t("daysToFull"), type: "number", width: 130, valueFormatter: (v) => (v == null ? "—" : Number(v).toFixed(1)) },
+    { field: "days_since_collection", headerName: t("sinceCollection"), type: "number", width: 150, valueFormatter: (v) => (v == null ? "—" : Number(v).toFixed(1)) },
+    { field: "overflow_risk", headerName: t("risk"), width: 120, renderCell: (p) => <Chip size="small" color={RISK_COLOR[p.row.overflow_risk]} label={riskLabel(p.row.overflow_risk)} /> },
+    {
+      field: "recommendation",
+      headerName: t("recommendation"),
+      flex: 1,
+      minWidth: 150,
+      valueGetter: (_v, row) =>
+        row.recommendation === "collect_today" ? t("collectTodayRec") : row.recommendation === "schedule_soon" ? t("scheduleSoonRec") : "—",
+    },
+    {
+      field: "actions",
+      headerName: "",
+      width: 170,
+      sortable: false,
+      filterable: false,
+      renderCell: (p) => (
+        <Button variant="contained" size="small" onClick={() => void markCollected(p.row)}>
+          {t("markCollected")}
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <PageStack>
       <Grid container spacing={3}>
@@ -107,62 +135,7 @@ export default function BinHealth() {
         {rows.length === 0 ? (
           <Muted>{t("noHealthData")}</Muted>
         ) : (
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>{t("bin")}</TableCell>
-                  <TableCell>{t("site")}</TableCell>
-                  <TableCell>{t("fillLevel")}</TableCell>
-                  <TableCell>{t("daysToFull")}</TableCell>
-                  <TableCell>{t("sinceCollection")}</TableCell>
-                  <TableCell>{t("risk")}</TableCell>
-                  <TableCell>{t("recommendation")}</TableCell>
-                  <TableCell />
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={row.bin_id} hover>
-                    <TableCell sx={{ fontFamily: "monospace" }}>{row.qr_code}</TableCell>
-                    <TableCell>{row.site_name}</TableCell>
-                    <TableCell>{Math.round(row.fill_pct)}%</TableCell>
-                    <TableCell>
-                      {row.days_to_full === null ? "—" : row.days_to_full.toFixed(1)}
-                    </TableCell>
-                    <TableCell>
-                      {row.days_since_collection === null
-                        ? "—"
-                        : row.days_since_collection.toFixed(1)}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        color={RISK_COLOR[row.overflow_risk]}
-                        label={t(
-                          row.overflow_risk === "high"
-                            ? "riskHigh"
-                            : row.overflow_risk === "medium"
-                              ? "riskMedium"
-                              : "riskLow",
-                        )}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {row.recommendation === "collect_today" && t("collectTodayRec")}
-                      {row.recommendation === "schedule_soon" && t("scheduleSoonRec")}
-                      {row.recommendation === "no_action" && "—"}
-                    </TableCell>
-                    <TableCell align="right">
-                      <Button variant="contained" size="small" onClick={() => void markCollected(row)}>
-                        {t("markCollected")}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable rows={rows} columns={columns} getRowId={(r) => r.bin_id} pageSize={15} />
         )}
       </SectionCard>
     </PageStack>

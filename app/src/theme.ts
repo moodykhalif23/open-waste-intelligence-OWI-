@@ -16,8 +16,13 @@ const theme = createTheme({
   shape: { borderRadius: 4 },
   typography: {
     fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-    h6: { fontWeight: 660, letterSpacing: "-0.01em" },
-    button: { textTransform: "none", fontWeight: 640 },
+    fontSize: 15,
+    fontWeightRegular: 460,
+    fontWeightMedium: 600,
+    h6: { fontWeight: 720, letterSpacing: "-0.01em", fontSize: "1.2rem" },
+    body1: { fontWeight: 470 },
+    body2: { fontWeight: 470, lineHeight: 1.6 },
+    button: { textTransform: "none", fontWeight: 680 },
   },
   components: {
     MuiCssBaseline: { styleOverrides: { body: { WebkitFontSmoothing: "antialiased" } } },

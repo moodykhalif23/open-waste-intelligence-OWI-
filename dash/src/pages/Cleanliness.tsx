@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
-import Alert from "@mui/material/Alert";
-import Grid from "@mui/material/Grid";
-import LinearProgress from "@mui/material/LinearProgress";
-import Stack from "@mui/material/Stack";
+import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { api } from "../api";
+import { DataTable, type GridColDef } from "../components/DataTable";
 import { Muted, PageStack, SectionCard } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
@@ -29,11 +27,11 @@ interface Methodology {
   note: string;
 }
 
-// Higher score = cleaner area; map to the theme palette bands.
-function scoreColor(score: number): "primary" | "warning" | "error" {
-  if (score >= 75) return "primary";
-  if (score >= 50) return "warning";
-  return "error";
+// Higher score = cleaner area.
+function scoreHex(score: number): string {
+  if (score >= 75) return "#059669";
+  if (score >= 50) return "#d97706";
+  return "#dc2626";
 }
 
 export default function Cleanliness() {
@@ -48,61 +46,50 @@ export default function Cleanliness() {
 
   if (areas === null) return <Muted>{t("loading")}</Muted>;
 
+  const compNames = Array.from(new Set(areas.flatMap((a) => a.components.map((c) => c.name))));
+
+  const columns: GridColDef<AreaScore>[] = [
+    { field: "site_name", headerName: t("site"), flex: 1, minWidth: 150 },
+    {
+      field: "score",
+      headerName: t("score"),
+      width: 120,
+      type: "number",
+      valueGetter: (_v, row) => (row.sufficient && row.score != null ? Math.round(row.score) : null),
+      renderCell: (p) =>
+        p.value == null ? (
+          <Box sx={{ color: "text.secondary" }}>{t("insufficient")}</Box>
+        ) : (
+          <Box sx={{ fontWeight: 800, fontSize: "1.05rem", color: scoreHex(p.value as number) }}>{p.value as number}</Box>
+        ),
+    },
+    ...compNames.map(
+      (name): GridColDef<AreaScore> => ({
+        field: `comp_${name}`,
+        headerName: t(`comp_${name}` as StringKey),
+        type: "number",
+        flex: 1,
+        minWidth: 130,
+        valueGetter: (_v, row) => {
+          const c = row.components.find((x) => x.name === name);
+          return c ? Math.round(c.value) : null;
+        },
+        renderCell: (p) => (p.value == null ? "—" : String(p.value)),
+      }),
+    ),
+  ];
+
   return (
     <PageStack>
       <Typography variant="h5">{t("cleanlinessIndex")}</Typography>
 
-      {areas.length === 0 ? (
-        <Muted>{t("noAreas")}</Muted>
-      ) : (
-        <Grid container spacing={3}>
-          {areas.map((a) => {
-            const color = a.score !== null ? scoreColor(a.score) : "primary";
-            return (
-              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={a.site_id}>
-                <SectionCard
-                  title={a.site_name}
-                  action={
-                    a.sufficient && a.score !== null ? (
-                      <Typography
-                        color={color}
-                        sx={{ fontWeight: 720, letterSpacing: "-0.02em", fontSize: "2.1rem", lineHeight: 1 }}
-                      >
-                        {Math.round(a.score)}
-                      </Typography>
-                    ) : undefined
-                  }
-                >
-                  {!(a.sufficient && a.score !== null) && (
-                    <Alert severity="warning" sx={{ mb: 2.5 }}>
-                      {t("insufficient")}
-                    </Alert>
-                  )}
-                  <Stack spacing={2.5}>
-                    {a.components.map((c) => (
-                      <Stack key={c.name} spacing={0.75}>
-                        <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "baseline" }}>
-                          <Typography variant="body2" color="text.secondary">
-                            {t(`comp_${c.name}` as StringKey)}
-                          </Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                            {Math.round(c.value)}
-                          </Typography>
-                        </Stack>
-                        <LinearProgress
-                          variant="determinate"
-                          value={c.value}
-                          sx={{ height: 8, borderRadius: 999 }}
-                        />
-                      </Stack>
-                    ))}
-                  </Stack>
-                </SectionCard>
-              </Grid>
-            );
-          })}
-        </Grid>
-      )}
+      <SectionCard>
+        {areas.length === 0 ? (
+          <Muted>{t("noAreas")}</Muted>
+        ) : (
+          <DataTable rows={areas} columns={columns} getRowId={(r) => r.site_id} toolbar={false} />
+        )}
+      </SectionCard>
 
       {method && (
         <Muted>

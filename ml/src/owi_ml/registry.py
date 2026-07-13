@@ -1,7 +1,7 @@
 """Publish a trained model to the API registry:
 
-    python -m owi_ml.registry --api http://localhost:8000 --token <jwt> \
-        --task classify --version v1 --onnx artifacts/classifier.onnx --metrics artifacts/metrics.json
+    python -m owi_ml.registry --api URL --token JWT --task classify --version v1 \
+        --onnx artifacts/classifier.onnx --metrics artifacts/metrics.json
 
 Activating (default) makes the batch worker use this model. Register is admin-only.
 """
@@ -53,9 +53,9 @@ def main() -> None:
     args = parser.parse_args()
 
     metrics = json.loads(args.metrics.read_text()) if args.metrics else {}
-    artifact_hash = (
-        hashlib.sha256(args.onnx.read_bytes()).hexdigest() if args.onnx and args.onnx.exists() else None
-    )
+    artifact_hash = None
+    if args.onnx and args.onnx.exists():
+        artifact_hash = hashlib.sha256(args.onnx.read_bytes()).hexdigest()
     result = register_model(
         args.api,
         args.token,

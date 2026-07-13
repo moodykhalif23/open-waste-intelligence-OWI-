@@ -69,14 +69,14 @@ def main() -> None:
         ]
     )
 
-    class ImgSet(Dataset):
+    class ImgSet(Dataset):  # type: ignore[type-arg]
         def __init__(self, images: list[LabeledImage]) -> None:
             self.items = [by_name[i.file_name] for i in images]
 
         def __len__(self) -> int:
             return len(self.items)
 
-        def __getitem__(self, i: int):
+        def __getitem__(self, i: int) -> tuple[object, int]:
             path, label = self.items[i]
             return tf(Image.open(path).convert("RGB")), label_idx[label]
 
@@ -120,7 +120,7 @@ def main() -> None:
     dummy = torch.randn(1, 3, 224, 224)
     torch.onnx.export(
         model,
-        dummy,
+        (dummy,),
         str(args.out / "classifier.onnx"),
         input_names=["image"],
         output_names=["logits"],

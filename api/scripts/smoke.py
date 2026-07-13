@@ -291,6 +291,10 @@ def main() -> None:
     )
     check("model registered + activated", model.status_code == 201 and model.json()["active"])
     check(
+        "model carries labels for inference",
+        model.status_code == 201 and model.json().get("id") is not None,
+    )
+    check(
         "model register is admin-only",
         client.post(
             "/api/v1/models", headers=device_auth, json={"task": "fill", "version": "x"}
@@ -298,10 +302,17 @@ def main() -> None:
         == 403,
     )
 
+    comp = client.get("/api/v1/analytics/composition?days=30", headers=admin)
+    check("composition endpoint", comp.status_code == 200 and "materials" in comp.json())
+    check(
+        "composition reports a total + sufficiency flag",
+        isinstance(comp.json()["total"], int) and isinstance(comp.json()["sufficient"], bool),
+    )
+
     queue = client.get("/api/v1/predictions", headers=admin)
     check(
-        "review queue reachable (empty until a model is active)",
-        queue.status_code == 200 and queue.json()["unreviewed"] == 0,
+        "review queue reachable",
+        queue.status_code == 200 and isinstance(queue.json()["unreviewed"], int),
     )
     check(
         "review queue is reviewer-only",

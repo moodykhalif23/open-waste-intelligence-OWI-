@@ -1,16 +1,22 @@
 import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, apiBlob, type Bin, type Observation } from "../api";
 import { useI18n, type StringKey } from "../i18n";
 
 export default function Reports() {
   const { t } = useI18n();
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const material = params.get("material");
   const [observations, setObservations] = useState<Observation[] | null>(null);
   const [bins, setBins] = useState<Bin[]>([]);
 
   useEffect(() => {
-    void api<Observation[]>("/api/v1/observations?limit=200").then(setObservations);
+    setObservations(null);
+    const q = material ? `&material=${encodeURIComponent(material)}` : "";
+    void api<Observation[]>(`/api/v1/observations?limit=200${q}`).then(setObservations);
     void api<Bin[]>("/api/v1/bins").then(setBins);
-  }, []);
+  }, [material]);
 
   async function viewPhoto(id: string) {
     const blob = await apiBlob(`/api/v1/observations/${id}/image`);
@@ -25,7 +31,14 @@ export default function Reports() {
 
   return (
     <div className="card">
-      <h2>{t("reports")}</h2>
+      <div className="section-head">
+        <h2>{t("reports")}</h2>
+        {material && (
+          <button className="secondary" onClick={() => navigate("/reports")}>
+            {t("filteredBy")}: {t(material as StringKey)} ✕
+          </button>
+        )}
+      </div>
       {observations.length === 0 ? (
         <p className="muted">{t("noData")}</p>
       ) : (

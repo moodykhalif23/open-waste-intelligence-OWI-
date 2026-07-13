@@ -8,14 +8,16 @@ from pydantic import TypeAdapter, ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from owi_api.analytics.composition import effective_material
 from owi_api.config import settings
 from owi_api.db import get_session
 from owi_api.ingestion.person_onnx import OnnxPersonDetector
 from owi_api.ingestion.privacy import PersonDetector
 from owi_api.ingestion.service import ingest_observation
 from owi_api.ingestion.storage import ObjectStore, get_store
-from owi_api.models.enums import UserRole
+from owi_api.models.enums import PredictionTask, UserRole
 from owi_api.models.observation import Observation
+from owi_api.models.prediction import Prediction
 from owi_api.routers.auth import require_roles
 from owi_api.schemas.observation import (
     BatchResponse,
@@ -99,18 +101,48 @@ async def ingest_batch(
     return BatchResponse(results=results)
 
 
+def _observation_ids_for_material(
+    session: Session, org_id: uuid.UUID, material: str
+) -> list[uuid.UUID]:
+    preds = session.scalars(
+        select(Prediction)
+        .where(
+            Prediction.org_id == org_id,
+            Prediction.task == PredictionTask.CLASSIFY,
+            Prediction.deleted_at.is_(None),
+        )
+        .order_by(Prediction.observation_id, Prediction.created_at.desc())
+    )
+    seen: set[uuid.UUID] = set()
+    matching: list[uuid.UUID] = []
+    for pred in preds:
+        if pred.observation_id in seen:
+            continue
+        seen.add(pred.observation_id)
+        if effective_material(pred.payload, pred.corrected_payload, pred.review_status) == material:
+            matching.append(pred.observation_id)
+    return matching
+
+
 @router.get("", response_model=list[ObservationOut])
 def list_observations(
     claims: Annotated[TokenClaims, require_roles(*STAFF)],
     session: Annotated[Session, Depends(get_session)],
     limit: Annotated[int, Query(gt=0, le=1000)] = 500,
+    material: str | None = None,
 ) -> list[ObservationOut]:
-    rows = session.execute(
+    query = (
         select(Observation, func.ST_Y(Observation.location), func.ST_X(Observation.location))
         .where(Observation.org_id == claims.org_id, Observation.deleted_at.is_(None))
         .order_by(Observation.captured_at.desc())
         .limit(limit)
     )
+    if material is not None:
+        # Composition drill-down: observations whose latest classify prediction reads `material`.
+        query = query.where(
+            Observation.id.in_(_observation_ids_for_material(session, claims.org_id, material))
+        )
+    rows = session.execute(query)
     return [
         ObservationOut(
             id=obs.id,

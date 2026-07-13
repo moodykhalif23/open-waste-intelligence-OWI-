@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from owi_api.config import settings
 from owi_api.routers import (
     admin,
+    analytics,
     auth,
     bins,
     models,
@@ -51,6 +52,7 @@ def create_app() -> FastAPI:
     app.include_router(observations.router)
     app.include_router(review.router)
     app.include_router(models.router)
+    app.include_router(analytics.router)
     app.include_router(volunteers.router)
 
     @app.get("/healthz")

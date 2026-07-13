@@ -384,6 +384,55 @@ button:hover {
   gap: 10px;
 }
 
+.composition-head {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 24px;
+}
+
+.comp-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 16px;
+  border-left: 1px solid var(--line);
+}
+
+.comp-tile:first-child {
+  padding-left: 0;
+  border-left: none;
+}
+
+.comp-pct {
+  font-size: 1.8rem;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.comp-label {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.notice {
+  background: #fffbeb;
+  color: #b45309;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+}
+
+.delta-up {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.delta-down {
+  color: #b45309;
+  font-weight: 600;
+}
+
 .materials {
   border: 1px solid var(--line);
   border-radius: 10px;

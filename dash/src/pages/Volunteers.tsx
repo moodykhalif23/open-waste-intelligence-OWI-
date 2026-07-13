@@ -174,7 +174,7 @@ function EventForm({ onCreated }: { onCreated: () => Promise<void> }) {
   }
 
   return (
-    <SectionCard title={t("logEvent")}>
+    <SectionCard collapsible title={t("logEvent")}>
       <Stack component="form" spacing={2.5} onSubmit={(e) => void onSubmit(e)}>
         <Grid container spacing={2.5}>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>

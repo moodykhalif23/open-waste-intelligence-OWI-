@@ -4,7 +4,7 @@ import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
-import Collapse from "@mui/material/Collapse";
+import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
@@ -186,30 +186,34 @@ export default function App() {
         </Toolbar>
       </AppBar>
 
-      <Collapse in={showSettings}>
-        <Box sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider", bgcolor: "background.paper" }}>
-          <Stack spacing={2}>
-            <TextField
-              size="small"
-              fullWidth
-              label={tr("deviceToken")}
-              value={settings.token}
-              onChange={(e) => updateSettings({ token: e.target.value })}
-            />
-            <TextField
-              select
-              size="small"
-              fullWidth
-              label={tr("language")}
-              value={lang}
-              onChange={(e) => updateSettings({ lang: e.target.value as Lang })}
-            >
-              <MenuItem value="en">English</MenuItem>
-              <MenuItem value="sw">Kiswahili</MenuItem>
-            </TextField>
-          </Stack>
-        </Box>
-      </Collapse>
+      <Drawer
+        anchor="right"
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        sx={{ "& .MuiDrawer-paper": { width: { xs: "85%", sm: 360 }, p: 2 } }}
+      >
+        <Stack spacing={2}>
+          <Typography variant="h6">{tr("settings")}</Typography>
+          <TextField
+            size="small"
+            fullWidth
+            label={tr("deviceToken")}
+            value={settings.token}
+            onChange={(e) => updateSettings({ token: e.target.value })}
+          />
+          <TextField
+            select
+            size="small"
+            fullWidth
+            label={tr("language")}
+            value={lang}
+            onChange={(e) => updateSettings({ lang: e.target.value as Lang })}
+          >
+            <MenuItem value="en">English</MenuItem>
+            <MenuItem value="sw">Kiswahili</MenuItem>
+          </TextField>
+        </Stack>
+      </Drawer>
 
       <Box sx={{ flex: 1, p: 2, pb: 10, display: "flex", flexDirection: "column", gap: 2 }}>
         {tab === "collect" && <CollectList lang={lang} token={settings.token} />}

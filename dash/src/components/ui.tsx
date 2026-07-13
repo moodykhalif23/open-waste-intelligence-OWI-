@@ -1,9 +1,13 @@
 import type { ReactNode } from "react";
+import Accordion from "@mui/material/Accordion";
+import AccordionDetails from "@mui/material/AccordionDetails";
+import AccordionSummary from "@mui/material/AccordionSummary";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import ExpandMoreOutlined from "@mui/icons-material/ExpandMoreOutlined";
 
 // Vertical rhythm for a page - Layout already provides the padded container.
 export function PageStack({ children }: { children: ReactNode }) {
@@ -52,14 +56,46 @@ export function SectionCard({
   subtitle,
   action,
   flush,
+  collapsible,
+  defaultExpanded,
   children,
 }: {
   title?: ReactNode;
   subtitle?: ReactNode;
   action?: ReactNode;
   flush?: boolean;
+  collapsible?: boolean;
+  defaultExpanded?: boolean;
   children: ReactNode;
 }) {
+  if (collapsible) {
+    return (
+      <Accordion
+        defaultExpanded={defaultExpanded}
+        disableGutters
+        elevation={0}
+        sx={{
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: "4px",
+          bgcolor: "background.paper",
+          "&:before": { display: "none" },
+        }}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreOutlined />} sx={{ px: { xs: 2, md: 2.75 } }}>
+          {typeof title === "string" ? <Typography variant="h6">{title}</Typography> : title}
+        </AccordionSummary>
+        <AccordionDetails sx={{ px: { xs: 2, md: 2.75 }, pt: 0, pb: 2.5 }}>
+          {subtitle && (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              {subtitle}
+            </Typography>
+          )}
+          {children}
+        </AccordionDetails>
+      </Accordion>
+    );
+  }
   const header = (title || action) && (
     <Box
       sx={{

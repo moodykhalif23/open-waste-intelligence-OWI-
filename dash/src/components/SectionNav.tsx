@@ -32,14 +32,17 @@ export default function SectionNav({
           borderColor: "divider",
         }}
       >
-        <Tabs value={active} variant="scrollable" scrollButtons={false} sx={{ minHeight: 40 }}>
+        <Tabs value={active} variant="scrollable" scrollButtons="auto" sx={{ minHeight: 44 }}>
           {items.map((item) => (
             <Tab
               key={item.path}
               value={item.path}
+              icon={item.icon}
+              iconPosition="start"
               label={t(item.key)}
               component={RouterLink}
               to={item.path}
+              sx={{ minHeight: 44, gap: 0.75, "& .MuiTab-icon": { mb: 0, mr: 0 } }}
             />
           ))}
         </Tabs>

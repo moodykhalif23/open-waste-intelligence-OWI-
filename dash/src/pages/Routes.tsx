@@ -377,7 +377,7 @@ function TruckForm({ onCreated }: { onCreated: () => Promise<void> }) {
   }
 
   return (
-    <SectionCard title={t("addTruck")}>
+    <SectionCard collapsible title={t("addTruck")}>
       <Box component="form" onSubmit={(e) => void onSubmit(e)}>
         <Stack spacing={2}>
           <TextField

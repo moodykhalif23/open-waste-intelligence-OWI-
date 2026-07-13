@@ -30,15 +30,20 @@ const theme = createTheme({
   shape: { borderRadius: 4 },
   typography: {
     fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-    h1: { fontWeight: 680, letterSpacing: "-0.02em" },
-    h2: { fontWeight: 660, letterSpacing: "-0.02em" },
-    h4: { fontWeight: 670, letterSpacing: "-0.02em", fontSize: "1.4rem" },
-    h5: { fontWeight: 650, letterSpacing: "-0.015em", fontSize: "1.15rem" },
-    h6: { fontWeight: 640, letterSpacing: "-0.01em", fontSize: "0.98rem" },
-    subtitle2: { fontWeight: 600 },
-    body2: { lineHeight: 1.55 },
-    button: { textTransform: "none", fontWeight: 620 },
-    overline: { fontWeight: 600, letterSpacing: "0.08em" },
+    fontSize: 15,
+    fontWeightRegular: 450,
+    fontWeightMedium: 600,
+    h1: { fontWeight: 720, letterSpacing: "-0.02em" },
+    h2: { fontWeight: 700, letterSpacing: "-0.02em" },
+    h4: { fontWeight: 720, letterSpacing: "-0.02em", fontSize: "1.6rem" },
+    h5: { fontWeight: 700, letterSpacing: "-0.015em", fontSize: "1.28rem" },
+    h6: { fontWeight: 690, letterSpacing: "-0.01em", fontSize: "1.08rem" },
+    subtitle1: { fontWeight: 600 },
+    subtitle2: { fontWeight: 620 },
+    body1: { fontWeight: 460 },
+    body2: { fontWeight: 460, lineHeight: 1.6 },
+    button: { textTransform: "none", fontWeight: 660 },
+    overline: { fontWeight: 640, letterSpacing: "0.08em" },
   },
   components: {
     MuiCssBaseline: {
@@ -60,11 +65,11 @@ const theme = createTheme({
     MuiCardContent: {
       styleOverrides: {
         root: ({ theme: t }) => ({
-          padding: 18,
-          "&:last-child": { paddingBottom: 18 },
+          padding: 22,
+          "&:last-child": { paddingBottom: 22 },
           [t.breakpoints.up("md")]: {
-            padding: 22,
-            "&:last-child": { paddingBottom: 22 },
+            padding: 28,
+            "&:last-child": { paddingBottom: 28 },
           },
         }),
       },
@@ -94,7 +99,7 @@ const theme = createTheme({
         root: {
           borderRadius: 4,
           marginInline: 8,
-          paddingBlock: 7,
+          paddingBlock: 9,
           "&.Mui-selected": {
             backgroundColor: emerald[50],
             color: emerald[700],
@@ -110,14 +115,14 @@ const theme = createTheme({
       styleOverrides: {
         head: {
           color: "#475569",
-          fontWeight: 600,
-          fontSize: "0.7rem",
+          fontWeight: 680,
+          fontSize: "0.75rem",
           textTransform: "uppercase",
           letterSpacing: "0.04em",
           backgroundColor: "#f8fafc",
           whiteSpace: "nowrap",
         },
-        root: { borderColor: border, padding: "9px 12px" },
+        root: { borderColor: border, padding: "13px 16px", fontSize: "0.95rem" },
       },
     },
     MuiTableRow: {

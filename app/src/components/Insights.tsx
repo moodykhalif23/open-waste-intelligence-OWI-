@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import Accordion from "@mui/material/Accordion";
+import AccordionDetails from "@mui/material/AccordionDetails";
+import AccordionSummary from "@mui/material/AccordionSummary";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Stack from "@mui/material/Stack";
+import ExpandMoreOutlined from "@mui/icons-material/ExpandMoreOutlined";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -37,8 +41,27 @@ function bandIndex(pct: number): number {
   return 4;
 }
 
-// A titled card wrapper — flat, 4px, matches the rest of the app.
-function Panel({ title, children }: { title: string; children: ReactNode }) {
+// A titled section — flat, 4px, matches the rest of the app. Collapsible ones
+// use an accordion so a collector on a small phone can fold charts away and
+// get to the table quickly.
+function Panel({ title, collapsible, children }: { title: string; collapsible?: boolean; children: ReactNode }) {
+  if (collapsible) {
+    return (
+      <Accordion
+        defaultExpanded
+        disableGutters
+        elevation={0}
+        sx={{ border: "1px solid", borderColor: "divider", borderRadius: "4px", "&:before": { display: "none" } }}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreOutlined />}>
+          <Typography variant="body2" sx={{ fontWeight: 660 }}>
+            {title}
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails>{children}</AccordionDetails>
+      </Accordion>
+    );
+  }
   return (
     <Card>
       <CardContent sx={{ "&:last-child": { pb: 2 } }}>
@@ -143,18 +166,18 @@ export default function Insights({ lang, token }: { lang: Lang; token: string })
 
   return (
     <Stack spacing={2}>
-      <Panel title={tr("insightsRiskMix")}>
+      <Panel collapsible title={tr("insightsRiskMix")}>
         <EChart height={190} option={donutOption(riskMix)} />
       </Panel>
 
-      <Panel title={tr("insightsFillBySite")}>
+      <Panel collapsible title={tr("insightsFillBySite")}>
         <EChart
           height={Math.max(170, heat.sites.length * 26 + 70)}
           option={heatmapOption(heat.labels, heat.sites, heat.data, heat.max)}
         />
       </Panel>
 
-      <Panel title={tr("insightsTopFill")}>
+      <Panel collapsible title={tr("insightsTopFill")}>
         <EChart height={Math.max(150, top.labels.length * 26)} option={hbarOption(top.labels, top.values, top.colors)} />
       </Panel>
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Link as RouterLink,
   Outlet,
@@ -6,23 +6,30 @@ import {
   useNavigate,
 } from "react-router-dom";
 import AppBar from "@mui/material/AppBar";
+import Badge from "@mui/material/Badge";
 import Box from "@mui/material/Box";
 import Container from "@mui/material/Container";
+import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
+import ListSubheader from "@mui/material/ListSubheader";
+import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
-import Select from "@mui/material/Select";
 import Toolbar from "@mui/material/Toolbar";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import AccountCircleOutlined from "@mui/icons-material/AccountCircleOutlined";
+import CheckOutlined from "@mui/icons-material/CheckOutlined";
 import LanguageOutlined from "@mui/icons-material/LanguageOutlined";
 import LogoutOutlined from "@mui/icons-material/LogoutOutlined";
 import MenuOutlined from "@mui/icons-material/MenuOutlined";
-import { clearToken } from "../api";
+import NotificationsNoneOutlined from "@mui/icons-material/NotificationsNoneOutlined";
+import { api, clearToken } from "../api";
+import NavSearch from "./NavSearch";
 import { useI18n, type Lang } from "../i18n";
 import { NAV, locate } from "../nav";
 
@@ -38,12 +45,25 @@ export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [acct, setAcct] = useState<null | HTMLElement>(null);
+  const [alerts, setAlerts] = useState(0);
 
   const here = locate(location.pathname);
   const barTitle = here ? t(here.entry.key) : t("appName");
 
+  useEffect(() => {
+    void api<{ unreviewed: number }>("/api/v1/predictions")
+      .then((r) => setAlerts(r.unreviewed ?? 0))
+      .catch(() => setAlerts(0));
+  }, [location.pathname]);
+
   const isActive = (path: string) =>
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
+
+  const chooseLang = (next: Lang) => {
+    setLang(next);
+    setAcct(null);
+  };
 
   const drawer = (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -75,7 +95,7 @@ export default function Layout() {
   return (
     <Box sx={{ display: "flex", minHeight: "100dvh", bgcolor: "background.default" }}>
       <AppBar position="fixed" sx={{ width: { md: `calc(100% - ${DRAWER_WIDTH}px)` }, ml: { md: `${DRAWER_WIDTH}px` } }}>
-        <Toolbar sx={{ gap: 1 }}>
+        <Toolbar sx={{ gap: { xs: 1, sm: 2 } }}>
           <IconButton
             edge="start"
             onClick={() => setMobileOpen((v) => !v)}
@@ -84,31 +104,53 @@ export default function Layout() {
           >
             <MenuOutlined />
           </IconButton>
-          <Typography sx={{ flexGrow: 1, fontWeight: 620, fontSize: "0.98rem" }} noWrap>
+          <Typography sx={{ fontWeight: 620, fontSize: "0.98rem", display: { xs: "none", sm: "block" } }} noWrap>
             {barTitle}
           </Typography>
-          <Select
-            size="small"
-            value={lang}
-            onChange={(e) => setLang(e.target.value as Lang)}
-            aria-label={t("language")}
-            startAdornment={<LanguageOutlined sx={{ fontSize: 18, mr: 0.75, color: "text.secondary" }} />}
-            sx={{ "& .MuiSelect-select": { py: 0.75 } }}
+          <NavSearch />
+          <Box sx={{ flexGrow: 1 }} />
+          <Tooltip title={t("notifications")}>
+            <IconButton onClick={() => navigate("/records/review")} aria-label={t("notifications")}>
+              <Badge badgeContent={alerts} color="error" max={99}>
+                <NotificationsNoneOutlined />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={t("account")}>
+            <IconButton edge="end" onClick={(e) => setAcct(e.currentTarget)} aria-label={t("account")}>
+              <AccountCircleOutlined />
+            </IconButton>
+          </Tooltip>
+          <Menu
+            anchorEl={acct}
+            open={Boolean(acct)}
+            onClose={() => setAcct(null)}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
           >
-            <MenuItem value="en">English</MenuItem>
-            <MenuItem value="sw">Kiswahili</MenuItem>
-          </Select>
-          <Tooltip title={t("logout")}>
-            <IconButton
+            <ListSubheader sx={{ bgcolor: "transparent", lineHeight: 2.4, fontSize: "0.72rem" }}>
+              <LanguageOutlined sx={{ fontSize: 15, verticalAlign: "-2px", mr: 0.5 }} />
+              {t("language")}
+            </ListSubheader>
+            {(["en", "sw"] as Lang[]).map((code) => (
+              <MenuItem key={code} selected={lang === code} onClick={() => chooseLang(code)}>
+                <ListItemIcon>{lang === code && <CheckOutlined fontSize="small" />}</ListItemIcon>
+                {code === "en" ? "English" : "Kiswahili"}
+              </MenuItem>
+            ))}
+            <Divider />
+            <MenuItem
               onClick={() => {
                 clearToken();
                 navigate("/login");
               }}
-              aria-label={t("logout")}
             >
-              <LogoutOutlined />
-            </IconButton>
-          </Tooltip>
+              <ListItemIcon>
+                <LogoutOutlined fontSize="small" />
+              </ListItemIcon>
+              {t("logout")}
+            </MenuItem>
+          </Menu>
         </Toolbar>
       </AppBar>
 

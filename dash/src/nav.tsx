@@ -1,16 +1,28 @@
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import DashboardOutlined from "@mui/icons-material/DashboardOutlined";
 import PlaylistAddCheckOutlined from "@mui/icons-material/PlaylistAddCheckOutlined";
 import AltRouteOutlined from "@mui/icons-material/AltRouteOutlined";
 import InsightsOutlined from "@mui/icons-material/InsightsOutlined";
 import Inventory2Outlined from "@mui/icons-material/Inventory2Outlined";
 import AdminPanelSettingsOutlined from "@mui/icons-material/AdminPanelSettingsOutlined";
+import PieChartOutlineOutlined from "@mui/icons-material/PieChartOutlineOutlined";
+import RecyclingOutlined from "@mui/icons-material/RecyclingOutlined";
+import EnergySavingsLeafOutlined from "@mui/icons-material/EnergySavingsLeafOutlined";
+import CleaningServicesOutlined from "@mui/icons-material/CleaningServicesOutlined";
+import WarningAmberOutlined from "@mui/icons-material/WarningAmberOutlined";
+import DeleteOutlineOutlined from "@mui/icons-material/DeleteOutlineOutlined";
+import ArticleOutlined from "@mui/icons-material/ArticleOutlined";
+import FactCheckOutlined from "@mui/icons-material/FactCheckOutlined";
+import VolunteerActivismOutlined from "@mui/icons-material/VolunteerActivismOutlined";
+import ManageAccountsOutlined from "@mui/icons-material/ManageAccountsOutlined";
+import PublicOutlined from "@mui/icons-material/PublicOutlined";
 import type { StringKey } from "./i18n";
 
 // A leaf destination. `end` marks index-style matching (exact path only).
 export interface NavLeaf {
   path: string;
   key: StringKey;
+  icon?: ReactElement;
   end?: boolean;
 }
 
@@ -33,11 +45,11 @@ export const NAV: NavEntry[] = [
     key: "navIntelligence",
     icon: <InsightsOutlined />,
     children: [
-      { path: "/intelligence/composition", key: "composition" },
-      { path: "/intelligence/recycling", key: "recycling" },
-      { path: "/intelligence/carbon", key: "carbon" },
-      { path: "/intelligence/cleanliness", key: "cleanliness" },
-      { path: "/intelligence/dumping", key: "dumping" },
+      { path: "/intelligence/composition", key: "composition", icon: <PieChartOutlineOutlined fontSize="small" /> },
+      { path: "/intelligence/recycling", key: "recycling", icon: <RecyclingOutlined fontSize="small" /> },
+      { path: "/intelligence/carbon", key: "carbon", icon: <EnergySavingsLeafOutlined fontSize="small" /> },
+      { path: "/intelligence/cleanliness", key: "cleanliness", icon: <CleaningServicesOutlined fontSize="small" /> },
+      { path: "/intelligence/dumping", key: "dumping", icon: <WarningAmberOutlined fontSize="small" /> },
     ],
   },
   {
@@ -45,10 +57,10 @@ export const NAV: NavEntry[] = [
     key: "navRecords",
     icon: <Inventory2Outlined />,
     children: [
-      { path: "/records/bins", key: "bins" },
-      { path: "/records/reports", key: "reports" },
-      { path: "/records/review", key: "review" },
-      { path: "/records/volunteers", key: "volunteers" },
+      { path: "/records/bins", key: "bins", icon: <DeleteOutlineOutlined fontSize="small" /> },
+      { path: "/records/reports", key: "reports", icon: <ArticleOutlined fontSize="small" /> },
+      { path: "/records/review", key: "review", icon: <FactCheckOutlined fontSize="small" /> },
+      { path: "/records/volunteers", key: "volunteers", icon: <VolunteerActivismOutlined fontSize="small" /> },
     ],
   },
   {
@@ -56,8 +68,8 @@ export const NAV: NavEntry[] = [
     key: "navAdmin",
     icon: <AdminPanelSettingsOutlined />,
     children: [
-      { path: "/admin/users", key: "users" },
-      { path: "/admin/open-data", key: "openData" },
+      { path: "/admin/users", key: "users", icon: <ManageAccountsOutlined fontSize="small" /> },
+      { path: "/admin/open-data", key: "openData", icon: <PublicOutlined fontSize="small" /> },
     ],
   },
 ];

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import Drawer from "@mui/material/Drawer";
 import Grid from "@mui/material/Grid";
 import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
@@ -248,16 +249,20 @@ function SitePanel({
   }
 
   return (
-    <SectionCard
-      title={`${t("site")} ${site.lat.toFixed(4)}, ${site.lng.toFixed(4)}`}
-      action={
+    <Drawer
+      anchor="right"
+      open
+      onClose={onClose}
+      sx={{ "& .MuiDrawer-paper": { width: { xs: "100%", sm: 440 }, p: { xs: 2, sm: 3 } } }}
+    >
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+        <Typography variant="h6">{`${t("site")} ${site.lat.toFixed(4)}, ${site.lng.toFixed(4)}`}</Typography>
         <IconButton size="small" onClick={onClose} aria-label="close">
           <CloseIcon fontSize="small" />
         </IconButton>
-      }
-    >
+      </Box>
       <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={12}>
           <Typography variant="h6" sx={{ mb: 1 }}>
             {t("timeline")}
           </Typography>
@@ -280,7 +285,7 @@ function SitePanel({
             ))}
           </List>
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={12}>
           <Typography variant="h6" sx={{ mb: 2 }}>
             {t("recordIntervention")}
           </Typography>
@@ -321,6 +326,6 @@ function SitePanel({
           </Stack>
         </Grid>
       </Grid>
-    </SectionCard>
+    </Drawer>
   );
 }

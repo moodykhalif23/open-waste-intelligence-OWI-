@@ -83,7 +83,7 @@ export default function Users() {
 
   return (
     <PageStack>
-      <SectionCard title={t("newUser")}>
+      <SectionCard collapsible title={t("newUser")}>
         <UserForm onCreated={reload} />
       </SectionCard>
 

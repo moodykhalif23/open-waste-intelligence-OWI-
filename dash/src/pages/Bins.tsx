@@ -117,7 +117,7 @@ function SiteForm({ onCreated }: { onCreated: () => Promise<void> }) {
   }
 
   return (
-    <SectionCard title={t("newSite")}>
+    <SectionCard collapsible title={t("newSite")}>
       <Stack component="form" spacing={2.5} onSubmit={(e) => void onSubmit(e)}>
         <TextField
           size="small"
@@ -182,7 +182,7 @@ function BinForm({ sites, onCreated }: { sites: Site[]; onCreated: () => Promise
   }
 
   return (
-    <SectionCard title={t("newBin")}>
+    <SectionCard collapsible title={t("newBin")}>
       <Stack component="form" spacing={2.5} onSubmit={(e) => void onSubmit(e)}>
         <TextField
           select

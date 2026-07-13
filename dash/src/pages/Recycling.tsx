@@ -170,7 +170,7 @@ function PriceForm({ onSaved }: { onSaved: () => Promise<void> }) {
   }
 
   return (
-    <SectionCard title={t("setPrice")}>
+    <SectionCard collapsible title={t("setPrice")}>
       <form onSubmit={(e) => void onSubmit(e)}>
         <Stack spacing={2}>
           <TextField
@@ -239,7 +239,7 @@ function PartnerForm({ onSaved }: { onSaved: () => Promise<void> }) {
   }
 
   return (
-    <SectionCard title={t("addPartner")}>
+    <SectionCard collapsible title={t("addPartner")}>
       <form onSubmit={(e) => void onSubmit(e)}>
         <Stack spacing={2}>
           <TextField

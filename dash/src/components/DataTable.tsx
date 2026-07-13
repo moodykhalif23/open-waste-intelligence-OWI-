@@ -18,7 +18,7 @@ export function DataTable({
       autoHeight
       showToolbar={toolbar}
       disableRowSelectionOnClick
-      rowHeight={54}
+      getRowHeight={() => "auto"}
       columnHeaderHeight={50}
       initialState={{ pagination: { paginationModel: { page: 0, pageSize } } }}
       pageSizeOptions={[pageSize, pageSize * 2, 50]}
@@ -36,10 +36,23 @@ export function DataTable({
           textTransform: "uppercase",
           letterSpacing: "0.04em",
           color: "text.secondary",
+          whiteSpace: "normal",
+          lineHeight: 1.2,
         },
-        "& .MuiDataGrid-cell": { borderColor: LINE, py: 0.75 },
+        // Wrap, never clip: content flows to the next line and the row grows
+        // (getRowHeight: auto) instead of overflowing.
+        "& .MuiDataGrid-cell": {
+          borderColor: LINE,
+          py: 1.25,
+          whiteSpace: "normal",
+          wordBreak: "break-word",
+          lineHeight: 1.4,
+          display: "flex",
+          alignItems: "center",
+        },
         "& .MuiDataGrid-row:hover": { bgcolor: "#f8fafc" },
-        "& .MuiDataGrid-columnSeparator": { display: "none" },
+        // Keep the resize handle visible so columns can be dragged wider/narrower.
+        "& .MuiDataGrid-columnSeparator": { color: LINE },
         "& .MuiDataGrid-footerContainer": { borderColor: LINE, minHeight: 48 },
         "& .MuiDataGrid-toolbarContainer": { p: 1.25, gap: 1 },
       }}

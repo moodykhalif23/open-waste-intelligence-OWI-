@@ -5,7 +5,7 @@ import { Alert, Box, Button, Chip, MenuItem, TextField, Typography } from "@mui/
 import { api } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import EChart, { donutOption, MATERIAL_COLORS } from "../components/EChart";
-import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
+import { Muted, PageStack, SectionCard, StatCard, TableSection } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
 interface MaterialShare {
@@ -137,9 +137,9 @@ export default function Composition() {
             />
           </SectionCard>
 
-          <SectionCard>
+          <TableSection>
             <DataTable rows={data.materials} columns={columns} getRowId={(r) => r.material} />
-          </SectionCard>
+          </TableSection>
         </>
       )}
     </PageStack>

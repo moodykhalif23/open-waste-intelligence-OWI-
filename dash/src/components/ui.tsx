@@ -129,6 +129,39 @@ export function SectionCard({
   );
 }
 
+// A table section with NO paper card — just a heading row + the content. The
+// DataGrid carries its own border, so wrapping it in a Card is redundant chrome.
+export function TableSection({
+  title,
+  action,
+  children,
+}: {
+  title?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <Box>
+      {(title || action) && (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 2,
+            mb: 1.5,
+            flexWrap: "wrap",
+          }}
+        >
+          {typeof title === "string" ? <Typography variant="h6">{title}</Typography> : title}
+          {action}
+        </Box>
+      )}
+      {children}
+    </Box>
+  );
+}
+
 // A light bordered surface for grouping content inside a card (no shadow).
 export function Panel({
   title,

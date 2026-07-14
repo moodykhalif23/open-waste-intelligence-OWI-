@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardActions from "@mui/material/CardActions";
+import CardContent from "@mui/material/CardContent";
+import CardMedia from "@mui/material/CardMedia";
 import Chip from "@mui/material/Chip";
 import Drawer from "@mui/material/Drawer";
 import Grid from "@mui/material/Grid";
@@ -19,7 +23,7 @@ import ScheduleIcon from "@mui/icons-material/Schedule";
 import { api, apiBlob } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import MapView from "../components/MapView";
-import { Muted, PageStack, SectionCard } from "../components/ui";
+import { Muted, PageStack, TableSection } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
 const INTERVENTIONS = ["bin_added", "signage", "cleanup", "engagement"] as const;
@@ -140,23 +144,21 @@ export default function Dumping() {
 
   return (
     <PageStack>
-      <SectionCard title={t("reviewQueue")}>
+      <TableSection title={t("reviewQueue")}>
         {candidates.length === 0 ? (
           <Muted>{t("noCandidates")}</Muted>
         ) : (
-          <Stack spacing={2.5}>
+          <Grid container spacing={{ xs: 2, md: 2.5 }}>
             {candidates.map((c) => (
-              <CandidateItem
-                key={c.observation_id}
-                candidate={c}
-                onReview={(d) => void review(c.observation_id, d)}
-              />
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={c.observation_id}>
+                <CandidateItem candidate={c} onReview={(d) => void review(c.observation_id, d)} />
+              </Grid>
             ))}
-          </Stack>
+          </Grid>
         )}
-      </SectionCard>
+      </TableSection>
 
-      <SectionCard title={t("hotspots")}>
+      <TableSection title={t("hotspots")}>
         {sites.length === 0 ? (
           <Muted>{t("noSites")}</Muted>
         ) : (
@@ -172,7 +174,7 @@ export default function Dumping() {
             <DataTable rows={sites} columns={siteCols} />
           </Stack>
         )}
-      </SectionCard>
+      </TableSection>
 
       {selected && (
         <SitePanel site={selected} onClose={() => setSelected(null)} onChanged={reload} />
@@ -206,37 +208,31 @@ function CandidateItem({
   }, [candidate.observation_id]);
 
   return (
-    <Stack
-      direction={{ xs: "column", sm: "row" }}
-      spacing={2.5}
-      sx={{ alignItems: { sm: "center" } }}
-    >
-      {imageUrl && (
-        <Box
-          component="img"
-          src={imageUrl}
-          alt=""
-          sx={{ width: 96, height: 96, objectFit: "cover", borderRadius: 2, flexShrink: 0 }}
-        />
-      )}
-      <Box sx={{ flexGrow: 1 }}>
+    <Card variant="outlined" sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <CardMedia
+        component="img"
+        image={imageUrl ?? undefined}
+        alt=""
+        sx={{ height: 168, objectFit: "cover", bgcolor: "#f0ede5" }}
+      />
+      <CardContent sx={{ flexGrow: 1, pb: 1 }}>
         <Muted>
           {candidate.lat.toFixed(4)}, {candidate.lng.toFixed(4)} ·{" "}
           {new Date(candidate.captured_at).toLocaleDateString()}
         </Muted>
-        <Stack direction="row" spacing={1.5} sx={{ mt: 1.5, flexWrap: "wrap" }}>
-          <Button variant="contained" color="primary" onClick={() => onReview("confirmed")}>
-            {t("confirmDumping")}
-          </Button>
-          <Button variant="outlined" color="error" onClick={() => onReview("rejected")}>
-            {t("reject")}
-          </Button>
-          <Button variant="outlined" onClick={() => onReview("duplicate")}>
-            {t("duplicate")}
-          </Button>
-        </Stack>
-      </Box>
-    </Stack>
+      </CardContent>
+      <CardActions sx={{ px: 2, pb: 2, pt: 0, flexWrap: "wrap", gap: 1 }}>
+        <Button size="small" variant="contained" color="primary" onClick={() => onReview("confirmed")}>
+          {t("confirmDumping")}
+        </Button>
+        <Button size="small" variant="outlined" color="error" onClick={() => onReview("rejected")}>
+          {t("reject")}
+        </Button>
+        <Button size="small" variant="outlined" onClick={() => onReview("duplicate")}>
+          {t("duplicate")}
+        </Button>
+      </CardActions>
+    </Card>
   );
 }
 

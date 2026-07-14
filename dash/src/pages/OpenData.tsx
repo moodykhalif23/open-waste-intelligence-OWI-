@@ -9,7 +9,7 @@ import Typography from "@mui/material/Typography";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { api, type ApiKey, type ApiKeyCreated, type PublicMeta } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import { Muted, PageStack, SectionCard } from "../components/ui";
+import { Muted, PageStack, SectionCard, TableSection } from "../components/ui";
 import { useI18n } from "../i18n";
 
 function fmtDate(iso: string): string {
@@ -107,7 +107,7 @@ export default function OpenData() {
         )}
       </SectionCard>
 
-      <SectionCard
+      <TableSection
         title={t("apiKeys")}
         action={<KeyForm onCreated={reload} onIssued={(k) => { setIssued(k); setCopied(false); }} />}
       >
@@ -144,7 +144,7 @@ export default function OpenData() {
         ) : (
           <DataTable rows={keys} columns={columns} toolbar={false} />
         )}
-      </SectionCard>
+      </TableSection>
     </PageStack>
   );
 }

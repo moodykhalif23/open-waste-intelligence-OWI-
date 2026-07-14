@@ -11,7 +11,7 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import { api } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
+import { Muted, PageStack, SectionCard, StatCard, TableSection } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
 const MATERIALS = ["plastic", "glass", "metal", "paper", "organic", "e_waste", "textile"] as const;
@@ -105,16 +105,16 @@ export default function Recycling() {
         </Grid>
       </Grid>
 
-      <SectionCard title={t("recoverableValue")}>
+      <TableSection title={t("recoverableValue")}>
         {value.materials.length === 0 ? (
           <Muted>{t("noValueYet")}</Muted>
         ) : (
           <DataTable rows={value.materials} columns={valueCols} getRowId={(r) => r.material} toolbar={false} />
         )}
-        <Alert severity="info" sx={{ mt: 2.5 }}>
+        <Alert severity="info" sx={{ mt: 2 }}>
           {t("valueMethod")}
         </Alert>
-      </SectionCard>
+      </TableSection>
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 6 }}>
@@ -127,22 +127,22 @@ export default function Recycling() {
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <SectionCard title={t("priceTable")}>
+          <TableSection title={t("priceTable")}>
             {prices.length === 0 ? (
               <Muted>{t("noPrices")}</Muted>
             ) : (
               <DataTable rows={prices} columns={priceCols} toolbar={false} pageSize={5} />
             )}
-          </SectionCard>
+          </TableSection>
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <SectionCard title={t("partners")}>
+          <TableSection title={t("partners")}>
             {partners.length === 0 ? (
               <Muted>{t("noPartners")}</Muted>
             ) : (
               <DataTable rows={partners} columns={partnerCols} toolbar={false} pageSize={5} />
             )}
-          </SectionCard>
+          </TableSection>
         </Grid>
       </Grid>
     </PageStack>

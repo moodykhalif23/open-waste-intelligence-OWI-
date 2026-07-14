@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardActions from "@mui/material/CardActions";
+import CardContent from "@mui/material/CardContent";
+import CardMedia from "@mui/material/CardMedia";
 import Chip from "@mui/material/Chip";
+import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { api, apiBlob } from "../api";
@@ -57,23 +62,22 @@ export default function Review() {
     <PageStack>
       <SectionCard
         title={t("reviewQueue")}
-        action={
-          <Chip size="small" label={t("pendingCount").replace("{n}", String(queue.unreviewed))} />
-        }
+        action={<Chip size="small" label={t("pendingCount").replace("{n}", String(queue.unreviewed))} />}
       >
         {queue.items.length === 0 ? (
           <Muted>{t("reviewEmpty")}</Muted>
         ) : (
-          <Stack spacing={2.5} divider={<Box sx={{ borderTop: "1px solid", borderColor: "divider" }} />}>
+          <Grid container spacing={{ xs: 2, md: 2.5 }}>
             {queue.items.map((p) => (
-              <ReviewItem
-                key={p.id}
-                prediction={p}
-                onConfirm={() => void confirm(p)}
-                onCorrect={(band) => void correctFill(p, band)}
-              />
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={p.id}>
+                <ReviewItem
+                  prediction={p}
+                  onConfirm={() => void confirm(p)}
+                  onCorrect={(band) => void correctFill(p, band)}
+                />
+              </Grid>
             ))}
-          </Stack>
+          </Grid>
         )}
       </SectionCard>
     </PageStack>
@@ -109,42 +113,42 @@ function ReviewItem({
   const predicted = String(prediction.payload.fill_band ?? "");
 
   return (
-    <Stack direction={{ xs: "column", sm: "row" }} spacing={2.5} sx={{ alignItems: { sm: "center" } }}>
-      {imageUrl && (
-        <Box
-          component="img"
-          src={imageUrl}
-          alt=""
-          sx={{ width: 96, height: 96, borderRadius: 2, objectFit: "cover", flexShrink: 0 }}
-        />
-      )}
-      <Box sx={{ flexGrow: 1 }}>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-          {prediction.task} · {t("predicted")}:{" "}
-          <Box component="strong" sx={{ color: "text.primary" }}>
-            {predicted || "—"}
-          </Box>
-        </Typography>
+    <Card variant="outlined" sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <CardMedia
+        component="img"
+        image={imageUrl ?? undefined}
+        alt=""
+        sx={{ height: 168, objectFit: "cover", bgcolor: "#f0ede5" }}
+      />
+      <CardContent sx={{ flexGrow: 1, pb: 1 }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+          <Chip size="small" variant="outlined" label={prediction.task} />
+          <Typography variant="body2" color="text.secondary">
+            {t("predicted")}:{" "}
+            <Box component="strong" sx={{ color: "text.primary" }}>
+              {predicted || "—"}
+            </Box>
+          </Typography>
+        </Stack>
+      </CardContent>
+      <CardActions sx={{ px: 2, pb: 2, pt: 0, flexWrap: "wrap", gap: 1 }}>
         {prediction.task === "fill" ? (
-          <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
-            {FILL_BANDS.map((band) => (
-              <Button
-                key={band}
-                size="small"
-                variant={band === predicted ? "contained" : "outlined"}
-                color="primary"
-                onClick={() => (band === predicted ? onConfirm() : onCorrect(band))}
-              >
-                {t(band)}
-              </Button>
-            ))}
-          </Stack>
+          FILL_BANDS.map((band) => (
+            <Button
+              key={band}
+              size="small"
+              variant={band === predicted ? "contained" : "outlined"}
+              onClick={() => (band === predicted ? onConfirm() : onCorrect(band))}
+            >
+              {t(band)}
+            </Button>
+          ))
         ) : (
-          <Button variant="contained" color="primary" onClick={onConfirm}>
+          <Button variant="contained" onClick={onConfirm}>
             {t("confirm")}
           </Button>
         )}
-      </Box>
-    </Stack>
+      </CardActions>
+    </Card>
   );
 }

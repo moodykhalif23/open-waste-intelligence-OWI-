@@ -2,7 +2,7 @@
 COMPOSE := docker compose --profile prod
 ADMIN_PHONE ?= +254700000000
 
-.PHONY: help web up down restart logs ps smoke bootstrap dev build clean ml-setup ml-data ml-train ml-register
+.PHONY: help web up down restart logs ps smoke seed bootstrap dev build clean ml-setup ml-data ml-train ml-register
 
 help: ## Show available targets
 	@echo OpenWaste Intelligence — make targets:
@@ -14,6 +14,7 @@ help: ## Show available targets
 	@echo   ps         Show service status
 	@echo   build      Build images only
 	@echo   smoke      Run the end-to-end smoke suite (needs PASSWORD=...)
+	@echo   seed       Load a realistic demo dataset (needs PASSWORD=...)
 	@echo   bootstrap  Create first org + admin (ORG, NAME, PHONE, PASSWORD)
 	@echo   dev        Print source dev-server commands
 	@echo   clean      Stop and remove volumes (DESTROYS local data)
@@ -45,6 +46,9 @@ build: ## Build images only
 
 smoke: ## Run the smoke suite against the running API
 	cd api && uv run python scripts/smoke.py http://127.0.0.1:8000 $(ADMIN_PHONE) $(PASSWORD)
+
+seed: ## Load a realistic demo dataset (idempotent; safe to re-run)
+	cd api && uv run python scripts/seed.py http://127.0.0.1:8000 $(ADMIN_PHONE) $(PASSWORD)
 
 bootstrap: ## Create first org + admin
 	$(COMPOSE) exec api uv run python -m owi_api.bootstrap --org "$(ORG)" --name "$(NAME)" --phone "$(PHONE)" --password "$(PASSWORD)"

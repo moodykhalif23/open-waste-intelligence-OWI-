@@ -9,7 +9,7 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import { api, getToken } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import EChart, { lineOption } from "../components/EChart";
-import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
+import { Muted, PageStack, SectionCard, StatCard, TableSection } from "../components/ui";
 import { useI18n } from "../i18n";
 
 const EVENT_TYPES = ["cleanup", "education", "sorting"] as const;
@@ -125,13 +125,13 @@ export default function Volunteers() {
 
       <EventForm onCreated={reload} />
 
-      <SectionCard title={t("events")}>
+      <TableSection title={t("events")}>
         {events.length === 0 ? (
           <Muted>{t("noData")}</Muted>
         ) : (
           <DataTable rows={events} columns={eventCols} />
         )}
-      </SectionCard>
+      </TableSection>
     </PageStack>
   );
 }

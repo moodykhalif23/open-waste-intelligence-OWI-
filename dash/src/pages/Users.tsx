@@ -9,7 +9,7 @@ import Typography from "@mui/material/Typography";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { api, type Role, type User } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import { Muted, PageStack, SectionCard } from "../components/ui";
+import { Muted, PageStack, SectionCard, TableSection } from "../components/ui";
 import { useI18n } from "../i18n";
 
 const ROLES: Role[] = ["collector", "coordinator", "viewer", "admin"];
@@ -87,7 +87,7 @@ export default function Users() {
         <UserForm onCreated={reload} />
       </SectionCard>
 
-      <SectionCard title={t("users")}>
+      <TableSection title={t("users")}>
         <DataTable rows={users} columns={columns} />
 
         {issued && (
@@ -118,7 +118,7 @@ export default function Users() {
             </Stack>
           </Alert>
         )}
-      </SectionCard>
+      </TableSection>
     </PageStack>
   );
 }

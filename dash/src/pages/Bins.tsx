@@ -9,7 +9,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import { api, apiBlob, type Bin, type Site } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import MapView from "../components/MapView";
-import { Muted, PageStack, SectionCard } from "../components/ui";
+import { Muted, PageStack, SectionCard, TableSection } from "../components/ui";
 import { useI18n } from "../i18n";
 
 export default function Bins() {
@@ -101,9 +101,9 @@ export default function Bins() {
         </SectionCard>
       )}
 
-      <SectionCard title={t("bins")}>
+      <TableSection title={t("bins")}>
         {bins.length === 0 ? <Muted>{t("noData")}</Muted> : <DataTable rows={bins} columns={columns} />}
-      </SectionCard>
+      </TableSection>
     </PageStack>
   );
 }

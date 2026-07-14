@@ -3,7 +3,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { api } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import { Muted, PageStack, SectionCard } from "../components/ui";
+import { Muted, PageStack } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
 interface Component {
@@ -83,13 +83,11 @@ export default function Cleanliness() {
     <PageStack>
       <Typography variant="h5">{t("cleanlinessIndex")}</Typography>
 
-      <SectionCard>
-        {areas.length === 0 ? (
-          <Muted>{t("noAreas")}</Muted>
-        ) : (
-          <DataTable rows={areas} columns={columns} getRowId={(r) => r.site_id} toolbar={false} />
-        )}
-      </SectionCard>
+      {areas.length === 0 ? (
+        <Muted>{t("noAreas")}</Muted>
+      ) : (
+        <DataTable rows={areas} columns={columns} getRowId={(r) => r.site_id} toolbar={false} />
+      )}
 
       {method && (
         <Muted>

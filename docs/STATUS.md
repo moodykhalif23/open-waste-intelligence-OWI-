@@ -122,7 +122,7 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 ### Infra & deployment
 
 - `docker-compose.yml` at repo root (Postgres+PostGIS, Redis, MinIO, Label Studio); all secrets and URLs in the single gitignored repo-root `.env`; frontends are same-origin (`/api` proxied in dev, reverse proxy in production) with zero hardcoded URLs
-- `make web` one-command launcher (Makefile at repo root: web / up / down / logs / ps / smoke / bootstrap / clean); screenshots live in the gitignored `screens/`
+- `make web` one-command launcher (Makefile at repo root: web / up / down / logs / ps / smoke / seed / bootstrap / clean); `make seed` loads a realistic, idempotent demo dataset (`api/scripts/seed.py`) so a fresh install isn't empty; screenshots live in the gitignored `screens/`
 - Production deploy (2026-07-13): compose `prod` profile runs the whole platform — one `api` image (model weights baked in, SHA256-verified at build; migrations auto-run on start; non-root) serving as api / worker / scheduler, plus a `web` image (both frontends built and served by Caddy, `/api` reverse-proxied, auto-TLS with domains or self-signed for LAN pilots); healthchecked dependencies; deploy guide in `docs/11-deployment.md`. Verified live: full containerized stack (8 services) passes all 25 smoke checks; Caddy serves both frontends and proxies `/api`; worker executed a real queued job; scheduler ran its purge cycle in-container
 
 ### Phase 1 start — Bin health & collect-today (M2, 2026-07-13)

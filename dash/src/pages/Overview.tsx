@@ -1,8 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import DeleteOutlineOutlined from "@mui/icons-material/DeleteOutlineOutlined";
 import PhotoCameraOutlined from "@mui/icons-material/PhotoCameraOutlined";
 import WarningAmberOutlined from "@mui/icons-material/WarningAmberOutlined";
+import AltRouteOutlined from "@mui/icons-material/AltRouteOutlined";
 import { api, type Bin, type FillBand, type Observation } from "../api";
 import EChart, { barOption, heatmapOption, lineOption } from "../components/EChart";
 import { Muted, PageHeader, PageStack, SectionCard, StatCard } from "../components/ui";
@@ -15,6 +21,7 @@ const HOURS = Array.from({ length: 24 }, (_, i) => String(i));
 
 export default function Overview() {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const [observations, setObservations] = useState<Observation[] | null>(null);
   const [bins, setBins] = useState<Bin[] | null>(null);
 
@@ -78,6 +85,53 @@ export default function Overview() {
   }, [week, t]);
 
   if (observations === null || bins === null) return <Muted>{t("loading")}</Muted>;
+
+  if (bins.length === 0) {
+    const steps: { icon: ReactNode; text: string }[] = [
+      { icon: <DeleteOutlineOutlined fontSize="small" />, text: t("gsStep1") },
+      { icon: <PhotoCameraOutlined fontSize="small" />, text: t("gsStep2") },
+      { icon: <PhotoCameraOutlined fontSize="small" />, text: t("gsStep3") },
+      { icon: <AltRouteOutlined fontSize="small" />, text: t("gsStep4") },
+    ];
+    return (
+      <PageStack>
+        <PageHeader title={t("gsTitle")} description={t("gsIntro")} />
+        <SectionCard>
+          <Stack spacing={1.5} sx={{ mb: 3 }}>
+            {steps.map((s, i) => (
+              <Stack key={i} direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                <Box
+                  sx={{
+                    width: 28,
+                    height: 28,
+                    flexShrink: 0,
+                    borderRadius: "4px",
+                    bgcolor: "#fbeecf",
+                    color: "#835a09",
+                    display: "grid",
+                    placeItems: "center",
+                    fontWeight: 800,
+                    fontSize: "0.85rem",
+                  }}
+                >
+                  {i + 1}
+                </Box>
+                <Typography sx={{ fontWeight: 550 }}>{s.text}</Typography>
+              </Stack>
+            ))}
+          </Stack>
+          <Stack direction="row" spacing={1.5} sx={{ flexWrap: "wrap", gap: 1.5 }}>
+            <Button variant="contained" startIcon={<DeleteOutlineOutlined />} onClick={() => navigate("/records/bins")}>
+              {t("newBin")}
+            </Button>
+            <Button variant="outlined" startIcon={<AltRouteOutlined />} onClick={() => navigate("/routes")}>
+              {t("routes")}
+            </Button>
+          </Stack>
+        </SectionCard>
+      </PageStack>
+    );
+  }
 
   const overflowing = week.filter((o) => o.fill_tap === "overflowing").length;
 

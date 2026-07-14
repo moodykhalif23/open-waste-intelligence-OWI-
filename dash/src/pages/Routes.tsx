@@ -2,6 +2,17 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import Checkbox from "@mui/material/Checkbox";
+import Chip from "@mui/material/Chip";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import Divider from "@mui/material/Divider";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemText from "@mui/material/ListItemText";
+import Snackbar from "@mui/material/Snackbar";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
@@ -20,7 +31,7 @@ import { api } from "../api";
 import { CATEGORICAL } from "../components/EChart";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import MapView, { type MapLine, type MapPoint } from "../components/MapView";
-import { Muted, PageHeader, PageStack, Panel, SectionCard, StatCard } from "../components/ui";
+import { Muted, PageHeader, PageStack, SectionCard, StatCard, TableSection } from "../components/ui";
 import { useI18n } from "../i18n";
 
 interface Truck {
@@ -74,6 +85,13 @@ export default function Routes() {
   const [planning, setPlanning] = useState(false);
   const [savings, setSavings] = useState<Savings | null>(null);
   const [savingsBusy, setSavingsBusy] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [planOpen, setPlanOpen] = useState(false);
+
+  const announce = (planned: Route[]) => {
+    const stops = planned.reduce((s, r) => s + r.stops.length, 0);
+    setToast(stops > 0 ? `${t("routesPlanned")} · ${stops} ${t("stops")}` : t("noBinsDue"));
+  };
 
   const reload = useCallback(async () => {
     const [tk, rt] = await Promise.all([
@@ -88,22 +106,6 @@ export default function Routes() {
     void reload();
   }, [reload]);
 
-  async function planToday() {
-    setPlanning(true);
-    setError(null);
-    try {
-      const planned = await api<Route[]>("/api/v1/routes/optimize", {
-        method: "POST",
-        body: JSON.stringify({}),
-      });
-      setRoutes(planned);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setPlanning(false);
-    }
-  }
-
   async function replan(disableTruckId?: string) {
     setPlanning(true);
     setError(null);
@@ -113,8 +115,11 @@ export default function Routes() {
         body: JSON.stringify(disableTruckId ? { disable_truck_ids: [disableTruckId] } : {}),
       });
       setRoutes(planned);
+      announce(planned);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+      setToast(msg);
     } finally {
       setPlanning(false);
     }
@@ -167,9 +172,9 @@ export default function Routes() {
         size="small"
         color="primary"
         disabled={planning}
-        onClick={() => void planToday()}
+        onClick={() => setPlanOpen(true)}
       >
-        {planning ? t("planning") : t("planToday")}
+        {t("planToday")}
       </Button>
     </Stack>
   );
@@ -215,81 +220,21 @@ export default function Routes() {
           <Muted>{t("noRoutes")}</Muted>
         ) : (
           <Grid container spacing={{ xs: 2, md: 2.5 }}>
-            {routes.map((route) => (
-              <Grid size={{ xs: 12, md: 6 }} key={route.id}>
-                <Panel
-                  title={
-                    <Box>
-                      <Typography variant="h6">{route.truck_name}</Typography>
-                      <Muted>
-                        {route.bins_served} {t("stops")} · {route.planned_km} km ·{" "}
-                        {route.planned_fuel_l} L · {Math.round(route.demand_kg)} kg
-                      </Muted>
-                    </Box>
-                  }
-                  action={
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      color="warning"
-                      startIcon={<BuildIcon />}
-                      disabled={planning}
-                      title={t("breakdownHint")}
-                      onClick={() => void replan(route.truck_id)}
-                    >
-                      {t("breakdown")}
-                    </Button>
-                  }
-                >
-                  {route.stops.length === 0 ? (
-                    <Muted>{t("noStops")}</Muted>
-                  ) : (
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-                        columnGap: 2,
-                      }}
-                    >
-                      {route.stops.map((s) => (
-                        <Box
-                          key={s.bin_id}
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1.25,
-                            py: 0.75,
-                            borderBottom: "1px solid",
-                            borderColor: "divider",
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              minWidth: 22,
-                              textAlign: "right",
-                              fontWeight: 700,
-                              fontSize: "0.8rem",
-                              color: "text.secondary",
-                              fontVariantNumeric: "tabular-nums",
-                            }}
-                          >
-                            {s.seq}
-                          </Box>
-                          <Box sx={{ minWidth: 0 }}>
-                            <Typography sx={{ fontFamily: "ui-monospace, monospace", fontSize: "0.85rem" }} noWrap>
-                              {s.qr_code}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {s.lat.toFixed(4)}, {s.lng.toFixed(4)}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      ))}
-                    </Box>
-                  )}
-                </Panel>
-              </Grid>
-            ))}
+            {[...routes]
+              .sort((a, b) => b.stops.length - a.stops.length)
+              .map((route) => (
+                <Grid size={{ xs: 12, md: route.stops.length === 0 ? 6 : 12, lg: 6 }} key={route.id}>
+                  <RouteCard
+                    route={route}
+                    disabled={planning}
+                    breakdownLabel={t("breakdown")}
+                    breakdownHint={t("breakdownHint")}
+                    stopsLabel={t("stops")}
+                    noStopsLabel={t("noStops")}
+                    onBreakdown={() => void replan(route.truck_id)}
+                  />
+                </Grid>
+              ))}
           </Grid>
         )}
       </SectionCard>
@@ -356,16 +301,265 @@ export default function Routes() {
           <TruckForm onCreated={reload} />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <SectionCard title={t("trucks")}>
+          <TableSection title={t("trucks")}>
             {trucks.length === 0 ? (
               <Muted>{t("noTrucks")}</Muted>
             ) : (
               <DataTable rows={trucks} columns={truckCols} toolbar={false} pageSize={5} />
             )}
-          </SectionCard>
+          </TableSection>
         </Grid>
       </Grid>
+
+      <PlanDialog
+        open={planOpen}
+        onClose={() => setPlanOpen(false)}
+        truckCount={trucks.length}
+        onPlanned={(planned) => {
+          setRoutes(planned);
+          announce(planned);
+        }}
+        onError={(msg) => setToast(msg)}
+      />
+
+      <Snackbar
+        open={!!toast}
+        autoHideDuration={4000}
+        onClose={() => setToast(null)}
+        message={toast}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      />
     </PageStack>
+  );
+}
+
+interface HealthRow {
+  bin_id: string;
+  qr_code: string;
+  site_name: string;
+  fill_pct: number;
+  overflow_risk: "low" | "medium" | "high";
+  recommendation: string;
+}
+
+const RISK_CHIP = { high: "error", medium: "warning", low: "success" } as const;
+
+// The planning step: admins see the trucks available and the bins due, choose
+// which to include, then commit — instead of a blind optimise-and-reload.
+function PlanDialog({
+  open,
+  onClose,
+  truckCount,
+  onPlanned,
+  onError,
+}: {
+  open: boolean;
+  onClose: () => void;
+  truckCount: number;
+  onPlanned: (routes: Route[]) => void;
+  onError: (msg: string) => void;
+}) {
+  const { t } = useI18n();
+  const [due, setDue] = useState<HealthRow[] | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setDue(null);
+    setErr(null);
+    void api<HealthRow[]>("/api/v1/bins/health")
+      .then((rows) => {
+        const dueRows = rows.filter((r) => r.recommendation !== "no_action");
+        setDue(dueRows);
+        setSelected(
+          new Set(dueRows.filter((r) => r.recommendation === "collect_today").map((r) => r.bin_id)),
+        );
+      })
+      .catch((e) => setErr(e instanceof Error ? e.message : String(e)));
+  }, [open]);
+
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  async function confirm() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const planned = await api<Route[]>("/api/v1/routes/optimize", {
+        method: "POST",
+        body: JSON.stringify({ bin_ids: [...selected] }),
+      });
+      onPlanned(planned);
+      onClose();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setErr(msg);
+      onError(msg);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const riskLabel = (r: HealthRow["overflow_risk"]) =>
+    t(r === "high" ? "riskHigh" : r === "medium" ? "riskMedium" : "riskLow");
+
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>{t("planTitle")}</DialogTitle>
+      <DialogContent dividers>
+        <Muted>{t("planPick")}</Muted>
+        <Stack direction="row" spacing={1} sx={{ my: 2, flexWrap: "wrap", gap: 1 }}>
+          <Chip color="secondary" label={`${truckCount} ${t("trucks")}`} />
+          <Chip variant="outlined" label={`${due?.length ?? 0} ${t("binsToCollect")}`} />
+          <Chip variant="outlined" label={`${selected.size} ${t("selected")}`} />
+        </Stack>
+        {err && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {err}
+          </Alert>
+        )}
+        {due === null ? (
+          <Muted>{t("loading")}</Muted>
+        ) : due.length === 0 ? (
+          <Muted>{t("noBinsDue")}</Muted>
+        ) : (
+          <Box sx={{ maxHeight: 340, overflowY: "auto" }}>
+            {due.map((r) => (
+              <ListItemButton
+                key={r.bin_id}
+                onClick={() => toggle(r.bin_id)}
+                sx={{ borderRadius: "4px", gap: 1 }}
+              >
+                <Checkbox edge="start" checked={selected.has(r.bin_id)} tabIndex={-1} disableRipple sx={{ p: 0.5 }} />
+                <ListItemText
+                  primary={`${r.site_name} · ${r.qr_code}`}
+                  secondary={`${Math.round(r.fill_pct)}%`}
+                  slotProps={{ primary: { sx: { fontSize: "0.9rem", fontWeight: 550 } } }}
+                />
+                <Chip size="small" color={RISK_CHIP[r.overflow_risk]} label={riskLabel(r.overflow_risk)} />
+              </ListItemButton>
+            ))}
+          </Box>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t("cancel")}</Button>
+        <Button variant="contained" disabled={busy || selected.size === 0} onClick={() => void confirm()}>
+          {busy ? t("planning") : `${t("planToday")} · ${selected.size}`}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function RouteCard({
+  route,
+  disabled,
+  breakdownLabel,
+  breakdownHint,
+  stopsLabel,
+  noStopsLabel,
+  onBreakdown,
+}: {
+  route: Route;
+  disabled: boolean;
+  breakdownLabel: string;
+  breakdownHint: string;
+  stopsLabel: string;
+  noStopsLabel: string;
+  onBreakdown: () => void;
+}) {
+  const breakdownBtn = (
+    <Button
+      variant="outlined"
+      size="small"
+      color="warning"
+      startIcon={<BuildIcon />}
+      disabled={disabled}
+      title={breakdownHint}
+      onClick={onBreakdown}
+    >
+      {breakdownLabel}
+    </Button>
+  );
+
+  if (route.stops.length === 0) {
+    return (
+      <Card variant="outlined" sx={{ height: "100%" }}>
+        <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1.5 }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="h6" noWrap>
+              {route.truck_name}
+            </Typography>
+            <Muted>{noStopsLabel}</Muted>
+          </Box>
+          {breakdownBtn}
+        </Box>
+      </Card>
+    );
+  }
+
+  return (
+    <Card variant="outlined" sx={{ height: "100%" }}>
+      <Box sx={{ p: 2, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1.5 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="h6" noWrap>
+            {route.truck_name}
+          </Typography>
+          <Stack direction="row" sx={{ mt: 1, flexWrap: "wrap", gap: 0.75 }}>
+            <Chip size="small" color="secondary" label={`${route.bins_served} ${stopsLabel}`} />
+            <Chip size="small" variant="outlined" label={`${route.planned_km} km`} />
+            <Chip size="small" variant="outlined" label={`${route.planned_fuel_l} L`} />
+            <Chip size="small" variant="outlined" label={`${Math.round(route.demand_kg)} kg`} />
+          </Stack>
+        </Box>
+        {breakdownBtn}
+      </Box>
+      <Divider />
+      <Box
+        sx={{
+          p: 2,
+          maxHeight: 280,
+          overflowY: "auto",
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+          columnGap: 2,
+          rowGap: 0.5,
+        }}
+      >
+        {route.stops.map((s) => (
+          <Stack key={s.bin_id} direction="row" spacing={1.25} sx={{ alignItems: "center", py: 0.5, minWidth: 0 }}>
+            <Box
+              sx={{
+                width: 22,
+                height: 22,
+                flexShrink: 0,
+                borderRadius: "4px",
+                bgcolor: "#fbeecf",
+                color: "#835a09",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                display: "grid",
+                placeItems: "center",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {s.seq}
+            </Box>
+            <Typography sx={{ fontFamily: "ui-monospace, monospace", fontSize: "0.85rem" }} noWrap>
+              {s.qr_code}
+            </Typography>
+          </Stack>
+        ))}
+      </Box>
+    </Card>
   );
 }
 

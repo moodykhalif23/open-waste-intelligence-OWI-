@@ -6,7 +6,7 @@ import Grid from "@mui/material/Grid";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { api } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import { Muted, PageStack, SectionCard, StatCard } from "../components/ui";
+import { Muted, PageStack, StatCard, TableSection } from "../components/ui";
 import { useI18n } from "../i18n";
 
 interface HealthRow {
@@ -131,13 +131,13 @@ export default function BinHealth() {
         </Grid>
       </Grid>
 
-      <SectionCard title={t("collectToday")} action={refreshAction}>
+      <TableSection title={t("collectToday")} action={refreshAction}>
         {rows.length === 0 ? (
           <Muted>{t("noHealthData")}</Muted>
         ) : (
           <DataTable rows={rows} columns={columns} getRowId={(r) => r.bin_id} pageSize={15} />
         )}
-      </SectionCard>
+      </TableSection>
     </PageStack>
   );
 }

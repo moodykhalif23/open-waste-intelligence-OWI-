@@ -58,7 +58,8 @@ def require_api_key(
     session: Annotated[Session, Depends(get_session)],
     x_api_key: str = Header(default=""),
 ) -> ApiKey:
-    parts = x_api_key.split("_")
+    # maxsplit: the random tail is urlsafe-base64 and may itself contain underscores.
+    parts = x_api_key.split("_", 2)
     if len(parts) != 3 or parts[0] != "owi":
         raise HTTPException(status_code=401, detail="missing or malformed API key")
     key = session.scalar(

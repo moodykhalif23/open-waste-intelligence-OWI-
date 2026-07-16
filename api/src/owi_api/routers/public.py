@@ -35,7 +35,7 @@ from owi_api.models.api_key import ApiKey
 from owi_api.models.enums import FillBand, PredictionTask, UserRole
 from owi_api.models.observation import Observation
 from owi_api.models.prediction import Prediction
-from owi_api.models.registry import Bin, Site
+from owi_api.models.registry import Bin, Organization, Site
 from owi_api.ratelimit import SlidingWindowLimiter
 from owi_api.routers.auth import require_roles
 from owi_api.security import TokenClaims, hash_password, verify_password
@@ -89,7 +89,7 @@ def _window(weeks: int) -> tuple[datetime, datetime]:
 
 
 def _observation_rows(
-    session: Session, start: datetime, end: datetime, ward: str | None
+    session: Session, org_id: uuid.UUID, start: datetime, end: datetime, ward: str | None
 ) -> list[tuple[str, str, uuid.UUID | None, FillBand | None]]:
     """(ward, week, bin_id, fill) for delayed, ward-attributable observations."""
     query = (
@@ -97,6 +97,7 @@ def _observation_rows(
         .join(Bin, Bin.id == Observation.bin_id)
         .join(Site, Site.id == Bin.site_id)
         .where(
+            Observation.org_id == org_id,
             Observation.deleted_at.is_(None),
             Observation.captured_at >= start,
             Observation.captured_at < end,
@@ -109,6 +110,11 @@ def _observation_rows(
         (w, iso_week(captured.date()), bin_id, fill)
         for w, captured, bin_id, fill in session.execute(query)
     ]
+
+
+def _attribution(session: Session, org_id: uuid.UUID) -> str:
+    org_name = session.scalar(select(Organization.name).where(Organization.id == org_id))
+    return f"{org_name or 'OpenWaste Intelligence'} via OpenWaste Intelligence, CC-BY-4.0"
 
 
 def _csv_response(rows: list[dict[str, object]], fields: list[str], name: str) -> Response:
@@ -140,7 +146,7 @@ def meta() -> MetaOut:
     return MetaOut(
         dataset_version=DATASET_VERSION,
         license=LICENSE,
-        attribution="OpenWaste Intelligence / Safi Cleaners and Recyclers, CC-BY-4.0",
+        attribution="OpenWaste Intelligence, CC-BY-4.0",
         delay_days=settings.public_api_delay_days,
         suppression=(
             f"ward x week cells with fewer than {MIN_BINS} bins or "
@@ -168,13 +174,14 @@ class CompositionCell(BaseModel):
 class CompositionOut(BaseModel):
     dataset_version: str = DATASET_VERSION
     license: str = LICENSE
+    attribution: str
     suppressed_cells: int
     cells: list[CompositionCell]
 
 
 @router.get("/composition", response_model=None)
 def composition_public(
-    _: Annotated[ApiKey, Depends(require_api_key)],
+    key: Annotated[ApiKey, Depends(require_api_key)],
     session: Annotated[Session, Depends(get_session)],
     weeks: Annotated[int, Query(gt=0, le=52)] = 12,
     ward: str | None = None,
@@ -195,6 +202,7 @@ def composition_public(
         .join(Bin, Bin.id == Observation.bin_id)
         .join(Site, Site.id == Bin.site_id)
         .where(
+            Prediction.org_id == key.org_id,
             Prediction.task == PredictionTask.CLASSIFY,
             Prediction.deleted_at.is_(None),
             Observation.captured_at >= start,
@@ -249,7 +257,9 @@ def composition_public(
         return _csv_response(
             flat, ["ward", "week", "observations", "material", "share_pct"], "composition"
         )
-    return CompositionOut(suppressed_cells=suppressed, cells=cells)
+    return CompositionOut(
+        attribution=_attribution(session, key.org_id), suppressed_cells=suppressed, cells=cells
+    )
 
 
 # ---- collections ----
@@ -266,13 +276,14 @@ class CollectionsCell(BaseModel):
 class CollectionsOut(BaseModel):
     dataset_version: str = DATASET_VERSION
     license: str = LICENSE
+    attribution: str
     suppressed_cells: int
     cells: list[CollectionsCell]
 
 
 @router.get("/collections", response_model=None)
 def collections_public(
-    _: Annotated[ApiKey, Depends(require_api_key)],
+    key: Annotated[ApiKey, Depends(require_api_key)],
     session: Annotated[Session, Depends(get_session)],
     weeks: Annotated[int, Query(gt=0, le=52)] = 12,
     ward: str | None = None,
@@ -282,7 +293,7 @@ def collections_public(
     obs_count: dict[tuple[str, str], int] = defaultdict(int)
     overflow: dict[tuple[str, str], int] = defaultdict(int)
     cell_bins: dict[tuple[str, str], set[uuid.UUID | None]] = defaultdict(set)
-    for ward_name, week, bin_id, fill in _observation_rows(session, start, end, ward):
+    for ward_name, week, bin_id, fill in _observation_rows(session, key.org_id, start, end, ward):
         cell = (ward_name, week)
         obs_count[cell] += 1
         cell_bins[cell].add(bin_id)
@@ -309,7 +320,9 @@ def collections_public(
         return _csv_response(
             flat, ["ward", "week", "observations", "bins", "overflow_rate_pct"], "collections"
         )
-    return CollectionsOut(suppressed_cells=suppressed, cells=cells)
+    return CollectionsOut(
+        attribution=_attribution(session, key.org_id), suppressed_cells=suppressed, cells=cells
+    )
 
 
 # ---- cleanliness ----
@@ -324,13 +337,14 @@ class CleanlinessCell(BaseModel):
 class CleanlinessOut(BaseModel):
     dataset_version: str = DATASET_VERSION
     license: str = LICENSE
+    attribution: str
     suppressed_cells: int
     cells: list[CleanlinessCell]
 
 
 @router.get("/cleanliness", response_model=None)
 def cleanliness_public(
-    _: Annotated[ApiKey, Depends(require_api_key)],
+    key: Annotated[ApiKey, Depends(require_api_key)],
     session: Annotated[Session, Depends(get_session)],
     weeks: Annotated[int, Query(gt=0, le=52)] = 12,
     ward: str | None = None,
@@ -342,7 +356,7 @@ def cleanliness_public(
     # Backing (bins + observations) gates suppression, same floor as the other endpoints.
     backing_bins: dict[tuple[str, str], set[uuid.UUID | None]] = defaultdict(set)
     backing_obs: dict[tuple[str, str], int] = defaultdict(int)
-    for ward_name, week, bin_id, _fill in _observation_rows(session, start, end, ward):
+    for ward_name, week, bin_id, _fill in _observation_rows(session, key.org_id, start, end, ward):
         backing_bins[(ward_name, week)].add(bin_id)
         backing_obs[(ward_name, week)] += 1
 
@@ -351,6 +365,7 @@ def cleanliness_public(
         select(Site.ward, CleanlinessDaily.date, CleanlinessDaily.score)
         .join(Site, Site.id == CleanlinessDaily.site_id)
         .where(
+            CleanlinessDaily.org_id == key.org_id,
             CleanlinessDaily.deleted_at.is_(None),
             CleanlinessDaily.date >= start.date(),
             CleanlinessDaily.date < end.date(),
@@ -375,7 +390,9 @@ def cleanliness_public(
     if format == "csv":
         flat = [c.model_dump() for c in cells]
         return _csv_response(flat, ["ward", "week", "mean_score"], "cleanliness")
-    return CleanlinessOut(suppressed_cells=suppressed, cells=cells)
+    return CleanlinessOut(
+        attribution=_attribution(session, key.org_id), suppressed_cells=suppressed, cells=cells
+    )
 
 
 # ---- key management (admin only) ----

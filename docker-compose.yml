@@ -45,7 +45,8 @@ services:
       retries: 12
 
   minio:
-    image: minio/minio:latest
+    # Digest-pinned: `latest` mutates under you; a reviewed bump beats a surprise one.
+    image: minio/minio:latest@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -63,7 +64,7 @@ services:
       retries: 12
 
   labelstudio:
-    image: heartexlabs/label-studio:latest
+    image: heartexlabs/label-studio:latest@sha256:aa461572e8f9d86a1bf9520c1db620204e86160fd2f80dd7e9d40ac84a8828ea
     restart: unless-stopped
     environment:
       LABEL_STUDIO_USERNAME: ${LABEL_STUDIO_USERNAME}
@@ -76,17 +77,28 @@ services:
     volumes:
       - ls-data:/label-studio/data
 
+  # One-shot: migrations run exactly once per `up`, never raced by app replicas.
+  migrate:
+    build: ./api
+    profiles: [prod]
+    environment: *owi-env
+    command: uv run alembic upgrade head
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+
   api:
     build: ./api
     profiles: [prod]
     restart: unless-stopped
     environment: *owi-env
-    command: sh -c "uv run alembic upgrade head && uv run uvicorn owi_api.main:app --host 0.0.0.0 --port 8000"
+    command: uv run uvicorn owi_api.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       minio:
@@ -99,6 +111,8 @@ services:
     environment: *owi-env
     command: uv run rq worker inference --url redis://redis:6379/0
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
 
@@ -109,8 +123,8 @@ services:
     environment: *owi-env
     command: uv run python -m owi_api.scheduler
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   # Nightly Postgres dumps with rotation into ./var/backups/postgres (gitignored).
   # Manual run: docker compose exec db-backup /backup.sh — restore via `make restore`.
@@ -136,7 +150,7 @@ services:
   # Daily image mirror into ./var/backups/minio. Governance: quarantine originals are
   # excluded and deletions propagate (--remove), so erased images never survive in backups.
   minio-backup:
-    image: minio/mc:latest
+    image: minio/mc:latest@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
     profiles: [prod]
     restart: unless-stopped
     entrypoint: /bin/sh
@@ -161,7 +175,7 @@ services:
   # OSM extract (see docs/11-deployment.md), then set OWI_OSRM_URL=http://osrm:5000.
   # Without it the routing engine uses straight-line distances.
   osrm:
-    image: osrm/osrm-backend:latest
+    image: osrm/osrm-backend:v5.27.1
     profiles: [osrm]
     restart: unless-stopped
     command: osrm-routed --algorithm mld /data/region.osrm

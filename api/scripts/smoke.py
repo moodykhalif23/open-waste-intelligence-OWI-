@@ -483,6 +483,10 @@ def main() -> None:
         and isinstance(coll.json()["suppressed_cells"], int),
     )
     check(
+        "public payload carries org attribution",
+        coll.status_code == 200 and "attribution" in coll.json(),
+    )
+    check(
         "public composition + cleanliness reachable with key",
         client.get("/api/v1/public/composition", headers=key_headers).status_code == 200
         and client.get("/api/v1/public/cleanliness", headers=key_headers).status_code == 200,

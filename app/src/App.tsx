@@ -22,6 +22,7 @@ import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
 import QrCodeScannerOutlined from "@mui/icons-material/QrCodeScannerOutlined";
 import InsightsOutlined from "@mui/icons-material/InsightsOutlined";
 import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
+import DeleteOutlineOutlined from "@mui/icons-material/DeleteOutlineOutlined";
 import CollectList from "./components/CollectList";
 import Insights from "./components/Insights";
 import QrScan from "./components/QrScan";
@@ -30,7 +31,13 @@ import { compressImage, type QualityWarning } from "./lib/compress";
 import { getFix, type GpsFix } from "./lib/gps";
 import { enqueue, listQueued, type FillBand } from "./lib/queue";
 import { loadSettings, saveSettings, type AppSettings } from "./lib/settings";
-import { SyncError, syncQueue } from "./lib/sync";
+import {
+  SyncError,
+  eraseObservation,
+  recentSynced,
+  syncQueue,
+  type RecentReport,
+} from "./lib/sync";
 
 const FILL_BANDS: FillBand[] = ["empty", "low", "half", "high", "overflowing"];
 
@@ -46,6 +53,7 @@ export default function App() {
   const [scanning, setScanning] = useState(false);
   const [fillTap, setFillTap] = useState<FillBand | null>(null);
   const [queueCount, setQueueCount] = useState(0);
+  const [recent, setRecent] = useState<RecentReport[]>(recentSynced);
   const [online, setOnline] = useState(navigator.onLine);
   const [toast, setToast] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -74,7 +82,18 @@ export default function App() {
       setToast(unauthorized ? tr("tokenInvalid") : tr("syncFailed"));
     }
     await refreshCount();
+    setRecent(recentSynced());
   }, [settings, tr, refreshCount]);
+
+  async function doErase(id: string) {
+    try {
+      await eraseObservation(settings.token, id);
+      setRecent(recentSynced());
+      setToast(tr("photoDeleted"));
+    } catch {
+      setToast(tr("syncFailed"));
+    }
+  }
 
   useEffect(() => {
     if (!toast) return;
@@ -326,6 +345,32 @@ export default function App() {
                   {tr("syncNow")}
                 </Button>
               </Stack>
+            )}
+
+            {recent.length > 0 && (
+              <Box sx={{ pt: 2, borderTop: "1px solid", borderColor: "divider" }}>
+                <Typography variant="body2" sx={{ fontWeight: 550, mb: 0.5 }} color="text.secondary">
+                  {tr("recentReports")}
+                </Typography>
+                <Stack>
+                  {recent.map((r) => (
+                    <Stack key={r.id} direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {new Date(r.at).toLocaleString()}
+                      </Typography>
+                      <IconButton
+                        aria-label={tr("deletePhoto")}
+                        title={tr("deletePhoto")}
+                        sx={{ width: 48, height: 48 }}
+                        disabled={!online}
+                        onClick={() => void doErase(r.id)}
+                      >
+                        <DeleteOutlineOutlined fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  ))}
+                </Stack>
+              </Box>
             )}
           </>
         )}

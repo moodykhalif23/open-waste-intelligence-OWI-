@@ -1,19 +1,21 @@
 import json
 import uuid
+from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Query, Response, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, Response, UploadFile
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from owi_api.analytics.composition import effective_material
+from owi_api.audit import client_ip, record_audit
 from owi_api.config import settings
 from owi_api.db import get_session
 from owi_api.ingestion.person_onnx import OnnxPersonDetector
 from owi_api.ingestion.privacy import PersonDetector
-from owi_api.ingestion.service import ingest_observation
+from owi_api.ingestion.service import ingest_observation, quarantine_key
 from owi_api.ingestion.storage import ObjectStore, get_store
 from owi_api.models.enums import PredictionTask, UserRole
 from owi_api.models.observation import Observation
@@ -173,3 +175,41 @@ def get_observation_image(
     if observation.image_deleted_at is not None:
         raise HTTPException(status_code=410, detail="image purged by retention policy")
     return Response(content=store.get(observation.image_ref), media_type="image/jpeg")
+
+
+@router.delete("/{observation_id}", status_code=204)
+def erase_observation(
+    observation_id: uuid.UUID,
+    request: Request,
+    claims: Annotated[
+        TokenClaims,
+        require_roles(UserRole.COLLECTOR, UserRole.COORDINATOR, UserRole.ADMIN),
+    ],
+    session: Annotated[Session, Depends(get_session)],
+    store: Annotated[ObjectStore, Depends(get_object_store)],
+) -> None:
+    """Do-not-use: the photo is hard-deleted, no questions; the row is retired."""
+    observation = session.get(Observation, observation_id)
+    if observation is None or observation.org_id != claims.org_id:
+        raise HTTPException(status_code=404, detail="observation not found")
+    # Collectors may only erase their own reports; staff can erase any.
+    if claims.role is UserRole.COLLECTOR and observation.collector_id != claims.user_id:
+        raise HTTPException(status_code=403, detail="not your report")
+
+    now = datetime.now(UTC)
+    store.delete(observation.image_ref)
+    if observation.quarantine_deleted_at is None:
+        store.delete(quarantine_key(observation.org_id, observation.image_sha256))
+        observation.quarantine_deleted_at = now
+    observation.image_deleted_at = now
+    observation.deleted_at = now
+    record_audit(
+        session,
+        org_id=claims.org_id,
+        actor_user_id=claims.user_id,
+        action="observation.erase",
+        entity="observation",
+        entity_id=observation.id,
+        ip=client_ip(request),
+    )
+    session.commit()

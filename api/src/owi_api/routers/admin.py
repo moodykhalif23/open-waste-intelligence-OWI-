@@ -1,10 +1,14 @@
+import csv
+import io
 import uuid
+import zipfile
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
+from geoalchemy2 import Geometry
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from owi_api.analytics.cleanliness_refresh import refresh_cleanliness
@@ -14,10 +18,30 @@ from owi_api.config import settings
 from owi_api.db import get_session
 from owi_api.ingestion.storage import ObjectStore, get_store
 from owi_api.maintenance import purge_expired_images, purge_expired_quarantine
+from owi_api.models import (
+    Bin,
+    BinHealthDaily,
+    CleanlinessDaily,
+    CollectionEvent,
+    DumpingCandidate,
+    DumpingEvent,
+    DumpingIntervention,
+    DumpingSite,
+    MaterialPrice,
+    MLModel,
+    Observation,
+    Prediction,
+    RecyclingPartner,
+    Route,
+    RouteStop,
+    Site,
+    Truck,
+    User,
+    VolunteerEvent,
+)
 from owi_api.models.audit import AuditLog
 from owi_api.models.enums import UserRole
 from owi_api.models.org_settings import OrgSettings
-from owi_api.models.registry import User
 from owi_api.routers.auth import require_roles
 from owi_api.security import TokenClaims
 
@@ -130,6 +154,80 @@ def purge_images(
     )
     session.commit()
     return {"purged": purged}
+
+
+# Every org-scoped table an operator owns on exit. Images live in the object
+# store under images/{org_id}/ and are copied separately .
+EXPORT_MODELS = [
+    Site,
+    Bin,
+    Observation,
+    CollectionEvent,
+    BinHealthDaily,
+    Truck,
+    Route,
+    RouteStop,
+    MLModel,
+    Prediction,
+    VolunteerEvent,
+    MaterialPrice,
+    RecyclingPartner,
+    DumpingSite,
+    DumpingCandidate,
+    DumpingEvent,
+    DumpingIntervention,
+    CleanlinessDaily,
+    User,
+    AuditLog,
+]
+_EXCLUDED_COLUMNS = {"password_hash"}
+
+
+def _table_csv(session: Session, model: type, org_id: uuid.UUID) -> str:
+    table = model.__table__  # type: ignore[attr-defined]
+    plain = [c for c in table.columns if not isinstance(c.type, Geometry)]
+    plain = [c for c in plain if c.name not in _EXCLUDED_COLUMNS]
+    geom = [c for c in table.columns if isinstance(c.type, Geometry)]
+    selected = list(plain)
+    fields = [c.name for c in plain]
+    for g in geom:
+        selected.extend([func.ST_Y(g).label(f"{g.name}_lat"), func.ST_X(g).label(f"{g.name}_lng")])
+        fields.extend([f"{g.name}_lat", f"{g.name}_lng"])
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(fields)
+    for row in session.execute(select(*selected).where(table.c.org_id == org_id)):
+        writer.writerow(["" if v is None else str(v) for v in row])
+    return buffer.getvalue()
+
+
+@router.get("/export")
+def org_export(
+    request: Request,
+    requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN)],
+    session: Annotated[Session, Depends(get_session)],
+) -> Response:
+    """Org-exit portability: one zip, one CSV per table, all rows this org owns."""
+    payload = io.BytesIO()
+    with zipfile.ZipFile(payload, "w", zipfile.ZIP_DEFLATED) as archive:
+        for model in EXPORT_MODELS:
+            name = model.__tablename__  # type: ignore[attr-defined]
+            archive.writestr(f"{name}.csv", _table_csv(session, model, requester.org_id))
+    record_audit(
+        session,
+        org_id=requester.org_id,
+        actor_user_id=requester.user_id,
+        action="org.export",
+        entity="organization",
+        entity_id=requester.org_id,
+        ip=client_ip(request),
+    )
+    session.commit()
+    return Response(
+        content=payload.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="owi-org-export.zip"'},
+    )
 
 
 class AuditOut(BaseModel):

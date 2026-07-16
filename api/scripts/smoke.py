@@ -523,6 +523,45 @@ def main() -> None:
         img_purge.text[:100],
     )
 
+    erase_target = results[0]["observation_id"]
+    erased = client.delete(f"/api/v1/observations/{erase_target}", headers=device_auth)
+    check("collector erases own photo (do-not-use)", erased.status_code == 204, erased.text[:100])
+    check(
+        "erased image is gone",
+        client.get(f"/api/v1/observations/{erase_target}/image", headers=admin).status_code
+        in (404, 410),
+    )
+
+    dsar = client.post(
+        "/api/v1/users",
+        headers=admin,
+        json={
+            "name": "DSAR Test",
+            "phone": f"+2547{uuid.uuid4().int % 10**8:08d}",
+            "role": "viewer",
+        },
+    )
+    dsar_id = dsar.json()["id"]
+    export = client.get(f"/api/v1/users/{dsar_id}/export", headers=admin)
+    check(
+        "user DSAR export",
+        export.status_code == 200 and export.json()["user"]["name"] == "DSAR Test",
+        export.text[:100],
+    )
+    gone = client.delete(f"/api/v1/users/{dsar_id}", headers=admin)
+    check(
+        "user PII erased",
+        gone.status_code == 204
+        and all(u["id"] != dsar_id for u in client.get("/api/v1/users", headers=admin).json()),
+    )
+
+    org_zip = client.get("/api/v1/admin/export", headers=admin)
+    check(
+        "org exit export is a zip of tables",
+        org_zip.status_code == 200 and org_zip.content[:2] == b"PK",
+        org_zip.headers.get("content-type", ""),
+    )
+
     audit = client.get("/api/v1/admin/audit", headers=admin)
     audit_actions = {row["action"] for row in audit.json()} if audit.status_code == 200 else set()
     check(

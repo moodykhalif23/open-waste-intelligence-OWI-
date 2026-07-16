@@ -34,3 +34,5 @@ class Observation(OwiRow, Base):
     privacy_status: Mapped[PrivacyStatus] = mapped_column(db_enum(PrivacyStatus, "privacy_status"))
     # Audit stamp: when the pre-blur original was purged (≤72h retention is a hard rule).
     quarantine_deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Retention stamp: when the operational image was purged (row + analytics stay).
+    image_deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

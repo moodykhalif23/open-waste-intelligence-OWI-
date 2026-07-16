@@ -499,6 +499,26 @@ def main() -> None:
         client.get("/api/v1/public/collections", headers=key_headers).status_code == 401,
     )
 
+    org_settings = client.get("/api/v1/admin/settings", headers=admin)
+    check(
+        "org settings served with retention default",
+        org_settings.status_code == 200 and org_settings.json()["image_retention_months"] >= 1,
+        org_settings.text[:120],
+    )
+    patched = client.patch(
+        "/api/v1/admin/settings", headers=admin, json={"image_retention_months": 36}
+    )
+    check(
+        "org retention configurable",
+        patched.status_code == 200 and patched.json()["image_retention_months"] == 36,
+    )
+    img_purge = client.post("/api/v1/admin/images/purge", headers=admin)
+    check(
+        "retention purge runs (nothing expired)",
+        img_purge.status_code == 200 and img_purge.json()["purged"] >= 0,
+        img_purge.text[:100],
+    )
+
     audit = client.get("/api/v1/admin/audit", headers=admin)
     audit_actions = {row["action"] for row in audit.json()} if audit.status_code == 200 else set()
     check(

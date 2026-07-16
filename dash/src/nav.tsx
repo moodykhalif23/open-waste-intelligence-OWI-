@@ -17,6 +17,7 @@ import VolunteerActivismOutlined from "@mui/icons-material/VolunteerActivismOutl
 import ManageAccountsOutlined from "@mui/icons-material/ManageAccountsOutlined";
 import PublicOutlined from "@mui/icons-material/PublicOutlined";
 import HistoryOutlined from "@mui/icons-material/HistoryOutlined";
+import TuneOutlined from "@mui/icons-material/TuneOutlined";
 import type { StringKey } from "./i18n";
 
 // A leaf destination. `end` marks index-style matching (exact path only).
@@ -72,6 +73,7 @@ export const NAV: NavEntry[] = [
       { path: "/admin/users", key: "users", icon: <ManageAccountsOutlined fontSize="small" /> },
       { path: "/admin/open-data", key: "openData", icon: <PublicOutlined fontSize="small" /> },
       { path: "/admin/audit", key: "audit", icon: <HistoryOutlined fontSize="small" /> },
+      { path: "/admin/settings", key: "settings", icon: <TuneOutlined fontSize="small" /> },
     ],
   },
 ];

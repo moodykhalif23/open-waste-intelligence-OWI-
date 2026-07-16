@@ -170,4 +170,6 @@ def get_observation_image(
     observation = session.get(Observation, observation_id)
     if observation is None or observation.org_id != claims.org_id:
         raise HTTPException(status_code=404, detail="observation not found")
+    if observation.image_deleted_at is not None:
+        raise HTTPException(status_code=410, detail="image purged by retention policy")
     return Response(content=store.get(observation.image_ref), media_type="image/jpeg")

@@ -29,7 +29,9 @@ import LanguageOutlined from "@mui/icons-material/LanguageOutlined";
 import LogoutOutlined from "@mui/icons-material/LogoutOutlined";
 import MenuOutlined from "@mui/icons-material/MenuOutlined";
 import NotificationsNoneOutlined from "@mui/icons-material/NotificationsNoneOutlined";
+import SecurityOutlined from "@mui/icons-material/SecurityOutlined";
 import { api, clearToken } from "../api";
+import MfaDialog from "./MfaDialog";
 import NavSearch from "./NavSearch";
 import { useI18n, type Lang } from "../i18n";
 import { NAV, locate } from "../nav";
@@ -47,6 +49,7 @@ export default function Layout() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [acct, setAcct] = useState<null | HTMLElement>(null);
+  const [mfaOpen, setMfaOpen] = useState(false);
   const [alerts, setAlerts] = useState(0);
   const [collectCount, setCollectCount] = useState(0);
 
@@ -207,6 +210,17 @@ export default function Layout() {
             <Divider />
             <MenuItem
               onClick={() => {
+                setAcct(null);
+                setMfaOpen(true);
+              }}
+            >
+              <ListItemIcon>
+                <SecurityOutlined fontSize="small" />
+              </ListItemIcon>
+              {t("mfa")}
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
                 clearToken();
                 navigate("/login");
               }}
@@ -217,6 +231,7 @@ export default function Layout() {
               {t("logout")}
             </MenuItem>
           </Menu>
+          <MfaDialog open={mfaOpen} onClose={() => setMfaOpen(false)} />
         </Toolbar>
       </AppBar>
 

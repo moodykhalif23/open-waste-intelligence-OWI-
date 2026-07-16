@@ -22,6 +22,25 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 
 ## Done
 
+### Enterprise Track A part 2 — per-org config, MFA, readiness, notifications (2026-07-16)
+
+- **Per-org operational config** (migration 0016): `fuel_price_kes_per_l` and `waste_density_kg_per_l` on `org_settings` (nullable → deployment default); consumed by route demand (`_bin_demand`), collection-weight estimates, and the savings report; partial-PATCH `/api/v1/admin/settings`; dash Settings covers every knob.
+- **TOTP MFA** (migration 0017, zero new dependencies — RFC 6238 in stdlib with RFC test vectors in the suite): enroll → QR (segno, served only during enrollment) → activate returns 8 single-use argon2-hashed recovery codes → login challenges with `otp required`; disable needs a valid code; dash: OTP field appears on demand at login + account-menu **Two-factor auth** dialog (EN+SW); `mfa.enable/disable` audited. Full lifecycle smoke-tested incl. spent-recovery-code rejection.
+- **Readiness** : `GET /readyz` pings DB, Redis, and the object store (healthz was process-liveness only); compose healthcheck turns the api service `(healthy)`.
+- **Notifications + M2-F5 overflow digest** (migration 0018): provider adapters for **Africa's Talking SMS** and **WhatsApp Cloud** over httpx with a console/log fallback (path exercisable with zero credentials — creds via `OWI_AT_*`/`OWI_WA_*` in `.env`); `notifications` delivery-log table + admin log endpoint; per-org alert phones in Settings; scheduler sends the digest once daily in the 6–8 am window, `POST /api/v1/admin/notifications/digest` sends on demand (audited).
+- Verified live: **103/103 smoke checks** (14 new), 108 api unit tests, mypy strict, both frontends green, api container healthy.
+
+### Enterprise Track A — backups, audit, retention, DSAR, tenant scoping (2026-07-16)
+
+- **Automated backups + restore drill**: compose sidecars `db-backup` (nightly rotated pg_dump → `var/backups/postgres`, 14d/8w/6m) and `minio-backup` (daily image mirror, **quarantine excluded and deletions propagate** so erased images never survive in backups); `make backup` / `make restore CONFIRM=yes`; a full backup→destructive-restore→smoke drill was executed live.
+- **Append-only audit log** (migration 0014): `record_audit` joins the mutation's transaction; wired into user create/erase/export, token revoke, device-token issue, API-key create/revoke, model register, prediction review, quarantine purge, retention purge, org settings, observation erase, org export. Admin-only `GET /api/v1/admin/audit` + dash **Admin → Audit** page (DataGrid, EN+SW).
+- **Retention engine** (migration 0015): per-org `image_retention_months` (default 24) in the new `org_settings` table; hourly scheduler job aggregate-then-deletes expired operational images (`image_deleted_at` stamp, image endpoint returns 410); on-demand `POST /api/v1/admin/images/purge`; dash **Admin → Settings** page. Closes the docs/08 promise that had no implementation.
+- **DSAR / erasure** (docs/08 + Kenya DPA): `DELETE /api/v1/observations/{id}` — the collector "do-not-use" flag (photo hard-deleted from store incl. quarantine, row retired, collectors limited to their own reports) with a **"Sent reports" delete surface in the field app**; `GET /users/{id}/export` (access/portability JSON) + `DELETE /users/{id}` (anonymize name/phone, kill tokens, de-attribute observations/collections — aggregates stay); `GET /api/v1/admin/export` org-exit zip (one CSV per org-scoped table, geometry as lat/lng, password hashes excluded).
+- **Public API tenant scoping**: composition/collections/cleanliness aggregates are now scoped to the API key's org (previously cross-org!) and every payload carries per-org attribution from the organizations table — "Safi Cleaners and Recyclers" is no longer hardcoded in code.
+- **Deploy hardening**: `minio`/`mc`/`label-studio` images digest-pinned, `osrm` on v5.27.1; migrations moved to a one-shot `migrate` service that gates api/worker/scheduler (`service_completed_successfully`) — no more migration races.
+- **Latent bug fixed**: ~39% of minted Open-Data API keys were rejected as "malformed" (urlsafe-base64 tail can contain `_`, validator split on every underscore). All previously-minted keys work after the `split("_", 2)` fix.
+- Verified live end-to-end: **89/89 smoke checks** (11 new), 99 api unit tests, mypy strict, both frontends build green.
+
 ### Configurable collection methods — manual collection is first-class (2026-07-16)
 
 - **Vehicles now carry a `method`**: truck / tricycle (tuk-tuk) / motorbike / bicycle / handcart / on-foot (migration 0013, enum `collection_method`; existing rows default to `truck`). The CVRP planner already only cared about capacity, so every method routes correctly; **non-motorized methods are forced to 0 L/100km** at creation and the savings report averages fuel over motorized vehicles only — no more phantom fuel litres for a handcart.

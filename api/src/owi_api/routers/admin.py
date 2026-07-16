@@ -16,6 +16,7 @@ from owi_api.analytics.refresh import refresh_bin_health
 from owi_api.audit import client_ip, record_audit
 from owi_api.config import settings
 from owi_api.db import get_session
+from owi_api.digest import send_overflow_digest
 from owi_api.ingestion.storage import ObjectStore, get_store
 from owi_api.maintenance import purge_expired_images, purge_expired_quarantine
 from owi_api.models import (
@@ -29,6 +30,7 @@ from owi_api.models import (
     DumpingSite,
     MaterialPrice,
     MLModel,
+    Notification,
     Observation,
     Prediction,
     RecyclingPartner,
@@ -42,6 +44,7 @@ from owi_api.models import (
 from owi_api.models.audit import AuditLog
 from owi_api.models.enums import UserRole
 from owi_api.models.org_settings import OrgSettings
+from owi_api.org_config import org_settings_row
 from owi_api.routers.auth import require_roles
 from owi_api.security import TokenClaims
 
@@ -86,19 +89,26 @@ def purge_quarantine(
 
 class OrgSettingsOut(BaseModel):
     image_retention_months: int
+    # None = deployment default applies.
+    fuel_price_kes_per_l: float | None
+    waste_density_kg_per_l: float | None
+    notify_phones: list[str] | None
 
 
 class OrgSettingsIn(BaseModel):
-    image_retention_months: int = Field(ge=1, le=120)
+    image_retention_months: int | None = Field(default=None, ge=1, le=120)
+    fuel_price_kes_per_l: float | None = Field(default=None, ge=0)
+    waste_density_kg_per_l: float | None = Field(default=None, gt=0, le=2)
+    notify_phones: list[str] | None = None
 
 
-def _org_settings(session: Session, org_id: uuid.UUID) -> OrgSettings:
-    row = session.scalar(select(OrgSettings).where(OrgSettings.org_id == org_id))
-    if row is None:
-        row = OrgSettings(org_id=org_id)
-        session.add(row)
-        session.flush()
-    return row
+def _settings_out(row: OrgSettings) -> OrgSettingsOut:
+    return OrgSettingsOut(
+        image_retention_months=row.image_retention_months,
+        fuel_price_kes_per_l=row.fuel_price_kes_per_l,
+        waste_density_kg_per_l=row.waste_density_kg_per_l,
+        notify_phones=row.notify_phones,
+    )
 
 
 @router.get("/settings", response_model=OrgSettingsOut)
@@ -106,9 +116,9 @@ def get_org_settings(
     requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN)],
     session: Annotated[Session, Depends(get_session)],
 ) -> OrgSettingsOut:
-    row = _org_settings(session, requester.org_id)
+    row = org_settings_row(session, requester.org_id)
     session.commit()
-    return OrgSettingsOut(image_retention_months=row.image_retention_months)
+    return _settings_out(row)
 
 
 @router.patch("/settings", response_model=OrgSettingsOut)
@@ -118,8 +128,10 @@ def update_org_settings(
     requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN)],
     session: Annotated[Session, Depends(get_session)],
 ) -> OrgSettingsOut:
-    row = _org_settings(session, requester.org_id)
-    row.image_retention_months = body.image_retention_months
+    row = org_settings_row(session, requester.org_id)
+    changed = body.model_dump(exclude_unset=True)
+    for field, value in changed.items():
+        setattr(row, field, value)
     record_audit(
         session,
         org_id=requester.org_id,
@@ -128,10 +140,10 @@ def update_org_settings(
         entity="org_settings",
         entity_id=row.id,
         ip=client_ip(request),
-        detail={"image_retention_months": body.image_retention_months},
+        detail=changed,
     )
     session.commit()
-    return OrgSettingsOut(image_retention_months=row.image_retention_months)
+    return _settings_out(row)
 
 
 @router.post("/images/purge")
@@ -154,6 +166,67 @@ def purge_images(
     )
     session.commit()
     return {"purged": purged}
+
+
+class NotificationOut(BaseModel):
+    id: uuid.UUID
+    created_at: datetime
+    kind: str
+    channel: str
+    recipient: str
+    body: str
+    status: str
+    provider: str
+    error: str | None
+
+
+@router.post("/notifications/digest")
+def send_digest_now(
+    request: Request,
+    requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN)],
+    session: Annotated[Session, Depends(get_session)],
+) -> dict[str, int]:
+    """Manual trigger sends unconditionally; the scheduler's daily run dedupes."""
+    messages = send_overflow_digest(session, only_if_unsent_today=False)
+    record_audit(
+        session,
+        org_id=requester.org_id,
+        actor_user_id=requester.user_id,
+        action="notifications.digest",
+        entity="notification",
+        ip=client_ip(request),
+        detail={"messages": messages},
+    )
+    session.commit()
+    return {"messages": messages}
+
+
+@router.get("/notifications", response_model=list[NotificationOut])
+def list_notifications(
+    requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN)],
+    session: Annotated[Session, Depends(get_session)],
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+) -> list[NotificationOut]:
+    rows = session.scalars(
+        select(Notification)
+        .where(Notification.org_id == requester.org_id)
+        .order_by(Notification.created_at.desc())
+        .limit(limit)
+    )
+    return [
+        NotificationOut(
+            id=n.id,
+            created_at=n.created_at,
+            kind=n.kind,
+            channel=n.channel,
+            recipient=n.recipient,
+            body=n.body,
+            status=n.status,
+            provider=n.provider,
+            error=n.error,
+        )
+        for n in rows
+    ]
 
 
 # Every org-scoped table an operator owns on exit. Images live in the object

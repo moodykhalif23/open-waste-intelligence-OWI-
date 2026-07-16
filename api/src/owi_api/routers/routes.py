@@ -18,6 +18,7 @@ from owi_api.models.enums import CollectionMethod, OverflowRisk, RouteStatus, Us
 from owi_api.models.operations import BinHealthDaily, CollectionEvent
 from owi_api.models.registry import Bin
 from owi_api.models.route import Route, RouteStop, Truck
+from owi_api.org_config import effective_fuel_price, effective_waste_density
 from owi_api.routers.auth import get_current_user, require_roles
 from owi_api.security import TokenClaims
 from owi_api.weights import estimate_collection_weight
@@ -176,10 +177,11 @@ def _bin_demand(session: Session, org_id: uuid.UUID, bin_ids: list[uuid.UUID]) -
             .distinct(BinHealthDaily.bin_id)
         ).all()
     }
+    density = effective_waste_density(session, org_id)
     stops = []
     for bin_, lat, lng in rows:
         fill = latest_fill.get(bin_.id, 100.0)  # unknown fill → assume full, so it isn't skipped
-        demand = fill / 100 * bin_.volume_liters * settings.waste_density_kg_per_l
+        demand = fill / 100 * bin_.volume_liters * density
         stops.append(Stop(str(bin_.id), (lng, lat), max(1.0, demand)))
     return stops
 
@@ -301,7 +303,7 @@ def routes_savings(
     optimized = _scenario(
         _bin_demand(session, requester.org_id, today_bins), len(trucks), depot, matrix, fuel_rate
     )
-    report = compute_savings(baseline, optimized, settings.fuel_price_kes_per_l)
+    report = compute_savings(baseline, optimized, effective_fuel_price(session, requester.org_id))
 
     return SavingsOut(
         baseline=ScenarioOut(

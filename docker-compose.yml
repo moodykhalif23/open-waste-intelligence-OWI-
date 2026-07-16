@@ -14,6 +14,13 @@ x-owi-env: &owi-env
   OWI_FUEL_PRICE_KES_PER_L: ${OWI_FUEL_PRICE_KES_PER_L:-0}
   OWI_PUBLIC_API_DELAY_DAYS: ${OWI_PUBLIC_API_DELAY_DAYS:-7}
   OWI_PUBLIC_API_RATE_PER_MIN: ${OWI_PUBLIC_API_RATE_PER_MIN:-60}
+  # Notification providers (unset = console/log provider).
+  OWI_NOTIFY_CHANNEL: ${OWI_NOTIFY_CHANNEL:-sms}
+  OWI_AT_USERNAME: ${OWI_AT_USERNAME:-}
+  OWI_AT_API_KEY: ${OWI_AT_API_KEY:-}
+  OWI_AT_SENDER_ID: ${OWI_AT_SENDER_ID:-}
+  OWI_WA_TOKEN: ${OWI_WA_TOKEN:-}
+  OWI_WA_PHONE_NUMBER_ID: ${OWI_WA_PHONE_NUMBER_ID:-}
 
 services:
   db:
@@ -96,6 +103,12 @@ services:
     command: uv run uvicorn owi_api.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD", "uv", "run", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/readyz', timeout=4)"]
+      interval: 30s
+      timeout: 6s
+      retries: 3
+      start_period: 30s
     depends_on:
       migrate:
         condition: service_completed_successfully

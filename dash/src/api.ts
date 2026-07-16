@@ -30,13 +30,27 @@ export async function apiBlob(path: string): Promise<Blob> {
   return (await request(path)).blob();
 }
 
-export async function login(phone: string, password: string): Promise<void> {
+export class LoginError extends Error {
+  constructor(readonly detail: string) {
+    super(detail);
+  }
+}
+
+export async function login(phone: string, password: string, otp?: string): Promise<void> {
   const response = await fetch("/api/v1/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ phone, password }),
+    body: JSON.stringify({ phone, password, otp: otp || null }),
   });
-  if (!response.ok) throw new Error("login failed");
+  if (!response.ok) {
+    let detail = "login failed";
+    try {
+      detail = ((await response.json()) as { detail?: string }).detail ?? detail;
+    } catch {
+      /* non-JSON error body */
+    }
+    throw new LoginError(detail);
+  }
   const data = (await response.json()) as { access_token: string };
   setToken(data.access_token);
 }

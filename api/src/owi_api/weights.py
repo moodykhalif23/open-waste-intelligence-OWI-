@@ -3,9 +3,9 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from owi_api.config import settings
 from owi_api.models.operations import BinHealthDaily
 from owi_api.models.registry import Bin
+from owi_api.org_config import effective_waste_density
 
 
 def estimate_collection_weight(session: Session, bin_id: uuid.UUID) -> float:
@@ -20,4 +20,5 @@ def estimate_collection_weight(session: Session, bin_id: uuid.UUID) -> float:
         .limit(1)
     )
     fill = fill_pct if fill_pct is not None else 100.0
-    return round(fill / 100 * bin_.volume_liters * settings.waste_density_kg_per_l, 2)
+    density = effective_waste_density(session, bin_.org_id)
+    return round(fill / 100 * bin_.volume_liters * density, 2)

@@ -70,6 +70,35 @@ def create_app() -> FastAPI:
     def healthz() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/readyz")
+    def readyz(response: Response) -> dict[str, str]:
+        """Readiness: healthz says the process runs; this says it can serve."""
+        from redis import Redis
+        from sqlalchemy import text
+
+        from owi_api.db import SessionLocal
+        from owi_api.ingestion.storage import get_store
+
+        checks: dict[str, str] = {}
+        try:
+            with SessionLocal() as session:
+                session.execute(text("SELECT 1"))
+            checks["db"] = "ok"
+        except Exception:
+            checks["db"] = "down"
+        try:
+            Redis.from_url(settings.redis_url, socket_timeout=3).ping()
+            checks["redis"] = "ok"
+        except Exception:
+            checks["redis"] = "down"
+        try:
+            checks["storage"] = "ok" if get_store(settings).ready() else "down"
+        except Exception:
+            checks["storage"] = "down"
+        if any(state != "ok" for state in checks.values()):
+            response.status_code = 503
+        return checks
+
     return app
 
 

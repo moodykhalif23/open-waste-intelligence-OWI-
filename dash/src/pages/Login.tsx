@@ -4,7 +4,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { login } from "../api";
+import { LoginError, login } from "../api";
 import { useI18n } from "../i18n";
 
 function BinMark({ size = 30, color = "#f2b949" }: { size?: number; color?: string }) {
@@ -22,16 +22,22 @@ export default function Login() {
   const navigate = useNavigate();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [needsOtp, setNeedsOtp] = useState(false);
   const [error, setError] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(false);
     try {
-      await login(phone, password);
+      await login(phone, password, needsOtp ? otp : undefined);
       navigate("/");
-    } catch {
-      setError(true);
+    } catch (err) {
+      if (err instanceof LoginError && err.detail === "otp required") {
+        setNeedsOtp(true);
+      } else {
+        setError(true);
+      }
     }
   }
 
@@ -126,6 +132,18 @@ export default function Login() {
             fullWidth
             margin="normal"
           />
+          {needsOtp && (
+            <TextField
+              label={t("otpCode")}
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              autoComplete="one-time-code"
+              autoFocus
+              fullWidth
+              margin="normal"
+              slotProps={{ htmlInput: { inputMode: "numeric", maxLength: 10 } }}
+            />
+          )}
           {error && (
             <Typography color="error" variant="body2" sx={{ mt: 1 }}>
               {t("loginFailed")}

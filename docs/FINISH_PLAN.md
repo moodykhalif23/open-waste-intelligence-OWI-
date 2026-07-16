@@ -81,17 +81,19 @@ Researched proposals, not commitments. Three tracks; each item independently shi
 
 ### Track A — Enterprise grade (ordered; A1–A4 are table stakes even at pilot scale)
 
-1. **Automated backups** (S): compose sidecar for nightly `pg_dump` + rotation, `mc mirror` for MinIO, `make restore` + documented restore drill. Today backups are one unchecked checklist line — a disk failure loses everything.
-2. **Audit log** (M): append-only `audit_log` (actor, org, action, entity, ip, ts) written from every security-relevant mutation (device-token minting is currently recordless), read-only admin page.
-3. **Retention engine** (M): docs/08 promises "operational images 24 months, aggregate-then-delete, configurable per org" — only the 72 h quarantine purge exists. Per-org retention in a new `org_settings` table + scheduler job. Governance is law; this is the largest law/code gap.
-4. **DSAR/erasure + export** (M): collector "do-not-use" photo flag (promised in docs/08, no DELETE route exists anywhere), admin erase/export-user-PII, org-exit full export. Kenya DPA 2019 exposure.
-5. **Tenant-isolation backstop** (M): Postgres RLS (`SET LOCAL owi.org_id`) or a centralized org-scoped query helper; public API aggregates currently ignore org entirely and hardcode Safi's name (`routers/public.py:142`).
-6. **org_settings + per-org config UI** (M): fuel price, retention, public-API delay, branding, module toggles — currently all process-global env vars.
-7. **MFA (TOTP) for admin/coordinator** (M) and **session hardening** (M): httpOnly cookie instead of localStorage JWT, short access + rotating refresh tokens.
-8. **Observability** (M): `/readyz` that pings DB/Redis/MinIO (healthz checks nothing), Prometheus metrics + RQ queue depth, structured JSON logs, optional Sentry/GlitchTip DSN.
-9. **Notifications service** (M): Africa's Talking SMS + WhatsApp Business adapters behind one interface — unblocks the M2-F5 overflow digest and dumping alerts.
-10. **Deploy hardening** (S): pin `minio:latest`/`label-studio:latest`/`osrm:latest` digests, split migrations into a one-shot service, document scale-out (Redis rate limiter, multi-worker).
+1. ✅ **Automated backups** (2026-07-16): `db-backup` sidecar (nightly rotated pg_dump) + `minio-backup` mirror (quarantine excluded, deletions propagate), `make backup` / `make restore CONFIRM=yes`, restore drill executed against the live stack.
+2. ✅ **Audit log** (2026-07-16): append-only `audit_log` (migration 0014), `record_audit` wired into 11+ security-relevant mutations, admin-only `GET /api/v1/admin/audit`, dash Admin→Audit page, smoke-verified.
+3. ✅ **Retention engine** (2026-07-16): `org_settings.image_retention_months` (migration 0015, default 24), hourly scheduler aggregate-then-delete (`image_deleted_at` stamp, 410 on purged images), `POST /admin/images/purge`, dash Admin→Settings page.
+4. ✅ **DSAR/erasure + export** (2026-07-16): `DELETE /observations/{id}` do-not-use (collector own / staff any; photo hard-deleted) with a field-app "Sent reports" delete surface; admin `GET/DELETE /users/{id}(/export)` PII export + anonymize; `GET /admin/export` org-exit zip (CSV per table, geometry as lat/lng, password hashes excluded).
+5. **Tenant-isolation backstop** (M): ✅ public API aggregates now org-scoped by API key + per-org attribution (Safi de-hardcoded). Still open: Postgres RLS (`SET LOCAL owi.org_id`) or a centralized org-scoped query helper for internal routers.
+6. ✅ **org_settings + per-org config** (2026-07-16): fuel price + waste density are per-org overrides (migration 0016, nullable = deployment default) consumed by route demand, collection weights, and savings; partial-PATCH admin API; Settings UI covers all knobs. Still deployment-global by design: public-API delay (governance), branding, module toggles.
+7. **MFA + session hardening** (M): ✅ TOTP MFA shipped (2026-07-16) — stdlib RFC 6238 (no new deps), enroll → QR (segno) → activate with 8 one-time recovery codes, OTP challenge on login, dash account-menu Security dialog, EN+SW, audit events, full lifecycle smoke-tested. Still open: httpOnly-cookie session + rotating refresh tokens.
+8. **Observability** (M): ✅ `/readyz` pings DB/Redis/object-store (2026-07-16) + compose healthcheck on the api service. Still open: Prometheus metrics + RQ queue depth (needs a dependency add via uv), structured JSON logs, optional Sentry/GlitchTip.
+9. ✅ **Notifications service** (2026-07-16): Africa's Talking SMS + WhatsApp Cloud adapters over httpx (no new deps) with a console/log fallback so the path works before credentials exist; `notifications` delivery-log table (migration 0018); per-org alert phones in Settings; **M2-F5 overflow digest** — daily 6–8 am scheduler send (per-day dedupe) + unconditional admin trigger `POST /admin/notifications/digest`.
+10. ✅ **Deploy hardening** (2026-07-16): minio/mc/label-studio digest-pinned, osrm on v5.27.1, migrations split into a one-shot `migrate` service gating api/worker/scheduler.
 11. Later tier (when operator #2 / municipal contract lands): SSO/OIDC (L), webhooks (M), BI bulk export (M), usage metering + quotas (M), per-site scoped permissions (L), supply-chain CI (Trivy/pip-audit/SBOM) (S), API stability policy (S).
+
+**Bug found & fixed during Track A verification (2026-07-16):** ~39% of public API keys were unusable — `_new_key()`'s urlsafe-base64 tail can contain `_`, and `require_api_key` split on every underscore and rejected the key as malformed. Fixed with `split("_", 2)`; existing keys work again.
 
 ### Track B — Intelligence (open-data training; classify past 0.80 with public data alone)
 

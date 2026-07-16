@@ -3,7 +3,7 @@ from datetime import datetime
 
 from geoalchemy2 import Geometry
 from sqlalchemy import DateTime, ForeignKey, String, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from owi_api.models.base import Base, OwiRow
@@ -30,6 +30,11 @@ class User(OwiRow, Base):
     password_hash: Mapped[str | None] = mapped_column(String(200))
     # Bumping this invalidates every token the user holds (lost/stolen phone).
     token_version: Mapped[int] = mapped_column(server_default="0")
+    # TOTP: secret set at enrollment, enforced only once activated; recovery
+    # codes stored as argon2 hashes, each usable once.
+    mfa_secret: Mapped[str | None] = mapped_column(String(64))
+    mfa_enabled: Mapped[bool] = mapped_column(server_default="false", default=False)
+    mfa_recovery: Mapped[list[str] | None] = mapped_column(JSONB)
 
 
 class Site(OwiRow, Base):

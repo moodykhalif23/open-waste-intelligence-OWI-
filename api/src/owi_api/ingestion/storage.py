@@ -11,6 +11,7 @@ class ObjectStore(Protocol):
     def put(self, key: str, data: bytes, content_type: str) -> None: ...
     def get(self, key: str) -> bytes: ...
     def delete(self, key: str) -> None: ...
+    def ready(self) -> bool: ...
 
 
 class LocalStore:
@@ -35,6 +36,9 @@ class LocalStore:
 
     def delete(self, key: str) -> None:
         self._path(key).unlink(missing_ok=True)
+
+    def ready(self) -> bool:
+        return True  # local filesystem: nothing remote to be down
 
 
 class S3Store:
@@ -62,6 +66,9 @@ class S3Store:
 
     def delete(self, key: str) -> None:
         self._client.remove_object(self._bucket, key)
+
+    def ready(self) -> bool:
+        return bool(self._client.bucket_exists(self._bucket))
 
 
 def get_store(settings: Settings) -> ObjectStore:

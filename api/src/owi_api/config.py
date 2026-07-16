@@ -53,6 +53,15 @@ class Settings(BaseSettings):
     public_api_delay_days: int = 7
     public_api_rate_per_min: int = 60
 
+    # Notifications: unset credentials fall back to a console/log provider, so the
+    # path stays exercisable without an account. Secrets live in .env only.
+    notify_channel: Literal["sms", "whatsapp"] = "sms"
+    at_username: str = ""
+    at_api_key: str = ""
+    at_sender_id: str = ""
+    wa_token: str = ""
+    wa_phone_number_id: str = ""
+
     def assert_production_safe(self) -> None:
         """Refusing to boot beats silently running a public API on dev credentials."""
         if self.environment != "production":

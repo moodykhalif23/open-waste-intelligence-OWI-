@@ -11,18 +11,35 @@ import { useI18n } from "../i18n";
 
 interface OrgSettings {
   image_retention_months: number;
+  fuel_price_kes_per_l: number | null;
+  waste_density_kg_per_l: number | null;
+  notify_phones: string[] | null;
 }
 
 export default function Settings() {
   const { t } = useI18n();
-  const [months, setMonths] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [months, setMonths] = useState("");
+  const [fuelPrice, setFuelPrice] = useState("");
+  const [density, setDensity] = useState("");
+  const [phones, setPhones] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
+  const apply = (s: OrgSettings) => {
+    setMonths(String(s.image_retention_months));
+    setFuelPrice(s.fuel_price_kes_per_l === null ? "" : String(s.fuel_price_kes_per_l));
+    setDensity(s.waste_density_kg_per_l === null ? "" : String(s.waste_density_kg_per_l));
+    setPhones((s.notify_phones ?? []).join(", "));
+  };
+
   useEffect(() => {
     void api<OrgSettings>("/api/v1/admin/settings")
-      .then((s) => setMonths(String(s.image_retention_months)))
+      .then((s) => {
+        apply(s);
+        setLoaded(true);
+      })
       .catch((e) => setErr(e instanceof Error ? e.message : String(e)));
   }, []);
 
@@ -31,11 +48,20 @@ export default function Settings() {
     setBusy(true);
     setErr(null);
     try {
+      const phoneList = phones
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean);
       const saved = await api<OrgSettings>("/api/v1/admin/settings", {
         method: "PATCH",
-        body: JSON.stringify({ image_retention_months: Number(months) }),
+        body: JSON.stringify({
+          image_retention_months: Number(months),
+          fuel_price_kes_per_l: fuelPrice === "" ? null : Number(fuelPrice),
+          waste_density_kg_per_l: density === "" ? null : Number(density),
+          notify_phones: phoneList.length > 0 ? phoneList : null,
+        }),
       });
-      setMonths(String(saved.image_retention_months));
+      apply(saved);
       setToast(t("settingsSaved"));
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -44,12 +70,12 @@ export default function Settings() {
     }
   }
 
-  if (months === null && !err) return <Muted>{t("loading")}</Muted>;
+  if (!loaded && !err) return <Muted>{t("loading")}</Muted>;
 
   return (
     <PageStack>
-      <SectionCard title={t("settingsRetention")}>
-        <Muted>{t("settingsRetentionHint")}</Muted>
+      <SectionCard title={t("settings")}>
+        <Muted>{t("settingsHint")}</Muted>
         <Box component="form" onSubmit={(e) => void onSubmit(e)} sx={{ mt: 2, maxWidth: 420 }}>
           <Stack spacing={2}>
             {err && <Alert severity="error">{err}</Alert>}
@@ -57,12 +83,39 @@ export default function Settings() {
               size="small"
               type="number"
               label={t("settingsRetentionMonths")}
-              value={months ?? ""}
+              helperText={t("settingsRetentionHint")}
+              value={months}
               onChange={(e) => setMonths(e.target.value)}
               required
               slotProps={{ htmlInput: { min: 1, max: 120 } }}
             />
-            <Button variant="contained" type="submit" disabled={busy || months === null}>
+            <TextField
+              size="small"
+              type="number"
+              label={t("settingsFuelPrice")}
+              helperText={t("settingsDefaultHint")}
+              value={fuelPrice}
+              onChange={(e) => setFuelPrice(e.target.value)}
+              slotProps={{ htmlInput: { min: 0, step: 0.5 } }}
+            />
+            <TextField
+              size="small"
+              type="number"
+              label={t("settingsWasteDensity")}
+              helperText={t("settingsDefaultHint")}
+              value={density}
+              onChange={(e) => setDensity(e.target.value)}
+              slotProps={{ htmlInput: { min: 0.01, max: 2, step: 0.01 } }}
+            />
+            <TextField
+              size="small"
+              label={t("settingsNotifyPhones")}
+              helperText={t("settingsNotifyPhonesHint")}
+              value={phones}
+              onChange={(e) => setPhones(e.target.value)}
+              slotProps={{ htmlInput: { inputMode: "tel" } }}
+            />
+            <Button variant="contained" type="submit" disabled={busy}>
               {t("save")}
             </Button>
           </Stack>

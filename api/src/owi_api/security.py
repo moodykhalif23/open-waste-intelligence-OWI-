@@ -1,3 +1,8 @@
+import base64
+import hmac
+import secrets
+import struct
+import time
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -59,3 +64,37 @@ def decode_token(token: str) -> TokenClaims:
         )
     except (jwt.PyJWTError, KeyError, ValueError) as exc:
         raise InvalidTokenError(str(exc)) from exc
+
+
+# RFC 6238 TOTP in stdlib — 6 digits, 30s steps, SHA-1 (what authenticator apps expect).
+TOTP_STEP_S = 30
+TOTP_DIGITS = 6
+
+
+def new_totp_secret() -> str:
+    return base64.b32encode(secrets.token_bytes(20)).decode()
+
+
+def _hotp(key: bytes, counter: int) -> str:
+    mac = hmac.new(key, struct.pack(">Q", counter), "sha1").digest()
+    offset = mac[-1] & 0x0F
+    code = (int.from_bytes(mac[offset : offset + 4]) & 0x7FFFFFFF) % 10**TOTP_DIGITS
+    return f"{code:0{TOTP_DIGITS}d}"
+
+
+def totp_now(secret_b32: str, at: float | None = None) -> str:
+    key = base64.b32decode(secret_b32)
+    return _hotp(key, int((time.time() if at is None else at) // TOTP_STEP_S))
+
+
+def verify_totp(secret_b32: str, code: str, at: float | None = None, window: int = 1) -> bool:
+    """±window steps of clock drift tolerated — field phones are rarely NTP-perfect."""
+    try:
+        key = base64.b32decode(secret_b32)
+    except (ValueError, TypeError):
+        return False
+    counter = int((time.time() if at is None else at) // TOTP_STEP_S)
+    return any(
+        hmac.compare_digest(_hotp(key, counter + offset), code)
+        for offset in range(-window, window + 1)
+    )

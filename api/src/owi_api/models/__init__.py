@@ -8,6 +8,7 @@ from owi_api.models.dumping import (
     DumpingIntervention,
     DumpingSite,
 )
+from owi_api.models.notification import Notification
 from owi_api.models.observation import Observation
 from owi_api.models.operations import BinHealthDaily, CollectionEvent
 from owi_api.models.org_settings import OrgSettings
@@ -31,6 +32,7 @@ __all__ = [
     "DumpingSite",
     "MLModel",
     "MaterialPrice",
+    "Notification",
     "Observation",
     "OrgSettings",
     "Organization",

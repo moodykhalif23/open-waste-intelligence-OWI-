@@ -1,7 +1,11 @@
 """End-to-end smoke test: python scripts/smoke.py <base_url> <phone> <password>"""
 
+import base64
+import hmac
 import json
+import struct
 import sys
+import time
 import uuid
 
 import cv2
@@ -39,6 +43,13 @@ def make_blurry_jpeg(seed: int) -> bytes:
     return encode(cv2.GaussianBlur(image, (51, 51), 0))
 
 
+def totp(secret_b32: str) -> str:
+    key = base64.b32decode(secret_b32)
+    mac = hmac.new(key, struct.pack(">Q", int(time.time() // 30)), "sha1").digest()
+    offset = mac[-1] & 0x0F
+    return f"{(int.from_bytes(mac[offset : offset + 4]) & 0x7FFFFFFF) % 10**6:06d}"
+
+
 def main() -> None:
     base, phone, password = sys.argv[1], sys.argv[2], sys.argv[3]
     client = httpx.Client(base_url=base, timeout=30)
@@ -46,6 +57,12 @@ def main() -> None:
     health = client.get("/healthz")
     check("healthz", health.status_code == 200)
     check("security headers", health.headers.get("x-content-type-options") == "nosniff")
+    ready = client.get("/readyz")
+    check(
+        "readyz pings db + redis + storage",
+        ready.status_code == 200 and all(v == "ok" for v in ready.json().values()),
+        ready.text[:100],
+    )
 
     check("unauthenticated is rejected", client.get("/api/v1/bins").status_code == 401)
     check(
@@ -522,6 +539,44 @@ def main() -> None:
         img_purge.status_code == 200 and img_purge.json()["purged"] >= 0,
         img_purge.text[:100],
     )
+    priced = client.patch(
+        "/api/v1/admin/settings", headers=admin, json={"fuel_price_kes_per_l": 185.0}
+    )
+    check(
+        "org fuel price configurable",
+        priced.status_code == 200 and priced.json()["fuel_price_kes_per_l"] == 185.0,
+        priced.text[:100],
+    )
+    savings_priced = client.get("/api/v1/routes/savings", headers=admin)
+    check(
+        "savings prices fuel from org settings",
+        savings_priced.status_code == 200 and savings_priced.json()["kes_saved"] is not None,
+        savings_priced.text[:100],
+    )
+
+    phones_set = client.patch(
+        "/api/v1/admin/settings", headers=admin, json={"notify_phones": ["+254700000321"]}
+    )
+    check(
+        "org alert phones configurable",
+        phones_set.status_code == 200 and phones_set.json()["notify_phones"] == ["+254700000321"],
+        phones_set.text[:100],
+    )
+    digest = client.post("/api/v1/admin/notifications/digest", headers=admin)
+    check(
+        "overflow digest dispatches",
+        digest.status_code == 200 and digest.json()["messages"] >= 1,
+        digest.text[:100],
+    )
+    notes = client.get("/api/v1/admin/notifications", headers=admin)
+    check(
+        "notification delivery log records the digest",
+        notes.status_code == 200
+        and any(
+            n["kind"] == "overflow_digest" and n["status"] in ("logged", "sent")
+            for n in notes.json()
+        ),
+    )
 
     erase_target = results[0]["observation_id"]
     erased = client.delete(f"/api/v1/observations/{erase_target}", headers=device_auth)
@@ -561,6 +616,56 @@ def main() -> None:
         org_zip.status_code == 200 and org_zip.content[:2] == b"PK",
         org_zip.headers.get("content-type", ""),
     )
+
+    mfa_phone = f"+2547{uuid.uuid4().int % 10**8:08d}"
+    mfa_pass = "mfa-smoke-password"
+    client.post(
+        "/api/v1/users",
+        headers=admin,
+        json={"name": "MFA Test", "phone": mfa_phone, "role": "coordinator", "password": mfa_pass},
+    )
+    mfa_login = client.post("/api/v1/auth/login", json={"phone": mfa_phone, "password": mfa_pass})
+    mfa_auth = {"Authorization": f"Bearer {mfa_login.json()['access_token']}"}
+    enroll = client.post("/api/v1/auth/mfa/enroll", headers=mfa_auth)
+    check(
+        "mfa enrollment issues secret",
+        enroll.status_code == 200 and "otpauth://" in enroll.json()["otpauth_uri"],
+        enroll.text[:100],
+    )
+    mfa_secret = enroll.json()["secret"]
+    qr = client.get("/api/v1/auth/mfa/qr.svg", headers=mfa_auth)
+    check("mfa QR renders during enrollment", qr.status_code == 200 and b"<svg" in qr.content)
+    act = client.post(
+        "/api/v1/auth/mfa/activate", headers=mfa_auth, json={"code": totp(mfa_secret)}
+    )
+    check(
+        "mfa activates with valid code",
+        act.status_code == 200 and len(act.json()["recovery_codes"]) == 8,
+        act.text[:100],
+    )
+    check(
+        "login without otp is challenged",
+        client.post(
+            "/api/v1/auth/login", json={"phone": mfa_phone, "password": mfa_pass}
+        ).status_code
+        == 401,
+    )
+    with_otp = client.post(
+        "/api/v1/auth/login",
+        json={"phone": mfa_phone, "password": mfa_pass, "otp": totp(mfa_secret)},
+    )
+    check("login with otp succeeds", with_otp.status_code == 200, with_otp.text[:100])
+    recovery = act.json()["recovery_codes"][0]
+    rec_login = client.post(
+        "/api/v1/auth/login", json={"phone": mfa_phone, "password": mfa_pass, "otp": recovery}
+    )
+    check("recovery code works once", rec_login.status_code == 200)
+    rec_again = client.post(
+        "/api/v1/auth/login", json={"phone": mfa_phone, "password": mfa_pass, "otp": recovery}
+    )
+    check("spent recovery code is rejected", rec_again.status_code == 401)
+    dis = client.post("/api/v1/auth/mfa/disable", headers=mfa_auth, json={"code": totp(mfa_secret)})
+    check("mfa disable works", dis.status_code == 204, dis.text[:100])
 
     audit = client.get("/api/v1/admin/audit", headers=admin)
     audit_actions = {row["action"] for row in audit.json()} if audit.status_code == 200 else set()

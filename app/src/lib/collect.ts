@@ -21,6 +21,7 @@ export interface RouteStop {
 export interface Route {
   id: string;
   truck_name: string;
+  method: string;
   planned_km: number;
   planned_fuel_l: number;
   bins_served: number;

@@ -83,3 +83,12 @@ class RouteStatus(enum.StrEnum):
     PLANNED = "planned"
     ACTIVE = "active"
     DONE = "done"
+
+
+class CollectionMethod(enum.StrEnum):
+    TRUCK = "truck"
+    TRICYCLE = "tricycle"
+    MOTORBIKE = "motorbike"
+    BICYCLE = "bicycle"
+    HANDCART = "handcart"
+    ON_FOOT = "on_foot"

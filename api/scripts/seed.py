@@ -22,12 +22,54 @@ FILL_BANDS = ["empty", "low", "half", "high", "overflowing"]
 # Per-profile 14-reading fill patterns (oldest -> newest). "fast" bins end overflowing
 # so they surface as collect-today / route candidates; "slow" bins stay low.
 FILL_PATTERNS = {
-    "fast": ["low", "half", "high", "overflowing", "low", "half", "high",
-             "overflowing", "half", "high", "overflowing", "high", "overflowing", "overflowing"],
-    "medium": ["empty", "low", "low", "half", "high", "half", "low",
-               "half", "high", "half", "high", "half", "high", "high"],
-    "slow": ["empty", "empty", "low", "low", "empty", "low", "half",
-             "low", "empty", "low", "half", "low", "half", "low"],
+    "fast": [
+        "low",
+        "half",
+        "high",
+        "overflowing",
+        "low",
+        "half",
+        "high",
+        "overflowing",
+        "half",
+        "high",
+        "overflowing",
+        "high",
+        "overflowing",
+        "overflowing",
+    ],
+    "medium": [
+        "empty",
+        "low",
+        "low",
+        "half",
+        "high",
+        "half",
+        "low",
+        "half",
+        "high",
+        "half",
+        "high",
+        "half",
+        "high",
+        "high",
+    ],
+    "slow": [
+        "empty",
+        "empty",
+        "low",
+        "low",
+        "empty",
+        "low",
+        "half",
+        "low",
+        "empty",
+        "low",
+        "half",
+        "low",
+        "half",
+        "low",
+    ],
 }
 # Rotate capture hours so the Overview day x hour heatmap looks alive.
 CAPTURE_HOURS = [7, 9, 11, 14, 16, 18, 20]
@@ -64,10 +106,13 @@ DUMP_POINTS = [
     ("Kawangware backlane", (-1.2861, 36.7421), 7),
 ]
 
+# (name, method, capacity_kg, fuel_l_per_100km, depot) — fuel None lets the API
+# apply the method default (0 for manual methods).
 TRUCKS = [
-    ("Isuzu FRR 01", 5000.0, 28.0, NAIROBI),
-    ("Isuzu NQR 02", 3500.0, 24.0, (-1.2960, 36.8100)),
-    ("Tuktuk collector 03", 800.0, 6.0, (-1.2800, 36.7500)),
+    ("Isuzu FRR 01", "truck", 5000.0, 28.0, NAIROBI),
+    ("Isuzu NQR 02", "truck", 3500.0, 24.0, (-1.2960, 36.8100)),
+    ("Tuktuk collector 03", "tricycle", 800.0, 6.0, (-1.2800, 36.7500)),
+    ("Mkokoteni crew 04", "handcart", 150.0, None, (-1.2850, 36.7460)),
 ]
 
 
@@ -141,8 +186,13 @@ def main() -> None:
         m = client.post(
             "/api/v1/models",
             headers=admin,
-            json={"task": task, "version": version, "metrics": {"macro_f1": 0.81},
-                  "labels": reg_labels, "activate": activate},
+            json={
+                "task": task,
+                "version": version,
+                "metrics": {"macro_f1": 0.81},
+                "labels": reg_labels,
+                "activate": activate,
+            },
         )
         if m.status_code == 201:
             bump("models")
@@ -175,8 +225,13 @@ def main() -> None:
             r = client.post(
                 "/api/v1/bins",
                 headers=admin,
-                json={"site_id": sid, "lat": lat, "lng": lng,
-                      "volume_liters": volume, "bin_type": bin_type},
+                json={
+                    "site_id": sid,
+                    "lat": lat,
+                    "lng": lng,
+                    "volume_liters": volume,
+                    "bin_type": bin_type,
+                },
             )
             if r.status_code == 201:
                 bump("bins")
@@ -192,8 +247,13 @@ def main() -> None:
         for i, band in enumerate(pattern):
             days_ago = len(pattern) - 1 - i  # newest reading ~today
             hour = CAPTURE_HOURS[(bi + i) % len(CAPTURE_HOURS)]
-            metas.append({"captured_at": iso(now, days_ago, hour, (i * 7) % 60),
-                          "bin_qr": b["qr_code"], "fill_tap": band})
+            metas.append(
+                {
+                    "captured_at": iso(now, days_ago, hour, (i * 7) % 60),
+                    "bin_qr": b["qr_code"],
+                    "fill_tap": band,
+                }
+            )
             # Global-unique seed keeps different observations from deduping into each other.
             seed = 100_000 + bi * 1000 + i
             files.append(("files", (f"b{bi}_{i}.jpg", make_jpeg(seed), "image/jpeg")))
@@ -214,8 +274,12 @@ def main() -> None:
         r = client.post(
             "/api/v1/recycling/prices",
             headers=admin,
-            json={"material": material, "kes_per_kg": kes,
-                  "effective_date": "2026-01-01", "source": source},
+            json={
+                "material": material,
+                "kes_per_kg": kes,
+                "effective_date": "2026-01-01",
+                "source": source,
+            },
         )
         if r.status_code == 201:
             bump("prices")
@@ -225,8 +289,12 @@ def main() -> None:
     for name, materials, min_kg, price, contact in PARTNERS:
         if name in have_partners:
             continue
-        body = {"name": name, "materials_accepted": materials, "min_kg_per_month": min_kg,
-                "contact": contact}
+        body = {
+            "name": name,
+            "materials_accepted": materials,
+            "min_kg_per_month": min_kg,
+            "contact": contact,
+        }
         if price is not None:
             body["indicative_price_kes_per_kg"] = price
         r = client.post("/api/v1/recycling/partners", headers=admin, json=body)
@@ -259,15 +327,19 @@ def main() -> None:
 
     # --- Trucks (get-or-create by name) ---
     have_trucks = {t["name"] for t in client.get("/api/v1/trucks", headers=admin).json()}
-    for name, cap, fuel, depot in TRUCKS:
+    for name, method, cap, fuel, depot in TRUCKS:
         if name in have_trucks:
             continue
-        r = client.post(
-            "/api/v1/trucks",
-            headers=admin,
-            json={"name": name, "capacity_kg": cap, "fuel_l_per_100km": fuel,
-                  "depot_lat": depot[0], "depot_lng": depot[1]},
-        )
+        body = {
+            "name": name,
+            "method": method,
+            "capacity_kg": cap,
+            "depot_lat": depot[0],
+            "depot_lng": depot[1],
+        }
+        if fuel is not None:
+            body["fuel_l_per_100km"] = fuel
+        r = client.post("/api/v1/trucks", headers=admin, json=body)
         if r.status_code == 201:
             bump("trucks")
 
@@ -281,15 +353,35 @@ def main() -> None:
 
     # --- Volunteer events (get-or-create by date+area+organizer) ---
     events = [
-        (150, "cleanup", "Kilimani", "Wanjiru Mwangi", 28, 84.0,
-         {"plastic": 42.0, "glass": 15.0, "paper": 20.0}),
+        (
+            150,
+            "cleanup",
+            "Kilimani",
+            "Wanjiru Mwangi",
+            28,
+            84.0,
+            {"plastic": 42.0, "glass": 15.0, "paper": 20.0},
+        ),
         (95, "education", "Kawangware", "Otieno Community Group", 40, 60.0, {}),
-        (60, "cleanup", "Kayole", "Kayole Green Team", 35, 105.0,
-         {"plastic": 55.0, "metal": 18.0, "organic": 30.0}),
-        (30, "sorting", "Kawangware", "TakaTaka Volunteers", 18, 72.0,
-         {"plastic": 80.0, "paper": 45.0, "glass": 22.0}),
-        (7, "cleanup", "Kilimani", "Wanjiru Mwangi", 22, 55.0,
-         {"plastic": 30.0, "paper": 12.0}),
+        (
+            60,
+            "cleanup",
+            "Kayole",
+            "Kayole Green Team",
+            35,
+            105.0,
+            {"plastic": 55.0, "metal": 18.0, "organic": 30.0},
+        ),
+        (
+            30,
+            "sorting",
+            "Kawangware",
+            "TakaTaka Volunteers",
+            18,
+            72.0,
+            {"plastic": 80.0, "paper": 45.0, "glass": 22.0},
+        ),
+        (7, "cleanup", "Kilimani", "Wanjiru Mwangi", 22, 55.0, {"plastic": 30.0, "paper": 12.0}),
     ]
     existing_events = {
         (e["occurred_on"], e["area"], e["organizer"])
@@ -302,9 +394,15 @@ def main() -> None:
         r = client.post(
             "/api/v1/volunteers",
             headers=admin,
-            json={"occurred_on": occurred_on, "event_type": etype, "area": area,
-                  "organizer": organizer, "participant_count": people,
-                  "hours_total": hours, "materials_kg": materials},
+            json={
+                "occurred_on": occurred_on,
+                "event_type": etype,
+                "area": area,
+                "organizer": organizer,
+                "participant_count": people,
+                "hours_total": hours,
+                "materials_kg": materials,
+            },
         )
         if r.status_code == 201:
             bump("volunteer_events")
@@ -315,9 +413,19 @@ def main() -> None:
         res = client.post(
             "/api/v1/observations/batch",
             headers=field,
-            data={"meta": json.dumps(
-                [{"captured_at": iso(now, days_ago, CAPTURE_HOURS[di % len(CAPTURE_HOURS)]),
-                  "lat": lat, "lng": lng}])},
+            data={
+                "meta": json.dumps(
+                    [
+                        {
+                            "captured_at": iso(
+                                now, days_ago, CAPTURE_HOURS[di % len(CAPTURE_HOURS)]
+                            ),
+                            "lat": lat,
+                            "lng": lng,
+                        }
+                    ]
+                )
+            },
             files=[("files", (f"dump{di}.jpg", make_jpeg(900_000 + di), "image/jpeg"))],
         )
         row = res.json()["results"][0]
@@ -348,8 +456,11 @@ def main() -> None:
             r = client.post(
                 f"/api/v1/dumping/sites/{target_site}/interventions",
                 headers=admin,
-                json={"kind": "cleanup", "performed_on": now.strftime("%Y-%m-%d"),
-                      "notes": "Community cleanup + signage installed"},
+                json={
+                    "kind": "cleanup",
+                    "performed_on": now.strftime("%Y-%m-%d"),
+                    "notes": "Community cleanup + signage installed",
+                },
             )
             if r.status_code == 201:
                 bump("dumping_interventions")

@@ -9,10 +9,16 @@ x-owi-env: &owi-env
   OWI_S3_ACCESS_KEY: ${MINIO_ROOT_USER}
   OWI_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
   OWI_JWT_SECRET: ${OWI_JWT_SECRET}
+  # Optional tuning from .env — without these lines the containers never see them.
+  OWI_OSRM_URL: ${OWI_OSRM_URL:-}
+  OWI_FUEL_PRICE_KES_PER_L: ${OWI_FUEL_PRICE_KES_PER_L:-0}
+  OWI_PUBLIC_API_DELAY_DAYS: ${OWI_PUBLIC_API_DELAY_DAYS:-7}
+  OWI_PUBLIC_API_RATE_PER_MIN: ${OWI_PUBLIC_API_RATE_PER_MIN:-60}
 
 services:
   db:
     image: postgis/postgis:16-3.4
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -29,6 +35,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports:
       - "6379:6379"
     healthcheck:
@@ -39,6 +46,7 @@ services:
 
   minio:
     image: minio/minio:latest
+    restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
@@ -56,6 +64,7 @@ services:
 
   labelstudio:
     image: heartexlabs/label-studio:latest
+    restart: unless-stopped
     environment:
       LABEL_STUDIO_USERNAME: ${LABEL_STUDIO_USERNAME}
       LABEL_STUDIO_PASSWORD: ${LABEL_STUDIO_PASSWORD}
@@ -70,6 +79,7 @@ services:
   api:
     build: ./api
     profiles: [prod]
+    restart: unless-stopped
     environment: *owi-env
     command: sh -c "uv run alembic upgrade head && uv run uvicorn owi_api.main:app --host 0.0.0.0 --port 8000"
     ports:
@@ -85,6 +95,7 @@ services:
   worker:
     build: ./api
     profiles: [prod]
+    restart: unless-stopped
     environment: *owi-env
     command: uv run rq worker inference --url redis://redis:6379/0
     depends_on:
@@ -94,6 +105,7 @@ services:
   scheduler:
     build: ./api
     profiles: [prod]
+    restart: unless-stopped
     environment: *owi-env
     command: uv run python -m owi_api.scheduler
     depends_on:
@@ -106,6 +118,7 @@ services:
   osrm:
     image: osrm/osrm-backend:latest
     profiles: [osrm]
+    restart: unless-stopped
     command: osrm-routed --algorithm mld /data/region.osrm
     ports:
       - "5000:5000"
@@ -117,6 +130,7 @@ services:
       context: .
       dockerfile: deploy/web.Dockerfile
     profiles: [prod]
+    restart: unless-stopped
     environment:
       DASH_DOMAIN: ${DASH_DOMAIN:-localhost:8443}
       APP_DOMAIN: ${APP_DOMAIN:-localhost:8444}

@@ -12,6 +12,7 @@ import DialogTitle from "@mui/material/DialogTitle";
 import Divider from "@mui/material/Divider";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
+import MenuItem from "@mui/material/MenuItem";
 import Snackbar from "@mui/material/Snackbar";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
@@ -32,13 +33,21 @@ import { CATEGORICAL } from "../components/EChart";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import MapView, { type MapLine, type MapPoint } from "../components/MapView";
 import { Muted, PageHeader, PageStack, SectionCard, StatCard, TableSection } from "../components/ui";
-import { useI18n } from "../i18n";
+import { useI18n, type StringKey } from "../i18n";
 
 interface Truck {
   id: string;
   name: string;
+  method: string;
   capacity_kg: number;
   fuel_l_per_100km: number;
+}
+
+interface MethodSpec {
+  method: string;
+  motorized: boolean;
+  default_capacity_kg: number;
+  default_fuel_l_per_100km: number;
 }
 
 interface Stop {
@@ -53,6 +62,7 @@ interface Route {
   id: string;
   truck_id: string;
   truck_name: string;
+  method: string;
   planned_km: number;
   planned_fuel_l: number;
   demand_kg: number;
@@ -80,6 +90,7 @@ interface Savings {
 export default function Routes() {
   const { t } = useI18n();
   const [trucks, setTrucks] = useState<Truck[] | null>(null);
+  const [methods, setMethods] = useState<MethodSpec[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [planning, setPlanning] = useState(false);
@@ -94,12 +105,14 @@ export default function Routes() {
   };
 
   const reload = useCallback(async () => {
-    const [tk, rt] = await Promise.all([
+    const [tk, rt, ms] = await Promise.all([
       api<Truck[]>("/api/v1/trucks"),
       api<Route[]>("/api/v1/routes"),
+      api<MethodSpec[]>("/api/v1/collection-methods"),
     ]);
     setTrucks(tk);
     setRoutes(rt);
+    setMethods(ms);
   }, []);
 
   useEffect(() => {
@@ -154,10 +167,13 @@ export default function Routes() {
       points: [...r.stops].sort((a, b) => a.seq - b.seq).map((s) => [s.lat, s.lng] as [number, number]),
     }));
 
+  const methodLabel = (m: string) => t(`method_${m}` as StringKey);
+
   const truckCols: GridColDef<Truck>[] = [
     { field: "name", headerName: t("name"), flex: 1, minWidth: 120 },
+    { field: "method", headerName: t("method"), minWidth: 110, valueFormatter: (v) => methodLabel(v) },
     { field: "capacity_kg", headerName: t("capacityKg"), type: "number", width: 120 },
-    { field: "fuel_l_per_100km", headerName: t("fuelUse"), type: "number", flex: 1, minWidth: 120, valueFormatter: (v) => `${v} L/100km` },
+    { field: "fuel_l_per_100km", headerName: t("fuelUse"), type: "number", flex: 1, minWidth: 120, valueFormatter: (v) => (v > 0 ? `${v} L/100km` : "—") },
   ];
 
   const routesAction = (
@@ -226,6 +242,7 @@ export default function Routes() {
                 <Grid size={{ xs: 12, md: route.stops.length === 0 ? 6 : 12, lg: 6 }} key={route.id}>
                   <RouteCard
                     route={route}
+                    methodLabel={methodLabel(route.method)}
                     disabled={planning}
                     breakdownLabel={t("breakdown")}
                     breakdownHint={t("breakdownHint")}
@@ -298,7 +315,7 @@ export default function Routes() {
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <TruckForm onCreated={reload} />
+          <TruckForm methods={methods} methodLabel={methodLabel} onCreated={reload} />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
           <TableSection title={t("trucks")}>
@@ -416,7 +433,7 @@ function PlanDialog({
       <DialogContent dividers>
         <Muted>{t("planPick")}</Muted>
         <Stack direction="row" spacing={1} sx={{ my: 2, flexWrap: "wrap", gap: 1 }}>
-          <Chip color="secondary" label={`${truckCount} ${t("trucks")}`} />
+          <Chip color="secondary" label={`${truckCount} ${t("vehicles")}`} />
           <Chip variant="outlined" label={`${due?.length ?? 0} ${t("binsToCollect")}`} />
           <Chip variant="outlined" label={`${selected.size} ${t("selected")}`} />
         </Stack>
@@ -461,6 +478,7 @@ function PlanDialog({
 
 function RouteCard({
   route,
+  methodLabel,
   disabled,
   breakdownLabel,
   breakdownHint,
@@ -469,6 +487,7 @@ function RouteCard({
   onBreakdown,
 }: {
   route: Route;
+  methodLabel: string;
   disabled: boolean;
   breakdownLabel: string;
   breakdownHint: string;
@@ -514,9 +533,12 @@ function RouteCard({
             {route.truck_name}
           </Typography>
           <Stack direction="row" sx={{ mt: 1, flexWrap: "wrap", gap: 0.75 }}>
+            <Chip size="small" variant="outlined" label={methodLabel} />
             <Chip size="small" color="secondary" label={`${route.bins_served} ${stopsLabel}`} />
             <Chip size="small" variant="outlined" label={`${route.planned_km} km`} />
-            <Chip size="small" variant="outlined" label={`${route.planned_fuel_l} L`} />
+            {route.planned_fuel_l > 0 && (
+              <Chip size="small" variant="outlined" label={`${route.planned_fuel_l} L`} />
+            )}
             <Chip size="small" variant="outlined" label={`${Math.round(route.demand_kg)} kg`} />
           </Stack>
         </Box>
@@ -563,36 +585,89 @@ function RouteCard({
   );
 }
 
-function TruckForm({ onCreated }: { onCreated: () => Promise<void> }) {
+function TruckForm({
+  methods,
+  methodLabel,
+  onCreated,
+}: {
+  methods: MethodSpec[];
+  methodLabel: (m: string) => string;
+  onCreated: () => Promise<void>;
+}) {
   const { t } = useI18n();
+  const [method, setMethod] = useState("truck");
   const [name, setName] = useState("");
   const [capacity, setCapacity] = useState("2000");
   const [fuel, setFuel] = useState("25");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const spec = methods.find((m) => m.method === method);
+  const motorized = spec?.motorized ?? true;
+
+  const pickMethod = (next: string) => {
+    setMethod(next);
+    const s = methods.find((m) => m.method === next);
+    if (s) {
+      setCapacity(String(s.default_capacity_kg));
+      setFuel(String(s.default_fuel_l_per_100km));
+    }
+  };
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    await api("/api/v1/trucks", {
-      method: "POST",
-      body: JSON.stringify({
-        name,
-        capacity_kg: Number(capacity),
-        fuel_l_per_100km: Number(fuel),
-        depot_lat: Number(lat),
-        depot_lng: Number(lng),
-      }),
-    });
-    setName("");
-    setLat("");
-    setLng("");
-    await onCreated();
+    const depotLat = Number(lat);
+    const depotLng = Number(lng);
+    if (!Number.isFinite(depotLat) || !Number.isFinite(depotLng)) {
+      setErr(`${t("depotLat")} / ${t("depotLng")}`);
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    try {
+      await api("/api/v1/trucks", {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          method,
+          capacity_kg: Number(capacity),
+          fuel_l_per_100km: motorized ? Number(fuel) : 0,
+          depot_lat: depotLat,
+          depot_lng: depotLng,
+        }),
+      });
+      setName("");
+      setLat("");
+      setLng("");
+      await onCreated();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <SectionCard collapsible title={t("addTruck")}>
       <Box component="form" onSubmit={(e) => void onSubmit(e)}>
         <Stack spacing={2}>
+          {err && <Alert severity="error">{err}</Alert>}
+          <TextField
+            size="small"
+            fullWidth
+            select
+            label={t("method")}
+            value={method}
+            onChange={(e) => pickMethod(e.target.value)}
+          >
+            {(methods.length > 0 ? methods : [{ method: "truck" } as MethodSpec]).map((m) => (
+              <MenuItem key={m.method} value={m.method}>
+                {methodLabel(m.method)}
+              </MenuItem>
+            ))}
+          </TextField>
           <TextField
             size="small"
             fullWidth
@@ -611,16 +686,18 @@ function TruckForm({ onCreated }: { onCreated: () => Promise<void> }) {
             required
             slotProps={{ htmlInput: { min: 1 } }}
           />
-          <TextField
-            size="small"
-            fullWidth
-            type="number"
-            label={t("fuelUse")}
-            value={fuel}
-            onChange={(e) => setFuel(e.target.value)}
-            required
-            slotProps={{ htmlInput: { min: 1, step: 0.1 } }}
-          />
+          {motorized && (
+            <TextField
+              size="small"
+              fullWidth
+              type="number"
+              label={t("fuelUse")}
+              value={fuel}
+              onChange={(e) => setFuel(e.target.value)}
+              required
+              slotProps={{ htmlInput: { min: 0, step: 0.1 } }}
+            />
+          )}
           <TextField
             size="small"
             fullWidth
@@ -639,7 +716,7 @@ function TruckForm({ onCreated }: { onCreated: () => Promise<void> }) {
             required
             slotProps={{ htmlInput: { inputMode: "decimal" } }}
           />
-          <Button variant="contained" color="primary" type="submit">
+          <Button variant="contained" color="primary" type="submit" disabled={busy}>
             {t("addTruck")}
           </Button>
         </Stack>

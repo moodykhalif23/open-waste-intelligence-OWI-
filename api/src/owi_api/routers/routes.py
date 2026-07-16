@@ -13,7 +13,8 @@ from owi_api.analytics.routing import DistanceMatrix, GeoPoint, Stop, TruckSpec,
 from owi_api.analytics.savings import Scenario, compute_savings
 from owi_api.config import settings
 from owi_api.db import get_session
-from owi_api.models.enums import OverflowRisk, RouteStatus, UserRole
+from owi_api.fleet import METHOD_SPECS, fleet_fuel_rate, resolve_capacity, resolve_fuel
+from owi_api.models.enums import CollectionMethod, OverflowRisk, RouteStatus, UserRole
 from owi_api.models.operations import BinHealthDaily, CollectionEvent
 from owi_api.models.registry import Bin
 from owi_api.models.route import Route, RouteStop, Truck
@@ -29,8 +30,10 @@ STAFF = (*PLANNERS, UserRole.COLLECTOR, UserRole.VIEWER)
 
 class TruckIn(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    capacity_kg: float = Field(gt=0)
-    fuel_l_per_100km: float = Field(default=25.0, gt=0)
+    method: CollectionMethod = CollectionMethod.TRUCK
+    # Omitted capacity/fuel fall back to the method's defaults.
+    capacity_kg: float | None = Field(default=None, gt=0)
+    fuel_l_per_100km: float | None = Field(default=None, ge=0)
     depot_lat: float = Field(ge=-90, le=90)
     depot_lng: float = Field(ge=-180, le=180)
 
@@ -38,8 +41,16 @@ class TruckIn(BaseModel):
 class TruckOut(BaseModel):
     id: uuid.UUID
     name: str
+    method: CollectionMethod
     capacity_kg: float
     fuel_l_per_100km: float
+
+
+class MethodOut(BaseModel):
+    method: CollectionMethod
+    motorized: bool
+    default_capacity_kg: float
+    default_fuel_l_per_100km: float
 
 
 class StopOut(BaseModel):
@@ -56,6 +67,7 @@ class RouteOut(BaseModel):
     id: uuid.UUID
     truck_id: uuid.UUID
     truck_name: str
+    method: CollectionMethod
     date: date
     status: RouteStatus
     planned_km: float
@@ -92,6 +104,31 @@ class SavingsOut(BaseModel):
     kes_saved: float | None
 
 
+@router.get("/collection-methods", response_model=list[MethodOut])
+def list_collection_methods(
+    requester: Annotated[TokenClaims, Depends(get_current_user)],
+) -> list[MethodOut]:
+    return [
+        MethodOut(
+            method=method,
+            motorized=spec.motorized,
+            default_capacity_kg=spec.default_capacity_kg,
+            default_fuel_l_per_100km=spec.default_fuel_l_per_100km,
+        )
+        for method, spec in METHOD_SPECS.items()
+    ]
+
+
+def _truck_out(truck: Truck) -> TruckOut:
+    return TruckOut(
+        id=truck.id,
+        name=truck.name,
+        method=truck.method,
+        capacity_kg=truck.capacity_kg,
+        fuel_l_per_100km=truck.fuel_l_per_100km,
+    )
+
+
 @router.post("/trucks", response_model=TruckOut, status_code=201)
 def create_truck(
     body: TruckIn,
@@ -101,18 +138,14 @@ def create_truck(
     truck = Truck(
         org_id=requester.org_id,
         name=body.name,
-        capacity_kg=body.capacity_kg,
-        fuel_l_per_100km=body.fuel_l_per_100km,
+        method=body.method,
+        capacity_kg=resolve_capacity(body.method, body.capacity_kg),
+        fuel_l_per_100km=resolve_fuel(body.method, body.fuel_l_per_100km),
         depot=f"SRID=4326;POINT({body.depot_lng} {body.depot_lat})",
     )
     session.add(truck)
     session.commit()
-    return TruckOut(
-        id=truck.id,
-        name=truck.name,
-        capacity_kg=truck.capacity_kg,
-        fuel_l_per_100km=truck.fuel_l_per_100km,
-    )
+    return _truck_out(truck)
 
 
 @router.get("/trucks", response_model=list[TruckOut])
@@ -125,12 +158,7 @@ def list_trucks(
             Truck.org_id == requester.org_id, Truck.deleted_at.is_(None), Truck.active.is_(True)
         )
     )
-    return [
-        TruckOut(
-            id=t.id, name=t.name, capacity_kg=t.capacity_kg, fuel_l_per_100km=t.fuel_l_per_100km
-        )
-        for t in trucks
-    ]
+    return [_truck_out(t) for t in trucks]
 
 
 def _bin_demand(session: Session, org_id: uuid.UUID, bin_ids: list[uuid.UUID]) -> list[Stop]:
@@ -156,7 +184,7 @@ def _bin_demand(session: Session, org_id: uuid.UUID, bin_ids: list[uuid.UUID]) -
     return stops
 
 
-def _route_out(session: Session, route: Route, truck_name: str) -> RouteOut:
+def _route_out(session: Session, route: Route, truck: Truck) -> RouteOut:
     stop_rows = session.scalars(
         select(RouteStop).where(RouteStop.route_id == route.id).order_by(RouteStop.seq)
     ).all()
@@ -181,7 +209,8 @@ def _route_out(session: Session, route: Route, truck_name: str) -> RouteOut:
     return RouteOut(
         id=route.id,
         truck_id=route.truck_id,
-        truck_name=truck_name,
+        truck_name=truck.name,
+        method=truck.method,
         date=route.date,
         status=route.status,
         planned_km=route.planned_km,
@@ -200,7 +229,7 @@ def list_routes(
 ) -> list[RouteOut]:
     day = on or datetime.now(UTC).date()
     rows = session.execute(
-        select(Route, Truck.name)
+        select(Route, Truck)
         .join(Truck, Truck.id == Route.truck_id)
         .where(
             Route.org_id == requester.org_id,
@@ -208,7 +237,7 @@ def list_routes(
             Route.date == day,
         )
     ).all()
-    return [_route_out(session, route, name) for route, name in rows]
+    return [_route_out(session, route, truck) for route, truck in rows]
 
 
 def _scenario(
@@ -242,7 +271,7 @@ def routes_savings(
     if not trucks:
         raise HTTPException(status_code=400, detail="no active trucks — add one first")
 
-    fuel_rate = sum(t.fuel_l_per_100km for t in trucks) / len(trucks)
+    fuel_rate = fleet_fuel_rate((t.method, t.fuel_l_per_100km) for t in trucks)
     depot_row = session.execute(
         select(func.ST_Y(Truck.depot), func.ST_X(Truck.depot)).where(Truck.id == trucks[0].id)
     ).one()
@@ -387,7 +416,7 @@ def _plan_and_persist(
         for seq, bid in enumerate(tr.stop_bin_ids):
             session.add(RouteStop(org_id=org_id, route_id=route.id, bin_id=uuid.UUID(bid), seq=seq))
         session.commit()
-        out.append(_route_out(session, route, truck.name))
+        out.append(_route_out(session, route, truck))
     return out
 
 

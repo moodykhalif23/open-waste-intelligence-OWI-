@@ -115,7 +115,8 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
                   {route.truck_name}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {route.planned_km} km · {route.stops.length} {tr("stopsShort")}
+                  {tr(`method_${route.method}` as StringKey)} · {route.planned_km} km ·{" "}
+                  {route.stops.length} {tr("stopsShort")}
                 </Typography>
               </Box>
               <Box sx={{ width: 54, height: 54, flexShrink: 0 }}>

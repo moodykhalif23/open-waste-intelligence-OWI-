@@ -235,8 +235,13 @@ def composition_public(
     cells.sort(key=lambda c: (c.ward, c.week))
     if format == "csv":
         flat = [
-            {"ward": c.ward, "week": c.week, "observations": c.observations,
-             "material": m.material, "share_pct": m.share_pct}
+            {
+                "ward": c.ward,
+                "week": c.week,
+                "observations": c.observations,
+                "material": m.material,
+                "share_pct": m.share_pct,
+            }
             for c in cells
             for m in c.materials
         ]

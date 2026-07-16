@@ -223,6 +223,7 @@ def main() -> None:
         served = sum(r["bins_served"] for r in routes)
         check("route covers collect-today bins", served >= 1, f"served={served}")
         check("route reports distance + fuel", all(r["planned_km"] >= 0 for r in routes))
+        check("route reports collection method", all(r.get("method") for r in routes))
     replan = client.post("/api/v1/routes/replan", headers=admin, json={})
     check("mid-day replan runs", replan.status_code == 200, replan.text[:150])
 
@@ -245,6 +246,37 @@ def main() -> None:
             "savings compares fixed sweep vs need-driven",
             s["baseline"]["bins"] >= s["optimized"]["bins"] and "fuel_l_saved" in s,
         )
+
+    methods = client.get("/api/v1/collection-methods", headers=admin)
+    check(
+        "collection-methods catalog served",
+        methods.status_code == 200
+        and any(m["method"] == "handcart" and not m["motorized"] for m in methods.json()),
+        methods.text[:150],
+    )
+    check(
+        "collection-methods require auth",
+        client.get("/api/v1/collection-methods").status_code == 401,
+    )
+    cart = client.post(
+        "/api/v1/trucks",
+        headers=admin,
+        json={
+            "name": "Handcart 1",
+            "method": "handcart",
+            "capacity_kg": 120,
+            "fuel_l_per_100km": 15,  # must be ignored: manual methods burn nothing
+            "depot_lat": -1.2921,
+            "depot_lng": 36.8219,
+        },
+    )
+    check(
+        "manual vehicle created with zero fuel",
+        cart.status_code == 201
+        and cart.json()["method"] == "handcart"
+        and cart.json()["fuel_l_per_100km"] == 0,
+        cart.text[:150],
+    )
 
     ev = client.post(
         "/api/v1/volunteers",
@@ -428,9 +460,7 @@ def main() -> None:
     )
     check(
         "api-key creation is admin-only",
-        client.post(
-            "/api/v1/admin/api-keys", headers=device_auth, json={"label": "x"}
-        ).status_code
+        client.post("/api/v1/admin/api-keys", headers=device_auth, json={"label": "x"}).status_code
         == 403,
     )
     made = client.post("/api/v1/admin/api-keys", headers=admin, json={"label": "researcher"})

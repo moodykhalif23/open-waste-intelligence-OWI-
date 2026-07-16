@@ -2,7 +2,7 @@
 COMPOSE := docker compose --profile prod
 ADMIN_PHONE ?= +254700000000
 
-.PHONY: help web up down restart logs ps smoke seed bootstrap dev build clean ml-setup ml-data ml-train ml-register
+.PHONY: help web up down restart logs ps smoke seed bootstrap dev build clean backup restore ml-setup ml-data ml-train ml-register
 
 help: ## Show available targets
 	@echo OpenWaste Intelligence — make targets:
@@ -16,6 +16,8 @@ help: ## Show available targets
 	@echo   smoke      Run the end-to-end smoke suite (needs PASSWORD=...)
 	@echo   seed       Load a realistic demo dataset (needs PASSWORD=...)
 	@echo   bootstrap  Create first org + admin (ORG, NAME, PHONE, PASSWORD)
+	@echo   backup     Run an immediate backup (db dump + image mirror)
+	@echo   restore    Restore the latest db dump (DESTRUCTIVE, needs CONFIRM=yes)
 	@echo   dev        Print source dev-server commands
 	@echo   clean      Stop and remove volumes (DESTROYS local data)
 
@@ -52,6 +54,14 @@ seed: ## Load a realistic demo dataset (idempotent; safe to re-run)
 
 bootstrap: ## Create first org + admin
 	$(COMPOSE) exec api uv run python -m owi_api.bootstrap --org "$(ORG)" --name "$(NAME)" --phone "$(PHONE)" --password "$(PASSWORD)"
+
+backup: ## Run an immediate backup (db dump + image mirror)
+	$(COMPOSE) exec db-backup /backup.sh
+	$(COMPOSE) exec minio-backup mc mirror --overwrite --remove --exclude "quarantine/*" src/owi-images /backups/owi-images
+
+restore: ## Restore the latest db dump (DESTRUCTIVE; requires CONFIRM=yes)
+	@if [ "$(CONFIRM)" != "yes" ]; then echo "Run: make restore CONFIRM=yes"; exit 1; fi
+	sh deploy/restore.sh --yes
 
 dev: ## Print source dev-server commands
 	@echo cd api  ^&^& uv run uvicorn owi_api.main:app --reload

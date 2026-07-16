@@ -75,6 +75,52 @@ Legend: effort **S**mall (≤½ day) / **M**edium (≤2 days) / **L**arge. Items
 - Deployment checklist (`docs/11-deployment.md`) and governance dataset-release checklist (`docs/08`) — unchecked
 - `.env` template in docs omits `OWI_S3_ACCESS_KEY`/`OWI_S3_SECRET_KEY` needed by `ml/config.py` for Label Studio sync (S, doc fix)
 
+## PROPOSED (2026-07-16, awaiting Brian's pick) — enterprise, intelligence, premium UI
+
+Researched proposals, not commitments. Three tracks; each item independently shippable.
+
+### Track A — Enterprise grade (ordered; A1–A4 are table stakes even at pilot scale)
+
+1. **Automated backups** (S): compose sidecar for nightly `pg_dump` + rotation, `mc mirror` for MinIO, `make restore` + documented restore drill. Today backups are one unchecked checklist line — a disk failure loses everything.
+2. **Audit log** (M): append-only `audit_log` (actor, org, action, entity, ip, ts) written from every security-relevant mutation (device-token minting is currently recordless), read-only admin page.
+3. **Retention engine** (M): docs/08 promises "operational images 24 months, aggregate-then-delete, configurable per org" — only the 72 h quarantine purge exists. Per-org retention in a new `org_settings` table + scheduler job. Governance is law; this is the largest law/code gap.
+4. **DSAR/erasure + export** (M): collector "do-not-use" photo flag (promised in docs/08, no DELETE route exists anywhere), admin erase/export-user-PII, org-exit full export. Kenya DPA 2019 exposure.
+5. **Tenant-isolation backstop** (M): Postgres RLS (`SET LOCAL owi.org_id`) or a centralized org-scoped query helper; public API aggregates currently ignore org entirely and hardcode Safi's name (`routers/public.py:142`).
+6. **org_settings + per-org config UI** (M): fuel price, retention, public-API delay, branding, module toggles — currently all process-global env vars.
+7. **MFA (TOTP) for admin/coordinator** (M) and **session hardening** (M): httpOnly cookie instead of localStorage JWT, short access + rotating refresh tokens.
+8. **Observability** (M): `/readyz` that pings DB/Redis/MinIO (healthz checks nothing), Prometheus metrics + RQ queue depth, structured JSON logs, optional Sentry/GlitchTip DSN.
+9. **Notifications service** (M): Africa's Talking SMS + WhatsApp Business adapters behind one interface — unblocks the M2-F5 overflow digest and dumping alerts.
+10. **Deploy hardening** (S): pin `minio:latest`/`label-studio:latest`/`osrm:latest` digests, split migrations into a one-shot service, document scale-out (Redis rate limiter, multi-worker).
+11. Later tier (when operator #2 / municipal contract lands): SSO/OIDC (L), webhooks (M), BI bulk export (M), usage metering + quotas (M), per-site scoped permissions (L), supply-chain CI (Trivy/pip-audit/SBOM) (S), API stability policy (S).
+
+### Track B — Intelligence (open-data training; classify past 0.80 with public data alone)
+
+1. **Training-data license policy** (S, first): shipped weights train only on CC BY 4.0 / CC0 / MIT; NC-licensed sets are internal-eval-only; unverifiable web scrapes excluded. Keeps the platform honestly Apache-2.0.
+2. **Multi-source downloader + taxonomy folding** (M): Garbage Dataset v2 (12,259 imgs, CC BY 4.0 — supplies ALL three missing classes: biological→organic, battery→e_waste, shoes+clothes→textile), TrashNet (MIT), TACO crops (CC BY 4.0), drinking-waste; per-source LICENSES manifest. `taxonomy_map.py` already has the name mappings.
+3. **pHash dedup before re-freezing the golden set** (S): public sets share images; without dedup the golden set leaks into training and the gate lies.
+4. **Modern recipe** (M): timm ConvNeXt-Tiny / EfficientNetV2-S (or DINOv2 ViT-S linear probe), class-balanced sampling, RandAugment+mixup, ~30 epochs — replaces the 3-epoch CPU MobileNetV3 baseline. Gate math: new classes need ~F1 ≥ 0.7 each to hold macro ≥ 0.80; organic is the risk class, textile/battery are easy.
+5. **Two-gate honesty** (S): Gate A = 0.80 on the 8-class public golden set (claimable now); Gate B = re-freeze a Safi-local golden set (~500–1,000 review-queue images) before claiming production accuracy.
+6. **Detect** (L): RT-DETRv2 fine-tune (HF `PekingU/rtdetr_v2_r50vd`, Apache-2.0) on TACO + ZeroWaste-f + UAVVaste; two-stage inference (waste detector → material classifier on crops). Ultralytics (AGPL) and RF-DETR XL (PML) stay excluded.
+7. **Fill** (M): ordinal-regression head (CORAL, 5 bands); reality check — no open 5-band dataset exists, so pretrain a 3-band proxy (Roboflow fill sets, Montevideo containers) and calibrate on local review-queue labels, which accrue fastest of all tasks.
+8. **Dumping** (M): scene-level classifier on spotgarbage-GINI (CC BY 4.0) + UrbanDumpSight (verify license) with hard negatives mined from normal route photos.
+9. **Active-learning loop** (M): uncertainty-sampled predictions → Label Studio queue, pseudo-label above threshold with human spot-check ratio, weekly retrain cadence — this is what makes "intelligent platform" true rather than aspirational.
+
+### Track C — Premium UI/UX (80/20 ordered; constraints honored: MUI+ECharts, flat, no gradients, 4px, Mimosa)
+
+1. **Self-hosted Inter Variable** in both apps (S): the themes specify weights 450/620/690/720 that static system fonts can't render — they silently snap today. One `@fontsource-variable/inter` import + weight remap + ECharts `textStyle.fontFamily`. Single highest-leverage change.
+2. **Tabular numerals everywhere** (S): exists in only 3 places in a metrics product; also fix `DataTable.tsx` cell `display:flex` silently breaking right-alignment of every numeric column.
+3. **Skeleton loading** (M): two primitives (StatRowSkeleton, TableSkeleton) replace all 16 text-only "Loading…" gates; zero layout shift.
+4. **Error states** (M): no dash page has a `.catch` — any API failure strands the page on "Loading…" forever. `useApi` hook + shared ErrorPanel with retry. (The field app already does this right.)
+5. **Motion baseline** (M): zero transitions exist today. 120 ms hover/press, 200 ms route-content entrance, 2 px gold LinearProgress as Suspense fallback (currently `null` → white flash), all under `prefers-reduced-motion`.
+6. **Focus-visible gold ring + Ctrl+K** (S): no focus styling anywhere (WCAG 2.4.7); NavSearch is already a jump-to surface — add the shortcut + `kbd` hint.
+7. **PWA install polish** (S): maskable 192/512 PNG icons (SVG-only today → broken Android icon), `env(safe-area-inset-bottom)` on the bottom nav, `beforeinstallprompt` banner.
+8. **Field ergonomics** (S): 48 px settings target, sticky Save above the bottom nav (one-hand reach), amber "N reports queued — will sync when online" bar so collectors trust the offline queue.
+9. **Detail sweep** (S): snap 6px/8px radius violations to 4 px, off-grid paddings to the 4/8 grid, warm-tinted thin scrollbars, `::selection` in mimosa cream, chart ResizeObserver, stale "emerald" comments.
+10. **Navigation context** (S): AppBar "Section / Page" breadcrumb (locate() already computes it), per-page `document.title`, theme-color meta.
+11. **Type-scale consolidation** (M): 14 ad-hoc font sizes → 7-step scale.
+12. **Login** (S): submit busy state (dead-feeling on slow networks today), Alert + subtle shake on failure, 8 px logo tiles → 4 px.
+13. **Open call for Brian**: the AppBar uses `backdropFilter: blur(8px)` (theme.ts:85) — technically glass; either bless it as the one exception or go solid `#ffffff`.
+
 ## E2E verification runbook (what "everything wired" means)
 
 1. `cd api && uv run ruff check && uv run ruff format --check && uv run mypy && uv run pytest` — all green

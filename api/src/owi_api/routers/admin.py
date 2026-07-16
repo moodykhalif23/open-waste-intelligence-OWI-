@@ -211,7 +211,7 @@ def org_export(
     payload = io.BytesIO()
     with zipfile.ZipFile(payload, "w", zipfile.ZIP_DEFLATED) as archive:
         for model in EXPORT_MODELS:
-            name = model.__tablename__  # type: ignore[attr-defined]
+            name = model.__tablename__
             archive.writestr(f"{name}.csv", _table_csv(session, model, requester.org_id))
     record_audit(
         session,

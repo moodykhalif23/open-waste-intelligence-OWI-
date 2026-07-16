@@ -1,6 +1,6 @@
 # Build Status — single source of truth
 
-**This is the only place build progress is tracked.** Other docs describe the product and its plans; when something ships, it gets recorded here and removed from any checklist elsewhere. Last updated: **2026-07-13**.
+**This is the only place build progress is tracked.** Other docs describe the product and its plans; when something ships, it gets recorded here and removed from any checklist elsewhere. The open-work backlog lives in `docs/FINISH_PLAN.md` (delete it when empty). Last updated: **2026-07-16**.
 
 ## Feature completeness vs docs (honest audit)
 
@@ -21,6 +21,16 @@ Platform foundation (ingestion, privacy gate, image-quality gate, auth + RBAC, b
 These are tracked so we complete them **one module at a time, fully** — not half-built across the board. **All eight modules plus the Open Data API are now built.** What remains per module is data-gated calibration and governance follow-ups (real Safi sorting weights, external carbon review, litter-density model + public cleanliness page, per-area publish opt-in) — no unbuilt core features.
 
 ## Done
+
+### Configurable collection methods — manual collection is first-class (2026-07-16)
+
+- **Vehicles now carry a `method`**: truck / tricycle (tuk-tuk) / motorbike / bicycle / handcart / on-foot (migration 0013, enum `collection_method`; existing rows default to `truck`). The CVRP planner already only cared about capacity, so every method routes correctly; **non-motorized methods are forced to 0 L/100km** at creation and the savings report averages fuel over motorized vehicles only — no more phantom fuel litres for a handcart.
+- **Adding a new method is one enum member + one spec line** (`api/src/owi_api/fleet.py`): defaults (capacity, fuel, motorized) are served by `GET /api/v1/collection-methods` (authenticated), so both frontends render whatever the backend defines — 6 unit tests.
+- Dashboard Routes page: method selector on the (renamed) "Add vehicle" form pre-fills per-method defaults and hides the fuel field for manual methods; fleet table + route cards show the method (fuel chip hidden when 0); form got error/busy handling and depot NaN validation. Field app driver view shows the method under the vehicle name. EN + SW labels (mkokoteni, tuktuk, pikipiki…).
+- Manual collection *without* routes was already live (`POST /collections` from the app's Collect fallback + dash mark-collected) — unchanged, now documented.
+- Seed fleet is method-typed (2 trucks, tuk-tuk as `tricycle`, new `handcart` crew); smoke suite gained 4 checks (catalog served + auth-gated, manual vehicle forced to zero fuel, routes report their method).
+- Ops fixes: compose now forwards optional `OWI_OSRM_URL` / `OWI_FUEL_PRICE_KES_PER_L` / public-API tuning from `.env` into containers (documented flows previously did nothing in prod) and every service has `restart: unless-stopped`.
+- Full-repo audit written to `docs/FINISH_PLAN.md` — prioritized backlog of every remaining defect/gap.
 
 ### UI/UX overhaul — Material UI + emerald theme (2026-07-13)
 
@@ -44,7 +54,7 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 
 - Monorepo scaffolding, CI (ruff, mypy strict, pytest × app/dash tsc, eslint, build), uv tooling
 - Data model v1 (migrations 0001–0002): organizations, users, sites, bins, observations — `org_id` on every table, soft deletes, UTC, PostGIS points, content-hash dedupe constraint
-- Ingestion service: batch upload → dedupe → privacy gate (person blur before storage, quarantine of originals) → object store (MinIO/local) → inference queue (Redis + RQ, placeholder job)
+- Ingestion service: batch upload → dedupe → privacy gate (person blur before storage, quarantine of originals) → object store (MinIO/local) → inference queue (Redis + RQ; live worker inference since 2026-07-13)
 - Bin registry: sites + bins CRUD, unguessable QR slugs, printable QR SVG endpoint, collector by-QR lookup
 - Registry-based location: observations accept GPS **or** a bin reference; QR-only reports get the bin's registered location
 - Auth: argon2 passwords, JWT with role claims, long-lived collector device tokens, per-user `token_version` revocation, bootstrap CLI (`python -m owi_api.bootstrap`)
@@ -180,12 +190,11 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 
 - **Phone test of the PWA spike** (Android 10 / 2 GB) — validates the PWA-over-Flutter decision; the project's #1 risk. Owner: Brian.
 
-## Next up (rough order)
+## Next up
 
-1. Open Data API (Phase 3): aggregates-only public endpoints, small-cell suppression (< 3 bins / < 20 obs), API keys, 7-day delay, CC-BY attribution — the last module
-2. Fine-tune on real Safi data once Phase 0 collection runs; push the baseline past the 0.80 golden gate
-2. Privacy-gate recall eval: dedicated person-containing test set (target recall ≥ 0.99) once real field photos exist
-3. M1 composition views + M5 recycling value on the dashboard (arrive with the classification model)
-4. Grant report hardening: WeasyPrint server-side PDF; fold in composition (M1) + carbon (M7) sections once those land
+The full prioritized backlog (wiring defects → product hygiene → unbuilt module features → data-gated
+items) lives in **`docs/FINISH_PLAN.md`**. Top of that list: make the seeded demo produce predictions
+(artifact upload + inference backfill), fix stale collect-today selection + single-depot planning,
+then fine-tune the classifier past the 0.80 golden gate on real Safi data.
 
 With all six Phase 0 engineering tasks delivered, the remaining Phase 0 work is operational, not code: partner kickoff, bin registry data entry, collector training, capture-rate tracking (gate G0).

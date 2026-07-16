@@ -158,8 +158,11 @@ def main() -> None:
         sys.exit(1)
     admin = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
-    # --- Collector + device token (get-or-create by fixed phone) ---
-    seed_phone = "+254711000777"
+    # --- Collector + device token (get-or-create by org-derived phone) ---
+    # Phones are globally unique; deriving from the org keeps re-runs idempotent
+    # and lets multiple orgs seed on one database without colliding.
+    org_id = client.get("/api/v1/auth/me", headers=admin).json()["org_id"]
+    seed_phone = f"+2547{int(org_id.replace('-', ''), 16) % 10**8:08d}"
     resp = client.post(
         "/api/v1/users",
         headers=admin,

@@ -6,7 +6,8 @@
 Organization ─┬─ User (role: admin | coordinator | collector | viewer)
               ├─ Site (estate, school, market, business, public area)
               │    └─ Bin (id, QR code, geo point, volume_liters, type, reference_photo)
-              ├─ Truck (capacity, fuel type, consumption baseline)
+              ├─ Vehicle "Truck" (method: truck|tricycle|motorbike|bicycle|handcart|on_foot,
+              │                   capacity_kg, fuel_l_per_100km — 0 for manual methods, depot)
               └─ MaterialPriceTable (material → KES/kg, effective_date)
 
 Observation  (the atomic record — one photo event)

@@ -1,11 +1,12 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from owi_api.audit import client_ip, record_audit
 from owi_api.db import get_session
 from owi_api.models.enums import UserRole
 from owi_api.models.registry import User
@@ -33,6 +34,7 @@ class UserOut(BaseModel):
 @router.post("", response_model=UserOut, status_code=201)
 def create_user(
     body: UserCreate,
+    request: Request,
     session: Annotated[Session, Depends(get_session)],
     requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN, UserRole.COORDINATOR)],
 ) -> UserOut:
@@ -47,6 +49,17 @@ def create_user(
         password_hash=hash_password(body.password) if body.password else None,
     )
     session.add(user)
+    session.flush()
+    record_audit(
+        session,
+        org_id=requester.org_id,
+        actor_user_id=requester.user_id,
+        action="user.create",
+        entity="user",
+        entity_id=user.id,
+        ip=client_ip(request),
+        detail={"role": body.role.value},
+    )
     session.commit()
     return UserOut(id=user.id, name=user.name, phone=user.phone, role=user.role)
 
@@ -54,6 +67,7 @@ def create_user(
 @router.post("/{user_id}/revoke-tokens", status_code=204)
 def revoke_tokens(
     user_id: uuid.UUID,
+    request: Request,
     session: Annotated[Session, Depends(get_session)],
     requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN, UserRole.COORDINATOR)],
 ) -> None:
@@ -62,6 +76,15 @@ def revoke_tokens(
     if user is None or user.org_id != requester.org_id:
         raise HTTPException(status_code=404, detail="user not found")
     user.token_version += 1
+    record_audit(
+        session,
+        org_id=requester.org_id,
+        actor_user_id=requester.user_id,
+        action="user.revoke_tokens",
+        entity="user",
+        entity_id=user.id,
+        ip=client_ip(request),
+    )
     session.commit()
 
 

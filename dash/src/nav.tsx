@@ -16,6 +16,7 @@ import FactCheckOutlined from "@mui/icons-material/FactCheckOutlined";
 import VolunteerActivismOutlined from "@mui/icons-material/VolunteerActivismOutlined";
 import ManageAccountsOutlined from "@mui/icons-material/ManageAccountsOutlined";
 import PublicOutlined from "@mui/icons-material/PublicOutlined";
+import HistoryOutlined from "@mui/icons-material/HistoryOutlined";
 import type { StringKey } from "./i18n";
 
 // A leaf destination. `end` marks index-style matching (exact path only).
@@ -70,6 +71,7 @@ export const NAV: NavEntry[] = [
     children: [
       { path: "/admin/users", key: "users", icon: <ManageAccountsOutlined fontSize="small" /> },
       { path: "/admin/open-data", key: "openData", icon: <PublicOutlined fontSize="small" /> },
+      { path: "/admin/audit", key: "audit", icon: <HistoryOutlined fontSize="small" /> },
     ],
   },
 ];

@@ -2,11 +2,12 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
+from owi_api.audit import client_ip, record_audit
 from owi_api.config import settings
 from owi_api.db import get_session
 from owi_api.ingestion.storage import ObjectStore, get_store
@@ -55,6 +56,7 @@ def _to_out(m: MLModel) -> ModelOut:
 @router.post("", response_model=ModelOut, status_code=201)
 def register_model(
     body: ModelIn,
+    request: Request,
     requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN)],
     session: Annotated[Session, Depends(get_session)],
 ) -> ModelOut:
@@ -80,6 +82,17 @@ def register_model(
             .values(active=False)
         )
         model.active = True
+    session.flush()
+    record_audit(
+        session,
+        org_id=requester.org_id,
+        actor_user_id=requester.user_id,
+        action="model.register",
+        entity="ml_model",
+        entity_id=model.id,
+        ip=client_ip(request),
+        detail={"task": body.task.value, "version": body.version, "activated": body.activate},
+    )
     session.commit()
     return _to_out(model)
 

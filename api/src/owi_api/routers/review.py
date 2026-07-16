@@ -2,12 +2,13 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from owi_api.analytics.review import apply_review
+from owi_api.audit import client_ip, record_audit
 from owi_api.db import get_session
 from owi_api.models.enums import PredictionTask, ReviewStatus, UserRole
 from owi_api.models.prediction import Prediction
@@ -80,6 +81,7 @@ def review_queue(
 def review_prediction(
     prediction_id: uuid.UUID,
     body: ReviewIn,
+    request: Request,
     claims: Annotated[TokenClaims, require_roles(*REVIEWERS)],
     session: Annotated[Session, Depends(get_session)],
 ) -> PredictionOut:
@@ -95,6 +97,16 @@ def review_prediction(
     prediction.review_status = outcome.status
     prediction.corrected_payload = outcome.corrected_payload
     prediction.reviewed_by = claims.user_id
+    record_audit(
+        session,
+        org_id=claims.org_id,
+        actor_user_id=claims.user_id,
+        action="prediction.review",
+        entity="prediction",
+        entity_id=prediction.id,
+        ip=client_ip(request),
+        detail={"action": body.action},
+    )
     session.commit()
     return PredictionOut(
         id=prediction.id,

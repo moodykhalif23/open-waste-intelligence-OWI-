@@ -13,7 +13,7 @@ from collections import Counter, defaultdict
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -28,6 +28,7 @@ from owi_api.analytics.public_data import (
     is_suppressed,
     iso_week,
 )
+from owi_api.audit import client_ip, record_audit
 from owi_api.config import settings
 from owi_api.db import get_session
 from owi_api.models.api_key import ApiKey
@@ -414,6 +415,7 @@ def list_keys(
 @keys_router.post("", response_model=KeyCreatedOut)
 def create_key(
     body: KeyCreateRequest,
+    request: Request,
     requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN)],
     session: Annotated[Session, Depends(get_session)],
 ) -> KeyCreatedOut:
@@ -426,6 +428,17 @@ def create_key(
         created_by=requester.user_id,
     )
     session.add(key)
+    session.flush()
+    record_audit(
+        session,
+        org_id=requester.org_id,
+        actor_user_id=requester.user_id,
+        action="api_key.create",
+        entity="api_key",
+        entity_id=key.id,
+        ip=client_ip(request),
+        detail={"label": body.label, "prefix": prefix},
+    )
     session.commit()
     session.refresh(key)
     return KeyCreatedOut(
@@ -442,6 +455,7 @@ def create_key(
 @keys_router.post("/{key_id}/revoke", response_model=KeyOut)
 def revoke_key(
     key_id: uuid.UUID,
+    request: Request,
     requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN)],
     session: Annotated[Session, Depends(get_session)],
 ) -> ApiKey:
@@ -450,5 +464,15 @@ def revoke_key(
         raise HTTPException(status_code=404, detail="key not found")
     if key.revoked_at is None:
         key.revoked_at = datetime.now(UTC)
+        record_audit(
+            session,
+            org_id=requester.org_id,
+            actor_user_id=requester.user_id,
+            action="api_key.revoke",
+            entity="api_key",
+            entity_id=key.id,
+            ip=client_ip(request),
+            detail={"prefix": key.key_prefix},
+        )
         session.commit()
     return key

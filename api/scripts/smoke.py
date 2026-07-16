@@ -499,6 +499,20 @@ def main() -> None:
         client.get("/api/v1/public/collections", headers=key_headers).status_code == 401,
     )
 
+    audit = client.get("/api/v1/admin/audit", headers=admin)
+    audit_actions = {row["action"] for row in audit.json()} if audit.status_code == 200 else set()
+    check(
+        "audit trail records admin actions",
+        audit.status_code == 200
+        and {"user.create", "device_token.issue", "api_key.create", "api_key.revoke"}
+        <= audit_actions,
+        str(sorted(audit_actions))[:150],
+    )
+    check(
+        "audit trail is admin-only",
+        client.get("/api/v1/admin/audit", headers=device_auth).status_code == 403,
+    )
+
     revoke = client.post(f"/api/v1/users/{collector.json()['id']}/revoke-tokens", headers=admin)
     check("revoke tokens", revoke.status_code == 204)
     check(

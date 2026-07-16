@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from owi_api.audit import client_ip, record_audit
 from owi_api.config import settings
 from owi_api.db import get_session
 from owi_api.models.enums import UserRole
@@ -101,6 +102,7 @@ def login(
 @router.post("/device-tokens", response_model=TokenResponse)
 def issue_device_token(
     body: DeviceTokenRequest,
+    request: Request,
     session: Annotated[Session, Depends(get_session)],
     requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN, UserRole.COORDINATOR)],
 ) -> TokenResponse:
@@ -110,6 +112,17 @@ def issue_device_token(
 
     claims = TokenClaims(user.id, user.org_id, user.role, user.token_version)
     token = create_token(claims, timedelta(days=settings.device_token_ttl_days))
+    record_audit(
+        session,
+        org_id=requester.org_id,
+        actor_user_id=requester.user_id,
+        action="device_token.issue",
+        entity="user",
+        entity_id=user.id,
+        ip=client_ip(request),
+        detail={"ttl_days": settings.device_token_ttl_days},
+    )
+    session.commit()
     return TokenResponse(access_token=token, role=user.role)
 
 

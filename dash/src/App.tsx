@@ -24,6 +24,7 @@ const Review = lazy(() => import("./pages/Review"));
 const Volunteers = lazy(() => import("./pages/Volunteers"));
 const Users = lazy(() => import("./pages/Users"));
 const OpenData = lazy(() => import("./pages/OpenData"));
+const Audit = lazy(() => import("./pages/Audit"));
 
 const kids = (path: string) => NAV.find((e) => e.path === path)!.children!;
 
@@ -91,6 +92,7 @@ export default function App() {
                     <Route index element={<Navigate to="users" replace />} />
                     <Route path="users" element={<Users />} />
                     <Route path="open-data" element={<OpenData />} />
+                    <Route path="audit" element={<Audit />} />
                   </Route>
 
                   {Object.entries(LEGACY_REDIRECTS).map(([from, to]) => (

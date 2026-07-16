@@ -19,7 +19,7 @@ help: ## Show available targets
 	@echo   dev        Print source dev-server commands
 	@echo   clean      Stop and remove volumes (DESTROYS local data)
 
-web: ## Build + start the whole platform
+web:
 	$(COMPOSE) up -d --build
 	@echo dashboard    https://localhost:8443
 	@echo field app    https://localhost:8444

@@ -1,4 +1,7 @@
 import "@fontsource-variable/inter";
+import "@fortawesome/fontawesome-free/css/fontawesome.min.css";
+import "@fortawesome/fontawesome-free/css/solid.min.css";
+import "@fortawesome/fontawesome-free/css/brands.min.css";
 import "./style.css";
 
 // One motion pattern for the whole page: sections rise 8px and fade in, once.

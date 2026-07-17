@@ -1,4 +1,4 @@
-# 11 — Deployment
+# Deployment
 
 One `docker compose` runs the whole platform: Postgres+PostGIS, Redis, MinIO, Label Studio, the API, the inference worker, the maintenance scheduler, and a Caddy web server that serves both frontends and reverse-proxies `/api`. Target: a single VPS (≤ USD 50/month) or an on-prem mini-PC.
 
@@ -56,7 +56,7 @@ LAN mode (no domains): open `https://<server-ip>:8443` (dashboard) and `https://
 
 - [ ] `.env` secrets are unique and random — the API **refuses to boot** in production with dev defaults
 - [ ] Firewall: expose only 80/443 (and 8080 if labelers are remote); keep 5432/6379/9000 internal
-- [x] Backups are automated in compose: `db-backup` (nightly rotated pg_dump → `var/backups/postgres`, keeps 14 daily / 8 weekly / 6 monthly) and `minio-backup` (daily image mirror → `var/backups/minio`, quarantine excluded, deletions propagate). `make backup` runs one now; `make restore CONFIRM=yes` restores the newest dump. Copy `var/backups/` off-box (rsync/rclone) — an off-site copy must honor the same erasure rules
+- [X] Backups are automated in compose: `db-backup` (nightly rotated pg_dump → `var/backups/postgres`, keeps 14 daily / 8 weekly / 6 monthly) and `minio-backup` (daily image mirror → `var/backups/minio`, quarantine excluded, deletions propagate). `make backup` runs one now; `make restore CONFIRM=yes` restores the newest dump. Copy `var/backups/` off-box (rsync/rclone) — an off-site copy must honor the same erasure rules
 - [ ] Run one restore drill per phase (`make backup && make restore CONFIRM=yes`, then the smoke suite)
 - [ ] Provision collector phones: dashboard login → issue device tokens (or `POST /api/v1/auth/device-tokens`)
 - [ ] After any deploy: `docker compose exec api uv run python scripts/smoke.py http://localhost:8000 <admin-phone> <password>` must print ALL PASS

@@ -617,6 +617,13 @@ def main() -> None:
         org_zip.headers.get("content-type", ""),
     )
 
+    backfill = client.post("/api/v1/admin/inference/backfill", headers=admin)
+    check(
+        "inference backfill enqueues unscored observations",
+        backfill.status_code == 200 and backfill.json()["enqueued"] >= 0,
+        backfill.text[:100],
+    )
+
     mfa_phone = f"+2547{uuid.uuid4().int % 10**8:08d}"
     mfa_pass = "mfa-smoke-password"
     client.post(

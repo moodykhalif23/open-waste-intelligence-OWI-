@@ -47,14 +47,22 @@ _SOURCE_TO_OWI = {
     "organic": "organic",
     "food": "organic",
     "garden": "organic",
+    "biological": "organic",
     # e-waste
     "e-waste": "e_waste",
     "battery": "e_waste",
+    "batteries": "e_waste",
     "electronics": "e_waste",
     # textile
     "textile": "textile",
     "cloth": "textile",
     "clothing": "textile",
+    "clothes": "textile",
+    "shoes": "textile",
+    # glass colour splits (Kaggle-style sets)
+    "green-glass": "glass",
+    "brown-glass": "glass",
+    "white-glass": "glass",
     "trash": "other_mixed",
     "litter": "other_mixed",
     "unlabeled litter": "other_mixed",

@@ -168,6 +168,58 @@ def purge_images(
     return {"purged": purged}
 
 
+@router.post("/inference/backfill")
+def backfill_inference(
+    request: Request,
+    requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN)],
+    session: Annotated[Session, Depends(get_session)],
+) -> dict[str, int]:
+    """Enqueue scoring for observations the active models haven't seen — makes
+    activating a model retroactive instead of new-ingests-only."""
+    from owi_api.worker.queue import enqueue_inference
+
+    model_ids = list(
+        session.scalars(
+            select(MLModel.id).where(
+                MLModel.org_id == requester.org_id,
+                MLModel.active.is_(True),
+                MLModel.deleted_at.is_(None),
+                MLModel.artifact_ref.is_not(None),
+            )
+        )
+    )
+    if not model_ids:
+        return {"enqueued": 0}
+
+    covered = (
+        select(Prediction.observation_id)
+        .where(Prediction.model_id.in_(model_ids))
+        .group_by(Prediction.observation_id)
+        .having(func.count(func.distinct(Prediction.model_id)) == len(model_ids))
+    )
+    pending = session.scalars(
+        select(Observation.id).where(
+            Observation.org_id == requester.org_id,
+            Observation.deleted_at.is_(None),
+            Observation.image_deleted_at.is_(None),
+            Observation.id.not_in(covered),
+        )
+    ).all()
+    for observation_id in pending:
+        enqueue_inference(observation_id)
+    record_audit(
+        session,
+        org_id=requester.org_id,
+        actor_user_id=requester.user_id,
+        action="inference.backfill",
+        entity="observation",
+        ip=client_ip(request),
+        detail={"enqueued": len(pending)},
+    )
+    session.commit()
+    return {"enqueued": len(pending)}
+
+
 class NotificationOut(BaseModel):
     id: uuid.UUID
     created_at: datetime

@@ -74,11 +74,11 @@ clean: ## Stop and remove volumes (DESTROYS local data)
 ml-setup: ## Install the ML training stack (PyTorch etc.)
 	cd ml && uv sync --group train
 
-ml-data: ## Download public training data (TrashNet)
+ml-data: ## Download licensed public training data (TrashNet + Garbage Dataset v2, deduped)
 	cd ml && uv run --group train python -m owi_ml.data.download
 
-ml-train: ## Train the T2 material classifier on downloaded data
-	cd ml && uv run --group train python -m owi_ml.train.classify --data datasets/trashnet
+ml-train: ## Train the T2 material classifier on the merged corpus
+	cd ml && uv run --group train python -m owi_ml.train.classify --data datasets/merged
 
 ml-register: ## Publish + activate the trained model (API_URL, TOKEN, VERSION required)
 	cd ml && uv run python -m owi_ml.registry --api $(API_URL) --token $(TOKEN) \

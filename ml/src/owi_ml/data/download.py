@@ -1,36 +1,46 @@
-"""Pull public training data (TrashNet, resized) into OWI class folders:
+"""Pull licensed public training data into OWI class folders:
 
     python -m owi_ml.data.download
 
-Public data pretrains generic material appearance; the local Safi export fine-tunes.
-TrashNet has no organic/e-waste/textile classes — those come from local data later.
+Manifest-driven: every source declares its verified license and a `shippable` flag —
+the enforcement point for ml/DATA_LICENSES.md. Non-shippable sources never reach the
+training tree. Fetchers write <out>/<owi_class>/<source>_<n>.jpg (source prefix keeps
+filenames collision-free and the hash-based split stable), then the tree is deduped.
 """
 
 import io
+import json
 import sys
 import time
 import urllib.error
 import urllib.request
 import zipfile
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
-ZIP_URL = "https://github.com/garythung/trashnet/raw/master/data/dataset-resized.zip"
-TRASHNET_TO_OWI = {
-    "cardboard": "paper",
-    "glass": "glass",
-    "metal": "metal",
-    "paper": "paper",
-    "plastic": "plastic",
-    "trash": "other_mixed",
-}
-OUT_DIR = Path("datasets/trashnet")
+from owi_ml.data.dedupe import dedupe_tree
+from owi_ml.data.taxonomy_map import map_category
+
+OUT_DIR = Path("datasets/merged")
 MAX_ATTEMPTS = 5
+
+TRASHNET_ZIP = "https://github.com/garythung/trashnet/raw/master/data/dataset-resized.zip"
+GDV2_KAGGLE = "sumn2u/garbage-classification-v2"
+
+
+@dataclass(frozen=True)
+class Source:
+    key: str
+    license: str
+    shippable: bool
+    fetch: Callable[[Path, str], dict[str, int]]
 
 
 def _download(url: str) -> bytes:
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
-            with urllib.request.urlopen(url, timeout=120) as response:
+            with urllib.request.urlopen(url, timeout=180) as response:
                 return bytes(response.read())
         except (urllib.error.URLError, TimeoutError) as exc:
             if attempt == MAX_ATTEMPTS:
@@ -41,27 +51,69 @@ def _download(url: str) -> bytes:
     raise RuntimeError("unreachable")
 
 
-def main() -> None:
-    print("fetching TrashNet (resized) ...")
-    archive = zipfile.ZipFile(io.BytesIO(_download(ZIP_URL)))
+def _save(out: Path, owi: str, key: str, counts: dict[str, int], data: bytes) -> None:
+    folder = out / owi
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / f"{key}_{owi}_{counts.get(owi, 0)}.jpg").write_bytes(data)
+    counts[owi] = counts.get(owi, 0) + 1
+
+
+def fetch_trashnet(out: Path, key: str) -> dict[str, int]:
+    archive = zipfile.ZipFile(io.BytesIO(_download(TRASHNET_ZIP)))
     counts: dict[str, int] = {}
-    for member in archive.namelist():
-        parts = member.lower().split("/")
+    for member in sorted(archive.namelist()):
         if not member.lower().endswith((".jpg", ".jpeg", ".png")):
             continue
-        source_class = next((p for p in parts if p in TRASHNET_TO_OWI), None)
-        if source_class is None:
+        parts = member.lower().split("/")
+        source_class = next((p for p in parts if map_category(p) != "other_mixed"), None)
+        owi = map_category(source_class) if source_class else "other_mixed"
+        if "trash" in parts:  # TrashNet's mixed class folds honestly to other_mixed
+            owi = "other_mixed"
+        elif source_class is None:
             continue
-        owi = TRASHNET_TO_OWI[source_class]
-        folder = OUT_DIR / owi
-        folder.mkdir(parents=True, exist_ok=True)
-        (folder / f"{owi}_{counts.get(owi, 0)}.jpg").write_bytes(archive.read(member))
-        counts[owi] = counts.get(owi, 0) + 1
+        _save(out, owi, key, counts, archive.read(member))
+    return counts
 
-    total = sum(counts.values())
-    print(f"saved {total} images to {OUT_DIR}: {counts}")
-    if total == 0:
-        sys.exit("no images extracted")
+
+def fetch_gdv2(out: Path, key: str) -> dict[str, int]:
+    import kagglehub
+
+    root = Path(kagglehub.dataset_download(GDV2_KAGGLE))
+    counts: dict[str, int] = {}
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in (".jpg", ".jpeg", ".png"):
+            continue
+        owi = map_category(path.parent.name)
+        _save(out, owi, key, counts, path.read_bytes())
+    return counts
+
+
+SOURCES = [
+    Source("trashnet", "MIT", True, fetch_trashnet),
+    Source("gdv2", "CC BY 4.0", True, fetch_gdv2),
+]
+
+
+def main() -> None:
+    totals: dict[str, int] = {}
+    manifest: dict[str, str] = {}
+    for source in SOURCES:
+        if not source.shippable:
+            print(f"skipping {source.key}: {source.license} is not shippable (eval-only)")
+            continue
+        print(f"fetching {source.key} ({source.license}) ...")
+        counts = source.fetch(OUT_DIR, source.key)
+        manifest[source.key] = source.license
+        print(f"  {source.key}: {sum(counts.values())} images {counts}")
+        for owi, n in counts.items():
+            totals[owi] = totals.get(owi, 0) + n
+
+    kept, removed = dedupe_tree(OUT_DIR)
+    (OUT_DIR / "SOURCES.json").write_text(json.dumps(manifest, indent=2))
+    print(f"dedupe: kept {kept}, removed {removed}")
+    print(f"merged corpus at {OUT_DIR}: {totals}")
+    if kept == 0:
+        sys.exit("no images downloaded")
 
 
 if __name__ == "__main__":

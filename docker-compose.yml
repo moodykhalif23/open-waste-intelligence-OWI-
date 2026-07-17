@@ -10,7 +10,9 @@ x-owi-env: &owi-env
   OWI_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
   OWI_JWT_SECRET: ${OWI_JWT_SECRET}
   # Optional tuning from .env — without these lines the containers never see them.
-  OWI_OSRM_URL: ${OWI_OSRM_URL:-}
+  # Road distances are the default; the API falls back to straight-line while
+  # OSRM prepares its extract on first boot.
+  OWI_OSRM_URL: ${OWI_OSRM_URL:-http://osrm:5000}
   OWI_FUEL_PRICE_KES_PER_L: ${OWI_FUEL_PRICE_KES_PER_L:-0}
   OWI_PUBLIC_API_DELAY_DAYS: ${OWI_PUBLIC_API_DELAY_DAYS:-7}
   OWI_PUBLIC_API_RATE_PER_MIN: ${OWI_PUBLIC_API_RATE_PER_MIN:-60}
@@ -184,18 +186,48 @@ services:
       minio:
         condition: service_healthy
 
-  # Optional road-distance engine. Enable with the "osrm" profile after preparing an
-  # OSM extract (see docs/11-deployment.md), then set OWI_OSRM_URL=http://osrm:5000.
-  # Without it the routing engine uses straight-line distances.
+  osrm-download:
+    image: curlimages/curl:8.11.1
+    profiles: [prod]
+    restart: "no"
+    command: >
+      sh -c "test -f /data/region.osm.pbf ||
+      curl -L --fail -o /data/region.osm.pbf
+      ${OSRM_PBF_URL:-https://download.geofabrik.de/africa/kenya-latest.osm.pbf}"
+    volumes:
+      - ./var/osrm:/data
+
+  osrm-prepare:
+    image: osrm/osrm-backend:v5.25.0
+    profiles: [prod]
+    restart: "no"
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - >
+        test -f /data/.prepared ||
+        (osrm-extract -p /opt/car.lua /data/region.osm.pbf &&
+        osrm-partition /data/region.osrm &&
+        osrm-customize /data/region.osrm &&
+        touch /data/.prepared)
+    volumes:
+      - ./var/osrm:/data
+    depends_on:
+      osrm-download:
+        condition: service_completed_successfully
+
   osrm:
-    image: osrm/osrm-backend:v5.27.1
-    profiles: [osrm]
+    image: osrm/osrm-backend:v5.25.0
+    profiles: [prod]
     restart: unless-stopped
     command: osrm-routed --algorithm mld /data/region.osrm
     ports:
       - "5000:5000"
     volumes:
       - ./var/osrm:/data
+    depends_on:
+      osrm-prepare:
+        condition: service_completed_successfully
 
   web:
     build:
@@ -206,7 +238,7 @@ services:
     environment:
       DASH_DOMAIN: ${DASH_DOMAIN:-localhost:8443}
       APP_DOMAIN: ${APP_DOMAIN:-localhost:8444}
-      LANDING_DOMAIN: ${LANDING_DOMAIN:-localhost:8085}
+      LANDING_DOMAIN: ${LANDING_DOMAIN:-http://localhost:8085}
     ports:
       - "80:80"
       - "443:443"

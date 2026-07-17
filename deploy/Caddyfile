@@ -1,6 +1,8 @@
 # Real domains via LANDING_DOMAIN / DASH_DOMAIN / APP_DOMAIN get automatic
-# Let's Encrypt TLS; the defaults serve self-signed HTTPS on local ports.
-{$LANDING_DOMAIN:localhost:8085} {
+# Let's Encrypt TLS; dash/app default to self-signed HTTPS (PWA/camera need a
+# secure context) while the landing page defaults to plain HTTP locally so
+# typing localhost:8085 just works — set LANDING_DOMAIN for real TLS.
+{$LANDING_DOMAIN:http://localhost:8085} {
 	encode gzip
 	root * /srv/site
 	file_server

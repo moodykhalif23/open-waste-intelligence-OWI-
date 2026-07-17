@@ -61,22 +61,24 @@ LAN mode (no domains): open `https://<server-ip>:8443` (dashboard) and `https://
 - [ ] Provision collector phones: dashboard login → issue device tokens (or `POST /api/v1/auth/device-tokens`)
 - [ ] After any deploy: `docker compose exec api uv run python scripts/smoke.py http://localhost:8000 <admin-phone> <password>` must print ALL PASS
 
-## Road distances for route optimization (optional)
+## Road distances for route optimization (automatic)
 
-Route optimization works out of the box with straight-line (haversine) distances — good enough to start. For real road distances, run a self-hosted OSRM on an OpenStreetMap extract (one-time prep, ~10 min + a few GB RAM):
+Road distances via self-hosted OSRM are part of the stack from day one. On first
+`make web`, two one-shot services download the OpenStreetMap extract (default:
+Kenya from Geofabrik) and prepare it (~5–15 min and a few GB of RAM/disk, once,
+into `var/osrm/`); every later boot skips straight to serving. While preparation
+runs, route planning transparently falls back to straight-line distances — a log
+line says so — and switches to road distances as soon as OSRM answers.
+
+Operating elsewhere? Set your region's extract in `.env` before first boot:
 
 ```sh
-mkdir -p var/osrm && cd var/osrm
-curl -O https://download.geofabrik.de/africa/kenya-latest.osm.pbf
-mv kenya-latest.osm.pbf region.osm.pbf
-docker run --rm -v "$PWD:/data" osrm/osrm-backend osrm-extract -p /opt/car.lua /data/region.osm.pbf
-docker run --rm -v "$PWD:/data" osrm/osrm-backend osrm-partition /data/region.osrm
-docker run --rm -v "$PWD:/data" osrm/osrm-backend osrm-customize /data/region.osrm
-cd ../..
-docker compose --profile prod --profile osrm up -d osrm   # start the routing service
+OSRM_PBF_URL=https://download.geofabrik.de/europe/portugal-latest.osm.pbf
 ```
 
-Then add `OWI_OSRM_URL=http://osrm:5000` to `.env` and `make restart`. The routing engine switches to road distances automatically; nothing else changes.
+To re-prepare after changing regions: delete `var/osrm/` and `make web` again.
+To opt out entirely (tiny hosts), set `OWI_OSRM_URL=` (empty) in `.env` —
+straight-line distances only, nothing else changes.
 
 ## Updating
 

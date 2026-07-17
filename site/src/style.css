@@ -15,7 +15,11 @@
   --line: #eae6dd;
   --font: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --ease: cubic-bezier(0.2, 0, 0, 1);
-  --radius: 20px;
+  --gutter: clamp(20px, 5vw, 40px);
+  --wave-h: clamp(42px, 7vw, 80px);
+  --pad-band: clamp(64px, 9vw, 110px);
+  --pad-hero: clamp(72px, 10vw, 130px);
+  --wave-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 64' preserveAspectRatio='none'%3E%3Cpath d='M0 34C220 66 480 2 740 30C1000 58 1240 10 1440 34V64H0Z'/%3E%3C/svg%3E");
 }
 
 * {
@@ -57,7 +61,16 @@ body {
 .wrap {
   max-width: 1100px;
   margin-inline: auto;
-  padding-inline: clamp(20px, 5vw, 40px);
+  padding-inline: var(--gutter);
+}
+
+/* Pull an element flush to the viewport edge from inside .wrap. */
+.bleed-l {
+  margin-left: calc((min(1100px, 100vw) - 100vw) / 2 - var(--gutter));
+}
+
+.bleed-r {
+  margin-right: calc((min(1100px, 100vw) - 100vw) / 2 - var(--gutter));
 }
 
 .narrow {
@@ -69,7 +82,7 @@ body {
 }
 
 section {
-  padding-block: clamp(64px, 9vw, 110px);
+  padding-block: var(--pad-band);
 }
 
 .band-white {
@@ -86,13 +99,16 @@ section {
 }
 
 /* ---------- wave dividers ----------
-   One wave shape, masked in CSS so the HTML stays free of decorative SVG.
-   --from is the band above, --to the band below. */
+   Each wave overlaps the bottom of the section above it and paints the next
+   band's colour below the curve. Whatever the section above shows there —
+   background or a flush photo — becomes the top side of the wave, so images
+   blend straight into the outline. */
 
 .wave {
-  height: clamp(42px, 7vw, 80px);
-  background-color: var(--from);
+  height: var(--wave-h);
+  margin-top: calc(-1 * var(--wave-h));
   position: relative;
+  z-index: 1;
 }
 
 .wave::after {
@@ -100,19 +116,18 @@ section {
   position: absolute;
   inset: 0;
   background-color: var(--to);
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 64' preserveAspectRatio='none'%3E%3Cpath d='M0 34C220 66 480 2 740 30C1000 58 1240 10 1440 34V64H0Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 64' preserveAspectRatio='none'%3E%3Cpath d='M0 34C220 66 480 2 740 30C1000 58 1240 10 1440 34V64H0Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  -webkit-mask: var(--wave-mask) center / 100% 100% no-repeat;
+  mask: var(--wave-mask) center / 100% 100% no-repeat;
 }
 
 .wave.flip::after {
   transform: scaleX(-1);
 }
 
-.w-white-cream { --from: var(--white); --to: var(--paper); }
-.w-cream-white { --from: var(--paper); --to: var(--white); }
-.w-white-brown { --from: var(--white); --to: var(--brown-deep); }
-.w-brown-white { --from: var(--brown-deep); --to: var(--white); }
-.w-cream-ink   { --from: var(--paper); --to: var(--ink); }
+.w-cream { --to: var(--paper); }
+.w-white { --to: var(--white); }
+.w-brown { --to: var(--brown-deep); }
+.w-ink   { --to: var(--ink); }
 
 /* ---------- type ---------- */
 
@@ -323,7 +338,9 @@ code {
   margin: 0;
 }
 
-/* ---------- photos ---------- */
+/* ---------- photos ----------
+   Photos are structural, not cards: square corners, no shadows, flush with
+   the viewport edge and with the wave outlines. */
 
 img {
   max-width: 100%;
@@ -336,42 +353,63 @@ img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: var(--radius);
 }
 
-.hero-photo,
-.side-photo {
-  border-radius: var(--radius);
-  overflow: hidden;
-  box-shadow: 0 24px 48px -24px rgba(16, 24, 40, 0.35);
+/* Pull a photo down through the section padding so the next wave cuts it. */
+.flush-b {
+  margin-bottom: calc(-1 * var(--pad-band));
 }
 
 .banner-photo {
-  border-radius: var(--radius);
-  overflow: hidden;
-  aspect-ratio: 5 / 2;
+  height: clamp(300px, 38vw, 460px);
+  margin-inline: calc((min(1100px, 100vw) - 100vw) / 2 - var(--gutter));
   margin-bottom: clamp(32px, 5vw, 52px);
-  box-shadow: 0 24px 48px -24px rgba(16, 24, 40, 0.35);
+  position: relative;
+}
+
+/* The banner carries its own wave-shaped edges, top and bottom. */
+.banner-photo::before,
+.banner-photo::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--wave-h);
+  background-color: var(--white);
+}
+
+.banner-photo::before {
+  top: 0;
+  -webkit-mask: var(--wave-mask) center / 100% 100% no-repeat;
+  mask: var(--wave-mask) center / 100% 100% no-repeat;
+  transform: scale(-1);
+}
+
+.banner-photo::after {
+  bottom: 0;
+  -webkit-mask: var(--wave-mask) center / 100% 100% no-repeat;
+  mask: var(--wave-mask) center / 100% 100% no-repeat;
 }
 
 /* ---------- hero ---------- */
 
 .hero {
-  padding-block: clamp(72px, 10vw, 130px);
+  padding-block: var(--pad-hero) calc(var(--pad-hero) + 28px);
 }
 
 .hero-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
   align-items: center;
   gap: clamp(36px, 5vw, 64px);
 }
 
+/* The hero photo fills the right half of the band, from the topbar down to
+   the wave that carries it into the next section. */
 .hero-photo {
-  aspect-ratio: 5 / 5.6;
-  max-height: 520px;
-  justify-self: end;
-  width: min(100%, 440px);
+  align-self: stretch;
+  margin-top: calc(-1 * var(--pad-hero));
+  margin-bottom: calc(-1 * (var(--pad-hero) + 28px));
 }
 
 /* ---------- split sections ---------- */
@@ -383,9 +421,9 @@ img {
   gap: clamp(36px, 5vw, 72px);
 }
 
-.side-photo {
-  aspect-ratio: 5 / 6;
-  max-height: 480px;
+.split .side-photo {
+  align-self: stretch;
+  min-height: 380px;
   width: 100%;
 }
 
@@ -396,6 +434,14 @@ img {
   grid-template-columns: repeat(4, 1fr);
   gap: clamp(28px, 4vw, 48px);
   margin-top: clamp(24px, 4vw, 44px);
+}
+
+/* Step artwork stands on its own — no chip, no overlay, generously sized. */
+.step-art {
+  display: block;
+  width: clamp(84px, 9vw, 120px);
+  height: auto;
+  margin-bottom: 20px;
 }
 
 .step p {
@@ -594,21 +640,20 @@ img {
     grid-template-columns: 1fr;
   }
   .hero-photo {
-    justify-self: stretch;
-    width: 100%;
+    align-self: auto;
+    margin-top: 0;
+    margin-inline: calc(-1 * var(--gutter));
     aspect-ratio: 16 / 10;
-    max-height: none;
   }
-  .side-photo {
+  .split .side-photo {
+    align-self: auto;
+    min-height: 0;
+    margin-inline: calc(-1 * var(--gutter));
     aspect-ratio: 16 / 10;
-    max-height: none;
-    order: -1;
-  }
-  .impact-split .side-photo {
-    order: 0;
   }
   .banner-photo {
-    aspect-ratio: 16 / 9;
+    height: auto;
+    aspect-ratio: 16 / 10;
   }
   .topnav {
     display: none;

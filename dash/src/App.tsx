@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import CssBaseline from "@mui/material/CssBaseline";
+import LinearProgress from "@mui/material/LinearProgress";
 import { ThemeProvider } from "@mui/material/styles";
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { getToken } from "./api";
@@ -39,7 +40,14 @@ export default function App() {
       <CssBaseline />
       <I18nProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <Suspense fallback={null}>
+          <Suspense
+            fallback={
+              <LinearProgress
+                color="secondary"
+                sx={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 2000 }}
+              />
+            }
+          >
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route element={<RequireAuth />}>

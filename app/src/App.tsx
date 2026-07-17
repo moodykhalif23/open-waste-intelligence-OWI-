@@ -18,6 +18,8 @@ import Typography from "@mui/material/Typography";
 import BottomNavigation from "@mui/material/BottomNavigation";
 import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import PhotoCameraOutlined from "@mui/icons-material/PhotoCameraOutlined";
+import CloseOutlined from "@mui/icons-material/CloseOutlined";
+import InstallMobileOutlined from "@mui/icons-material/InstallMobileOutlined";
 import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
 import QrCodeScannerOutlined from "@mui/icons-material/QrCodeScannerOutlined";
 import InsightsOutlined from "@mui/icons-material/InsightsOutlined";
@@ -41,6 +43,13 @@ import {
 
 const FILL_BANDS: FillBand[] = ["empty", "low", "half", "high", "overflowing"];
 
+// Chromium-only event; not in lib.dom, so declare the minimal surface we use.
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+}
+
+const INSTALL_DISMISSED_KEY = "owi-install-dismissed";
+
 type GpsState = { kind: "waiting" } | { kind: "fix"; fix: GpsFix } | { kind: "failed" };
 
 export default function App() {
@@ -57,6 +66,7 @@ export default function App() {
   const [online, setOnline] = useState(navigator.onLine);
   const [toast, setToast] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null);
   const [tab, setTab] = useState<"report" | "collect" | "insights">("report");
   const startedAt = useRef<number>(0);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -100,6 +110,16 @@ export default function App() {
     const timer = window.setTimeout(() => setToast(null), 4000);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+    const onInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      if (localStorage.getItem(INSTALL_DISMISSED_KEY)) return;
+      setInstallEvt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener("beforeinstallprompt", onInstallPrompt);
+    return () => window.removeEventListener("beforeinstallprompt", onInstallPrompt);
+  }, []);
 
   useEffect(() => {
     void refreshCount();
@@ -199,6 +219,7 @@ export default function App() {
             aria-label={tr("settings")}
             onClick={() => setShowSettings((v) => !v)}
             color={showSettings ? "primary" : "default"}
+            sx={{ width: 48, height: 48 }}
           >
             <SettingsOutlined />
           </IconButton>
@@ -233,6 +254,12 @@ export default function App() {
           </TextField>
         </Stack>
       </Drawer>
+
+      {!online && queueCount > 0 && (
+        <Box sx={{ bgcolor: "#fbeecf", color: "#835a09", px: 2, py: 0.75, fontSize: "0.85rem" }}>
+          {tr("queued", { n: queueCount })}
+        </Box>
+      )}
 
       <Box sx={{ flex: 1, p: 2, pb: 10, display: "flex", flexDirection: "column", gap: 2 }}>
         {tab === "collect" && <CollectList lang={lang} token={settings.token} />}
@@ -310,7 +337,18 @@ export default function App() {
                     </ToggleButton>
                   ))}
                 </ToggleButtonGroup>
-                <Stack direction="row" spacing={1.5}>
+                {/* Sticky keeps Save in one-hand reach on tall phones while a photo is staged. */}
+                <Stack
+                  direction="row"
+                  spacing={1.5}
+                  sx={{
+                    position: "sticky",
+                    bottom: "calc(64px + env(safe-area-inset-bottom))",
+                    bgcolor: "background.default",
+                    py: 1,
+                    zIndex: 2,
+                  }}
+                >
                   <Button variant="outlined" sx={{ flex: 1 }} onClick={() => fileInput.current?.click()}>
                     {tr("retake")}
                   </Button>
@@ -378,8 +416,50 @@ export default function App() {
 
       <Paper
         elevation={0}
-        sx={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, mx: "auto", borderTop: "1px solid", borderColor: "divider" }}
+        sx={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          maxWidth: 480,
+          mx: "auto",
+          borderTop: "1px solid",
+          borderColor: "divider",
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}
       >
+        {installEvt && (
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ alignItems: "center", px: 2, py: 0.5, borderBottom: "1px solid", borderColor: "divider" }}
+          >
+            <InstallMobileOutlined fontSize="small" />
+            <Typography variant="body2" sx={{ flex: 1, fontWeight: 550 }}>
+              {tr("installTitle")}
+            </Typography>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => {
+                void installEvt.prompt();
+                setInstallEvt(null);
+              }}
+            >
+              {tr("installAction")}
+            </Button>
+            <IconButton
+              aria-label={tr("cancel")}
+              sx={{ width: 48, height: 48 }}
+              onClick={() => {
+                localStorage.setItem(INSTALL_DISMISSED_KEY, "1");
+                setInstallEvt(null);
+              }}
+            >
+              <CloseOutlined fontSize="small" />
+            </IconButton>
+          </Stack>
+        )}
         <BottomNavigation
           showLabels
           value={tab}
@@ -395,7 +475,7 @@ export default function App() {
         open={!!toast}
         message={toast}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-        sx={{ bottom: { xs: 80 } }}
+        sx={{ bottom: { xs: "calc(80px + env(safe-area-inset-bottom))" } }}
       />
     </Box>
   );

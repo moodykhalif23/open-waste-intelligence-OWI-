@@ -9,8 +9,9 @@ import Chip from "@mui/material/Chip";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 import { api, apiBlob } from "../api";
-import { Muted, PageStack, SectionCard } from "../components/ui";
+import { EmptyState, ErrorPanel, PageSkeleton, PageStack, SectionCard } from "../components/ui";
 import { useI18n } from "../i18n";
 
 const FILL_BANDS = ["empty", "low", "half", "high", "overflowing"] as const;
@@ -31,9 +32,15 @@ interface Queue {
 export default function Review() {
   const { t } = useI18n();
   const [queue, setQueue] = useState<Queue | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    setQueue(await api<Queue>("/api/v1/predictions"));
+    setError(null);
+    try {
+      setQueue(await api<Queue>("/api/v1/predictions"));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   }, []);
 
   useEffect(() => {
@@ -56,7 +63,14 @@ export default function Review() {
     await reload();
   }
 
-  if (queue === null) return <Muted>{t("loading")}</Muted>;
+  if (error) {
+    return (
+      <PageStack>
+        <ErrorPanel message={t("errorLoad")} retryLabel={t("retry")} onRetry={() => void reload()} />
+      </PageStack>
+    );
+  }
+  if (queue === null) return <PageSkeleton />;
 
   return (
     <PageStack>
@@ -65,7 +79,7 @@ export default function Review() {
         action={<Chip size="small" label={t("pendingCount").replace("{n}", String(queue.unreviewed))} />}
       >
         {queue.items.length === 0 ? (
-          <Muted>{t("reviewEmpty")}</Muted>
+          <EmptyState icon={<FactCheckOutlinedIcon />} title={t("reviewEmpty")} />
         ) : (
           <Grid container spacing={{ xs: 2, md: 2.5 }}>
             {queue.items.map((p) => (

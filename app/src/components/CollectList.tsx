@@ -137,9 +137,8 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
                       justifyContent: "center",
                       fontSize: "0.82rem",
                       fontWeight: 650,
-                      bgcolor: stop.collected ? "primary.main" : "primary.light",
+                      bgcolor: stop.collected ? "primary.main" : "#eceef1",
                       color: stop.collected ? "#fff" : "primary.dark",
-                      ...(stop.collected ? {} : { bgcolor: "#eceef1", color: "primary.dark" }),
                     }}
                   >
                     {stop.seq + 1}

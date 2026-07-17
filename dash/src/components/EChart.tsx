@@ -55,8 +55,10 @@ export const MATERIAL_COLORS: Record<string, string> = {
   other_mixed: CATEGORICAL[7],
 };
 
-// Emerald single-hue ramp, light→dark, for sequential (heatmap) magnitude.
-const SEQUENTIAL = ["#eceef1", "#c2c7d0", "#3a4256", "#3a4256", "#05070c"];
+// Ink single-hue ramp, light→dark, for sequential (heatmap) magnitude.
+const SEQUENTIAL = ["#eceef1", "#c2c7d0", "#8a93a8", "#3a4256", "#05070c"];
+
+const CHART_FONT = '"Inter Variable", system-ui, sans-serif';
 
 export default function EChart({ option, height = 280 }: { option: ChartOption; height?: number }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -65,11 +67,13 @@ export default function EChart({ option, height = 280 }: { option: ChartOption; 
     const el = ref.current;
     if (!el) return;
     const chart = echarts.init(el);
-    chart.setOption(option);
-    const onResize = () => chart.resize();
-    window.addEventListener("resize", onResize);
+    chart.setOption({ textStyle: { fontFamily: CHART_FONT }, ...option });
+    // Container-based: charts reflow when the drawer toggles or the grid
+    // re-breaks, not only on window resize.
+    const observer = new ResizeObserver(() => chart.resize());
+    observer.observe(el);
     return () => {
-      window.removeEventListener("resize", onResize);
+      observer.disconnect();
       chart.dispose();
     };
   }, [option]);
@@ -81,7 +85,7 @@ const flatTooltip = {
   backgroundColor: "#ffffff",
   borderColor: LINE,
   borderWidth: 1,
-  textStyle: { color: INK, fontSize: 12 },
+  textStyle: { color: INK, fontSize: 12, fontFamily: CHART_FONT },
   extraCssText: "box-shadow: 0 4px 16px rgba(16,24,40,0.10); border-radius: 4px;",
 };
 

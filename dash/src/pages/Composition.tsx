@@ -1,11 +1,21 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Grid from "@mui/material/Grid";
 import { Alert, Box, Button, Chip, MenuItem, TextField, Typography } from "@mui/material";
-import { api } from "../api";
+import DonutLargeOutlined from "@mui/icons-material/DonutLargeOutlined";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import EChart, { donutOption, MATERIAL_COLORS } from "../components/EChart";
-import { Muted, PageStack, SectionCard, StatCard, TableSection } from "../components/ui";
+import {
+  EmptyState,
+  ErrorPanel,
+  PageStack,
+  SectionCard,
+  StatCard,
+  StatRowSkeleton,
+  TableSection,
+  TableSkeleton,
+} from "../components/ui";
+import { useApi } from "../useApi";
 import { useI18n, type StringKey } from "../i18n";
 
 interface MaterialShare {
@@ -28,15 +38,7 @@ export default function Composition() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const [days, setDays] = useState(7);
-  const [data, setData] = useState<Composition | null>(null);
-
-  const reload = useCallback(async () => {
-    setData(await api<Composition>(`/api/v1/analytics/composition?days=${days}`));
-  }, [days]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const { data, error, retry } = useApi<Composition>(`/api/v1/analytics/composition?days=${days}`);
 
   const label = (m: string) => t(m as StringKey);
 
@@ -104,10 +106,15 @@ export default function Composition() {
         {periodSelect}
       </Box>
 
-      {data === null ? (
-        <Muted>{t("loading")}</Muted>
+      {error !== null ? (
+        <ErrorPanel message={t("errorLoad")} retryLabel={t("retry")} onRetry={retry} />
+      ) : data === null ? (
+        <>
+          <StatRowSkeleton count={5} />
+          <TableSkeleton />
+        </>
       ) : data.total === 0 ? (
-        <Muted>{t("noComposition")}</Muted>
+        <EmptyState icon={<DonutLargeOutlined />} title={t("noComposition")} />
       ) : (
         <>
           {!data.sufficient && (
@@ -138,7 +145,11 @@ export default function Composition() {
           </SectionCard>
 
           <TableSection>
-            <DataTable rows={data.materials} columns={columns} getRowId={(r) => r.material} />
+            {data.materials.length === 0 ? (
+              <EmptyState icon={<DonutLargeOutlined />} title={t("noComposition")} />
+            ) : (
+              <DataTable rows={data.materials} columns={columns} getRowId={(r) => r.material} />
+            )}
           </TableSection>
         </>
       )}

@@ -6,7 +6,7 @@ const LINE = "#eae6dd";
 
 // One styled DataGrid for the whole dashboard: sortable, filterable (quick
 // search + column filters via the toolbar), paginated, flat with 4px corners
-// and the emerald hover — matches the rest of the UI. Pass rows/columns and,
+// and the warm row hover — matches the rest of the UI. Pass rows/columns and,
 // when a row's key isn't `id`, a getRowId.
 export function DataTable({
   pageSize = 10,
@@ -49,7 +49,11 @@ export function DataTable({
           lineHeight: 1.4,
           display: "flex",
           alignItems: "center",
+          fontVariantNumeric: "tabular-nums",
         },
+        // The flex display above would otherwise defeat right-alignment of
+        // type:"number" columns — numbers must keep a shared right edge.
+        "& .MuiDataGrid-cell--textRight": { justifyContent: "flex-end" },
         "& .MuiDataGrid-row:hover": { bgcolor: "#f6f4ee" },
         // Keep the resize handle visible so columns can be dragged wider/narrower.
         "& .MuiDataGrid-columnSeparator": { color: LINE },

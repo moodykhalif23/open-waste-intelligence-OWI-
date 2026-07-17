@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -6,8 +6,9 @@ import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import { api } from "../api";
-import { Muted, PageStack, SectionCard } from "../components/ui";
+import { ErrorPanel, Muted, PageStack, SectionCard, TableSkeleton } from "../components/ui";
 import { useI18n } from "../i18n";
+import { useApi } from "../useApi";
 
 interface OrgSettings {
   image_retention_months: number;
@@ -18,6 +19,7 @@ interface OrgSettings {
 
 export default function Settings() {
   const { t } = useI18n();
+  const { data: initial, error: loadErr, retry } = useApi<OrgSettings>("/api/v1/admin/settings");
   const [loaded, setLoaded] = useState(false);
   const [months, setMonths] = useState("");
   const [fuelPrice, setFuelPrice] = useState("");
@@ -27,21 +29,19 @@ export default function Settings() {
   const [err, setErr] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  const apply = (s: OrgSettings) => {
+  const apply = useCallback((s: OrgSettings) => {
     setMonths(String(s.image_retention_months));
     setFuelPrice(s.fuel_price_kes_per_l === null ? "" : String(s.fuel_price_kes_per_l));
     setDensity(s.waste_density_kg_per_l === null ? "" : String(s.waste_density_kg_per_l));
     setPhones((s.notify_phones ?? []).join(", "));
-  };
+  }, []);
 
   useEffect(() => {
-    void api<OrgSettings>("/api/v1/admin/settings")
-      .then((s) => {
-        apply(s);
-        setLoaded(true);
-      })
-      .catch((e) => setErr(e instanceof Error ? e.message : String(e)));
-  }, []);
+    if (initial !== null) {
+      apply(initial);
+      setLoaded(true);
+    }
+  }, [initial, apply]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -70,7 +70,20 @@ export default function Settings() {
     }
   }
 
-  if (!loaded && !err) return <Muted>{t("loading")}</Muted>;
+  if (loadErr) {
+    return (
+      <PageStack>
+        <ErrorPanel message={t("errorLoad")} retryLabel={t("retry")} onRetry={retry} />
+      </PageStack>
+    );
+  }
+  if (!loaded) {
+    return (
+      <PageStack>
+        <TableSkeleton rows={4} />
+      </PageStack>
+    );
+  }
 
   return (
     <PageStack>

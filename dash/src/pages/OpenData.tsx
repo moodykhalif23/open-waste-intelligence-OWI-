@@ -7,9 +7,11 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import PublicOutlined from "@mui/icons-material/PublicOutlined";
 import { api, type ApiKey, type ApiKeyCreated, type PublicMeta } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import { Muted, PageStack, SectionCard, TableSection } from "../components/ui";
+import { EmptyState, ErrorPanel, PageSkeleton, PageStack, SectionCard, TableSection } from "../components/ui";
+import { useApi } from "../useApi";
 import { useI18n } from "../i18n";
 
 function fmtDate(iso: string): string {
@@ -19,17 +21,22 @@ function fmtDate(iso: string): string {
 export default function OpenData() {
   const { t } = useI18n();
   const [keys, setKeys] = useState<ApiKey[] | null>(null);
-  const [meta, setMeta] = useState<PublicMeta | null>(null);
+  const [keysError, setKeysError] = useState<string | null>(null);
+  const { data: meta, error: metaError, retry: retryMeta } = useApi<PublicMeta>("/api/v1/public/meta");
   const [issued, setIssued] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const reload = useCallback(async () => {
-    setKeys(await api<ApiKey[]>("/api/v1/admin/api-keys"));
+    setKeysError(null);
+    try {
+      setKeys(await api<ApiKey[]>("/api/v1/admin/api-keys"));
+    } catch (e) {
+      setKeysError(e instanceof Error ? e.message : String(e));
+    }
   }, []);
 
   useEffect(() => {
     void reload();
-    void api<PublicMeta>("/api/v1/public/meta").then(setMeta);
   }, [reload]);
 
   async function revoke(id: string) {
@@ -43,7 +50,14 @@ export default function OpenData() {
     setCopied(true);
   }
 
-  if (keys === null) return <Muted>{t("loading")}</Muted>;
+  if (keysError && keys === null) {
+    return (
+      <PageStack>
+        <ErrorPanel message={t("errorLoad")} retryLabel={t("retry")} onRetry={() => void reload()} />
+      </PageStack>
+    );
+  }
+  if (keys === null) return <PageSkeleton />;
 
   const columns: GridColDef<ApiKey>[] = [
     { field: "label", headerName: t("keyLabel"), flex: 1, minWidth: 120 },
@@ -77,6 +91,7 @@ export default function OpenData() {
   return (
     <PageStack>
       <SectionCard title={t("publicApiDocs")} subtitle={t("publicApiIntro")}>
+        {metaError && <ErrorPanel message={t("errorLoad")} retryLabel={t("retry")} onRetry={retryMeta} />}
         {meta && (
           <Stack spacing={1.5}>
             <Meta label={t("license")} value={meta.license} />
@@ -111,6 +126,11 @@ export default function OpenData() {
         title={t("apiKeys")}
         action={<KeyForm onCreated={reload} onIssued={(k) => { setIssued(k); setCopied(false); }} />}
       >
+        {keysError && (
+          <Box sx={{ mb: 2.5 }}>
+            <ErrorPanel message={t("errorLoad")} retryLabel={t("retry")} onRetry={() => void reload()} />
+          </Box>
+        )}
         {issued && (
           <Alert severity="success" icon={false} sx={{ mb: 2.5 }}>
             <Stack spacing={1.5}>
@@ -140,7 +160,7 @@ export default function OpenData() {
           </Alert>
         )}
         {keys.length === 0 ? (
-          <Muted>{t("noKeys")}</Muted>
+          <EmptyState icon={<PublicOutlined />} title={t("noKeys")} />
         ) : (
           <DataTable rows={keys} columns={columns} toolbar={false} />
         )}

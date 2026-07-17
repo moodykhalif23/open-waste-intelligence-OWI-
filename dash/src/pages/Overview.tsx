@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -9,9 +9,21 @@ import DeleteOutlineOutlined from "@mui/icons-material/DeleteOutlineOutlined";
 import PhotoCameraOutlined from "@mui/icons-material/PhotoCameraOutlined";
 import WarningAmberOutlined from "@mui/icons-material/WarningAmberOutlined";
 import AltRouteOutlined from "@mui/icons-material/AltRouteOutlined";
-import { api, type Bin, type FillBand, type Observation } from "../api";
+import BarChartOutlined from "@mui/icons-material/BarChartOutlined";
+import GridOnOutlined from "@mui/icons-material/GridOnOutlined";
+import ShowChartOutlined from "@mui/icons-material/ShowChartOutlined";
+import { type Bin, type FillBand, type Observation } from "../api";
 import EChart, { barOption, heatmapOption, lineOption } from "../components/EChart";
-import { Muted, PageHeader, PageStack, SectionCard, StatCard } from "../components/ui";
+import {
+  EmptyState,
+  ErrorPanel,
+  PageHeader,
+  PageSkeleton,
+  PageStack,
+  SectionCard,
+  StatCard,
+} from "../components/ui";
+import { useApi } from "../useApi";
 import { useI18n, type StringKey } from "../i18n";
 
 const BANDS: FillBand[] = ["empty", "low", "half", "high", "overflowing"];
@@ -22,13 +34,12 @@ const HOURS = Array.from({ length: 24 }, (_, i) => String(i));
 export default function Overview() {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [observations, setObservations] = useState<Observation[] | null>(null);
-  const [bins, setBins] = useState<Bin[] | null>(null);
-
-  useEffect(() => {
-    void api<Observation[]>("/api/v1/observations?limit=1000").then(setObservations);
-    void api<Bin[]>("/api/v1/bins").then(setBins);
-  }, []);
+  const {
+    data: observations,
+    error: observationsError,
+    retry: retryObservations,
+  } = useApi<Observation[]>("/api/v1/observations?limit=1000");
+  const { data: bins, error: binsError, retry: retryBins } = useApi<Bin[]>("/api/v1/bins");
 
   const week = useMemo(
     () =>
@@ -84,7 +95,22 @@ export default function Overview() {
     };
   }, [week, t]);
 
-  if (observations === null || bins === null) return <Muted>{t("loading")}</Muted>;
+  if (observationsError || binsError) {
+    return (
+      <PageStack>
+        <ErrorPanel
+          message={t("errorLoad")}
+          retryLabel={t("retry")}
+          onRetry={() => {
+            if (observationsError) retryObservations();
+            if (binsError) retryBins();
+          }}
+        />
+      </PageStack>
+    );
+  }
+
+  if (observations === null || bins === null) return <PageSkeleton />;
 
   if (bins.length === 0) {
     const steps: { icon: ReactNode; text: string }[] = [
@@ -155,7 +181,9 @@ export default function Overview() {
             {activity.data.length > 0 ? (
               <EChart height={260} option={heatmapOption(HOURS, WEEKDAYS, activity.data, activity.max)} />
             ) : (
-              <Muted>{t("noData")}</Muted>
+              <Box sx={{ height: 260, display: "grid", placeItems: "center" }}>
+                <EmptyState icon={<GridOnOutlined />} title={t("noData")} />
+              </Box>
             )}
           </SectionCard>
         </Grid>
@@ -164,14 +192,22 @@ export default function Overview() {
             {week.some((o) => o.fill_tap) ? (
               <EChart height={260} option={barOption(fillDist.categories, fillDist.values)} />
             ) : (
-              <Muted>{t("noData")}</Muted>
+              <Box sx={{ height: 260, display: "grid", placeItems: "center" }}>
+                <EmptyState icon={<BarChartOutlined />} title={t("noData")} />
+              </Box>
             )}
           </SectionCard>
         </Grid>
       </Grid>
 
       <SectionCard title={t("reportsPerDay")}>
-        <EChart height={240} option={lineOption(perDay.categories, perDay.values)} />
+        {perDay.values.some((v) => v > 0) ? (
+          <EChart height={240} option={lineOption(perDay.categories, perDay.values)} />
+        ) : (
+          <Box sx={{ height: 240, display: "grid", placeItems: "center" }}>
+            <EmptyState icon={<ShowChartOutlined />} title={t("noData")} />
+          </Box>
+        )}
       </SectionCard>
     </PageStack>
   );

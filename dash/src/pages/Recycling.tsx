@@ -9,9 +9,20 @@ import Grid from "@mui/material/Grid";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import HandshakeOutlined from "@mui/icons-material/HandshakeOutlined";
+import RecyclingOutlined from "@mui/icons-material/RecyclingOutlined";
+import SellOutlined from "@mui/icons-material/SellOutlined";
 import { api } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import { Muted, PageStack, SectionCard, StatCard, TableSection } from "../components/ui";
+import {
+  EmptyState,
+  ErrorPanel,
+  PageSkeleton,
+  PageStack,
+  SectionCard,
+  StatCard,
+  TableSection,
+} from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
 const MATERIALS = ["plastic", "glass", "metal", "paper", "organic", "e_waste", "textile"] as const;
@@ -51,16 +62,22 @@ export default function Recycling() {
   const [value, setValue] = useState<ValueReport | null>(null);
   const [prices, setPrices] = useState<Price[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    const [v, p, pa] = await Promise.all([
-      api<ValueReport>("/api/v1/recycling/value?days=30"),
-      api<Price[]>("/api/v1/recycling/prices"),
-      api<Partner[]>("/api/v1/recycling/partners"),
-    ]);
-    setValue(v);
-    setPrices(p);
-    setPartners(pa);
+    try {
+      const [v, p, pa] = await Promise.all([
+        api<ValueReport>("/api/v1/recycling/value?days=30"),
+        api<Price[]>("/api/v1/recycling/prices"),
+        api<Partner[]>("/api/v1/recycling/partners"),
+      ]);
+      setValue(v);
+      setPrices(p);
+      setPartners(pa);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   }, []);
 
   useEffect(() => {
@@ -68,7 +85,14 @@ export default function Recycling() {
   }, [reload]);
 
   const label = (m: string) => t(m as StringKey);
-  if (value === null) return <Muted>{t("loading")}</Muted>;
+  if (error !== null) {
+    return (
+      <PageStack>
+        <ErrorPanel message={t("errorLoad")} retryLabel={t("retry")} onRetry={() => void reload()} />
+      </PageStack>
+    );
+  }
+  if (value === null) return <PageSkeleton />;
 
   const valueCols: GridColDef<MaterialValue>[] = [
     { field: "material", headerName: t("material"), flex: 1, minWidth: 110, valueGetter: (_v, row) => label(row.material) },
@@ -107,7 +131,7 @@ export default function Recycling() {
 
       <TableSection title={t("recoverableValue")}>
         {value.materials.length === 0 ? (
-          <Muted>{t("noValueYet")}</Muted>
+          <EmptyState icon={<RecyclingOutlined />} title={t("noValueYet")} />
         ) : (
           <DataTable rows={value.materials} columns={valueCols} getRowId={(r) => r.material} toolbar={false} />
         )}
@@ -129,7 +153,7 @@ export default function Recycling() {
         <Grid size={{ xs: 12, md: 6 }}>
           <TableSection title={t("priceTable")}>
             {prices.length === 0 ? (
-              <Muted>{t("noPrices")}</Muted>
+              <EmptyState icon={<SellOutlined />} title={t("noPrices")} />
             ) : (
               <DataTable rows={prices} columns={priceCols} toolbar={false} pageSize={5} />
             )}
@@ -138,7 +162,7 @@ export default function Recycling() {
         <Grid size={{ xs: 12, md: 6 }}>
           <TableSection title={t("partners")}>
             {partners.length === 0 ? (
-              <Muted>{t("noPartners")}</Muted>
+              <EmptyState icon={<HandshakeOutlined />} title={t("noPartners")} />
             ) : (
               <DataTable rows={partners} columns={partnerCols} toolbar={false} pageSize={5} />
             )}

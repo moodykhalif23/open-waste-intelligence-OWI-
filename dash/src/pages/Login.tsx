@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { LoginError, login } from "../api";
@@ -25,10 +27,13 @@ export default function Login() {
   const [otp, setOtp] = useState("");
   const [needsOtp, setNeedsOtp] = useState(false);
   const [error, setError] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [shake, setShake] = useState(0);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(false);
+    setBusy(true);
     try {
       await login(phone, password, needsOtp ? otp : undefined);
       navigate("/");
@@ -37,7 +42,10 @@ export default function Login() {
         setNeedsOtp(true);
       } else {
         setError(true);
+        setShake((s) => s + 1);
       }
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -67,7 +75,7 @@ export default function Login() {
               placeItems: "center",
               width: 56,
               height: 56,
-              borderRadius: "8px",
+              borderRadius: "4px",
               bgcolor: "#ffffff",
             }}
           >
@@ -91,7 +99,20 @@ export default function Login() {
       </Box>
 
       <Box sx={{ display: "grid", placeItems: "center", p: 4, bgcolor: "background.default" }}>
-        <Box component="form" onSubmit={(e) => void onSubmit(e)} sx={{ width: "100%", maxWidth: 360 }}>
+        <Box
+          component="form"
+          onSubmit={(e) => void onSubmit(e)}
+          key={shake}
+          sx={{
+            width: "100%",
+            maxWidth: 360,
+            "@keyframes owiShake": {
+              "20%, 60%": { transform: "translateX(-4px)" },
+              "40%, 80%": { transform: "translateX(4px)" },
+            },
+            animation: shake > 0 ? "owiShake 240ms ease" : "none",
+          }}
+        >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, mb: 4 }}>
             <Box
               sx={{
@@ -99,7 +120,7 @@ export default function Login() {
                 placeItems: "center",
                 width: 44,
                 height: 44,
-                borderRadius: "8px",
+                borderRadius: "4px",
                 bgcolor: "#eceef1",
               }}
             >
@@ -145,11 +166,19 @@ export default function Login() {
             />
           )}
           {error && (
-            <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+            <Alert severity="error" variant="outlined" sx={{ mt: 1.5 }}>
               {t("loginFailed")}
-            </Typography>
+            </Alert>
           )}
-          <Button type="submit" variant="contained" size="large" fullWidth sx={{ mt: 3, py: 1.35, fontSize: "1rem" }}>
+          <Button
+            type="submit"
+            variant="contained"
+            size="large"
+            fullWidth
+            disabled={busy}
+            startIcon={busy ? <CircularProgress size={18} color="inherit" /> : undefined}
+            sx={{ mt: 3, py: 1.35, fontSize: "1rem" }}
+          >
             {t("login")}
           </Button>
         </Box>

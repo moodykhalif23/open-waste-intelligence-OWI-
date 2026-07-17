@@ -54,7 +54,13 @@ export default function Layout() {
   const [collectCount, setCollectCount] = useState(0);
 
   const here = locate(location.pathname);
-  const barTitle = here ? t(here.entry.key) : t("appName");
+  const sectionTitle = here ? t(here.entry.key) : t("appName");
+  const leafTitle = here?.leaf ? t(here.leaf.key) : null;
+
+  // Tab identity per page: operators keep Review + Routes open side by side.
+  useEffect(() => {
+    document.title = `${leafTitle ?? sectionTitle} · OpenWaste`;
+  }, [sectionTitle, leafTitle]);
 
   useEffect(() => {
     void api<{ unreviewed: number }>("/api/v1/predictions")
@@ -127,20 +133,22 @@ export default function Layout() {
                 border: "none",
                 bgcolor: "transparent",
                 cursor: "pointer",
-                borderRadius: "6px",
+                borderRadius: "4px",
                 px: 1,
                 py: 0.75,
+                transition: "background-color 120ms cubic-bezier(0.2, 0, 0, 1)",
                 "&:hover": { bgcolor: "#f6f4ee" },
               }}
             >
               <Box
                 sx={{
-                  minWidth: 34,
-                  height: 30,
+                  minWidth: 32,
+                  height: 28,
                   px: 1,
                   display: "grid",
                   placeItems: "center",
-                  borderRadius: "6px",
+                  borderRadius: "4px",
+                  fontVariantNumeric: "tabular-nums",
                   fontWeight: 800,
                   fontSize: "1rem",
                   bgcolor: zero ? "#f6f4ee" : row.bg,
@@ -172,9 +180,22 @@ export default function Layout() {
           >
             <MenuOutlined />
           </IconButton>
-          <Typography sx={{ fontWeight: 680, fontSize: "1.05rem", display: { xs: "none", sm: "block" } }} noWrap>
-            {barTitle}
-          </Typography>
+          <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center", gap: 0.5, minWidth: 0 }}>
+            <Typography
+              sx={{ fontWeight: leafTitle ? 480 : 680, fontSize: "1.05rem", color: leafTitle ? "text.secondary" : "text.primary" }}
+              noWrap
+            >
+              {sectionTitle}
+            </Typography>
+            {leafTitle && (
+              <>
+                <ChevronRightOutlined sx={{ fontSize: 17, color: "text.secondary" }} />
+                <Typography sx={{ fontWeight: 680, fontSize: "1.05rem" }} noWrap>
+                  {leafTitle}
+                </Typography>
+              </>
+            )}
+          </Box>
           <Box sx={{ flexGrow: 1 }} />
           <NavSearch />
           <Box sx={{ flexGrow: 1 }} />
@@ -263,7 +284,12 @@ export default function Layout() {
       <Box component="main" sx={{ flexGrow: 1, width: { md: `calc(100% - ${DRAWER_WIDTH}px)` }, minWidth: 0 }}>
         <Toolbar />
         <Container maxWidth="xl" sx={{ py: { xs: 2.5, md: 3.5 }, px: { xs: 2, md: 3.5 } }}>
-          <Outlet />
+          <Box
+            key={location.pathname}
+            sx={{ animation: "owiPageIn 200ms cubic-bezier(0, 0, 0.2, 1)" }}
+          >
+            <Outlet />
+          </Box>
         </Container>
       </Box>
     </Box>

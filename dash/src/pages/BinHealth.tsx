@@ -4,9 +4,10 @@ import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Grid from "@mui/material/Grid";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import PlaylistAddCheckOutlinedIcon from "@mui/icons-material/PlaylistAddCheckOutlined";
 import { api } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import { Muted, PageStack, StatCard, TableSection } from "../components/ui";
+import { EmptyState, ErrorPanel, PageSkeleton, PageStack, StatCard, TableSection } from "../components/ui";
 import { useI18n } from "../i18n";
 
 interface HealthRow {
@@ -30,10 +31,16 @@ const RISK_COLOR = {
 export default function BinHealth() {
   const { t } = useI18n();
   const [rows, setRows] = useState<HealthRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const reload = useCallback(async () => {
-    setRows(await api<HealthRow[]>("/api/v1/bins/health"));
+    try {
+      setRows(await api<HealthRow[]>("/api/v1/bins/health"));
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   }, []);
 
   useEffect(() => {
@@ -68,7 +75,22 @@ export default function BinHealth() {
     };
   }, [rows]);
 
-  if (rows === null) return <Muted>{t("loading")}</Muted>;
+  if (error) {
+    return (
+      <PageStack>
+        <ErrorPanel
+          message={t("errorLoad")}
+          retryLabel={t("retry")}
+          onRetry={() => {
+            setError(null);
+            setRows(null);
+            void reload();
+          }}
+        />
+      </PageStack>
+    );
+  }
+  if (rows === null) return <PageSkeleton />;
 
   const refreshAction = (
     <Button
@@ -133,7 +155,7 @@ export default function BinHealth() {
 
       <TableSection title={t("collectToday")} action={refreshAction}>
         {rows.length === 0 ? (
-          <Muted>{t("noHealthData")}</Muted>
+          <EmptyState icon={<PlaylistAddCheckOutlinedIcon />} title={t("noHealthData")} />
         ) : (
           <DataTable rows={rows} columns={columns} getRowId={(r) => r.bin_id} pageSize={15} />
         )}

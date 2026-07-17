@@ -24,15 +24,27 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import AltRouteOutlined from "@mui/icons-material/AltRouteOutlined";
 import BuildIcon from "@mui/icons-material/Build";
 import DeleteOutlineOutlined from "@mui/icons-material/DeleteOutlineOutlined";
+import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
 import RouteOutlined from "@mui/icons-material/RouteOutlined";
 import LocalGasStationOutlined from "@mui/icons-material/LocalGasStationOutlined";
 import { api } from "../api";
 import { CATEGORICAL } from "../components/EChart";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import MapView, { type MapLine, type MapPoint } from "../components/MapView";
-import { Muted, PageHeader, PageStack, SectionCard, StatCard, TableSection } from "../components/ui";
+import {
+  EmptyState,
+  ErrorPanel,
+  Muted,
+  PageHeader,
+  PageSkeleton,
+  PageStack,
+  SectionCard,
+  StatCard,
+  TableSection,
+} from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
 interface Truck {
@@ -93,6 +105,7 @@ export default function Routes() {
   const [methods, setMethods] = useState<MethodSpec[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [planning, setPlanning] = useState(false);
   const [savings, setSavings] = useState<Savings | null>(null);
   const [savingsBusy, setSavingsBusy] = useState(false);
@@ -115,9 +128,16 @@ export default function Routes() {
     setMethods(ms);
   }, []);
 
-  useEffect(() => {
-    void reload();
+  // Initial load + retry: catches into loadError so reload() itself keeps
+  // throwing for callers with their own error UI (e.g. TruckForm).
+  const load = useCallback(() => {
+    setLoadError(null);
+    reload().catch((e: unknown) => setLoadError(e instanceof Error ? e.message : String(e)));
   }, [reload]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   async function replan(disableTruckId?: string) {
     setPlanning(true);
@@ -150,7 +170,15 @@ export default function Routes() {
     }
   }
 
-  if (trucks === null) return <Muted>{t("loading")}</Muted>;
+  if (loadError) {
+    return (
+      <PageStack>
+        <ErrorPanel message={t("errorLoad")} retryLabel={t("retry")} onRetry={load} />
+      </PageStack>
+    );
+  }
+
+  if (trucks === null) return <PageSkeleton />;
 
   const totalKm = routes.reduce((s, r) => s + r.planned_km, 0);
   const totalFuel = routes.reduce((s, r) => s + r.planned_fuel_l, 0);
@@ -233,7 +261,7 @@ export default function Routes() {
           </Box>
         )}
         {routes.length === 0 ? (
-          <Muted>{t("noRoutes")}</Muted>
+          <EmptyState icon={<AltRouteOutlined />} title={t("noRoutes")} />
         ) : (
           <Grid container spacing={{ xs: 2, md: 2.5 }}>
             {[...routes]
@@ -320,7 +348,7 @@ export default function Routes() {
         <Grid size={{ xs: 12, md: 6 }}>
           <TableSection title={t("trucks")}>
             {trucks.length === 0 ? (
-              <Muted>{t("noTrucks")}</Muted>
+              <EmptyState icon={<LocalShippingOutlined />} title={t("noTrucks")} />
             ) : (
               <DataTable rows={trucks} columns={truckCols} toolbar={false} pageSize={5} />
             )}

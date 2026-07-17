@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { api } from "../api";
+import CleaningServicesOutlinedIcon from "@mui/icons-material/CleaningServicesOutlined";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import { Muted, PageStack } from "../components/ui";
+import { EmptyState, ErrorPanel, Muted, PageSkeleton, PageStack } from "../components/ui";
+import { useApi } from "../useApi";
 import { useI18n, type StringKey } from "../i18n";
 
 interface Component {
@@ -36,15 +36,18 @@ function scoreHex(score: number): string {
 
 export default function Cleanliness() {
   const { t } = useI18n();
-  const [areas, setAreas] = useState<AreaScore[] | null>(null);
-  const [method, setMethod] = useState<Methodology | null>(null);
+  const { data: areas, error, retry } = useApi<AreaScore[]>("/api/v1/cleanliness");
+  // Methodology is a secondary footnote: on failure the line is simply omitted.
+  const { data: method } = useApi<Methodology>("/api/v1/cleanliness/methodology");
 
-  useEffect(() => {
-    void api<AreaScore[]>("/api/v1/cleanliness").then(setAreas);
-    void api<Methodology>("/api/v1/cleanliness/methodology").then(setMethod);
-  }, []);
-
-  if (areas === null) return <Muted>{t("loading")}</Muted>;
+  if (error) {
+    return (
+      <PageStack>
+        <ErrorPanel message={t("errorLoad")} retryLabel={t("retry")} onRetry={retry} />
+      </PageStack>
+    );
+  }
+  if (areas === null) return <PageSkeleton />;
 
   const compNames = Array.from(new Set(areas.flatMap((a) => a.components.map((c) => c.name))));
 
@@ -84,7 +87,7 @@ export default function Cleanliness() {
       <Typography variant="h5">{t("cleanlinessIndex")}</Typography>
 
       {areas.length === 0 ? (
-        <Muted>{t("noAreas")}</Muted>
+        <EmptyState icon={<CleaningServicesOutlinedIcon />} title={t("noAreas")} />
       ) : (
         <DataTable rows={areas} columns={columns} getRowId={(r) => r.site_id} toolbar={false} />
       )}

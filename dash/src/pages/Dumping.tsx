@@ -19,11 +19,13 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CloseIcon from "@mui/icons-material/Close";
+import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 import ScheduleIcon from "@mui/icons-material/Schedule";
+import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
 import { api, apiBlob } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import MapView from "../components/MapView";
-import { Muted, PageStack, TableSection } from "../components/ui";
+import { EmptyState, ErrorPanel, Muted, PageSkeleton, PageStack, TableSection } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
 const INTERVENTIONS = ["bin_added", "signage", "cleanup", "engagement"] as const;
@@ -81,14 +83,21 @@ export default function Dumping() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [sites, setSites] = useState<Site[] | null>(null);
   const [selected, setSelected] = useState<SiteDetail | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    const [c, s] = await Promise.all([
-      api<Candidate[]>("/api/v1/dumping/candidates"),
-      api<Site[]>("/api/v1/dumping/sites"),
-    ]);
-    setCandidates(c);
-    setSites(s);
+    // Swallow into error state: reload is shared with mutation flows and must not reject.
+    try {
+      const [c, s] = await Promise.all([
+        api<Candidate[]>("/api/v1/dumping/candidates"),
+        api<Site[]>("/api/v1/dumping/sites"),
+      ]);
+      setCandidates(c);
+      setSites(s);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   }, []);
 
   useEffect(() => {
@@ -107,7 +116,14 @@ export default function Dumping() {
     setSelected(await api<SiteDetail>(`/api/v1/dumping/sites/${id}`));
   }
 
-  if (sites === null) return <Muted>{t("loading")}</Muted>;
+  if (error) {
+    return (
+      <PageStack>
+        <ErrorPanel message={t("errorLoad")} retryLabel={t("retry")} onRetry={() => void reload()} />
+      </PageStack>
+    );
+  }
+  if (sites === null) return <PageSkeleton />;
 
   const siteCols: GridColDef<Site>[] = [
     {
@@ -146,7 +162,7 @@ export default function Dumping() {
     <PageStack>
       <TableSection title={t("reviewQueue")}>
         {candidates.length === 0 ? (
-          <Muted>{t("noCandidates")}</Muted>
+          <EmptyState icon={<FactCheckOutlinedIcon />} title={t("noCandidates")} />
         ) : (
           <Grid container spacing={{ xs: 2, md: 2.5 }}>
             {candidates.map((c) => (
@@ -160,7 +176,7 @@ export default function Dumping() {
 
       <TableSection title={t("hotspots")}>
         {sites.length === 0 ? (
-          <Muted>{t("noSites")}</Muted>
+          <EmptyState icon={<WarningAmberOutlinedIcon />} title={t("noSites")} />
         ) : (
           <Stack spacing={2.5}>
             <MapView

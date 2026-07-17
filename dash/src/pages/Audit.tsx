@@ -1,8 +1,14 @@
-import { useEffect, useState } from "react";
-import { api } from "../api";
+import HistoryOutlined from "@mui/icons-material/HistoryOutlined";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import { Muted, PageStack, TableSection } from "../components/ui";
+import {
+  EmptyState,
+  ErrorPanel,
+  PageStack,
+  TableSection,
+  TableSkeleton,
+} from "../components/ui";
 import { useI18n } from "../i18n";
+import { useApi } from "../useApi";
 
 interface AuditRow {
   id: string;
@@ -17,15 +23,27 @@ interface AuditRow {
 
 export default function Audit() {
   const { t } = useI18n();
-  const [rows, setRows] = useState<AuditRow[] | null>(null);
+  const { data: rows, error, retry } = useApi<AuditRow[]>(
+    "/api/v1/admin/audit?limit=500",
+  );
 
-  useEffect(() => {
-    void api<AuditRow[]>("/api/v1/admin/audit?limit=500")
-      .then(setRows)
-      .catch(() => setRows([]));
-  }, []);
+  if (error) {
+    return (
+      <PageStack>
+        <ErrorPanel message={t("errorLoad")} retryLabel={t("retry")} onRetry={retry} />
+      </PageStack>
+    );
+  }
 
-  if (rows === null) return <Muted>{t("loading")}</Muted>;
+  if (rows === null) {
+    return (
+      <PageStack>
+        <TableSection title={t("audit")}>
+          <TableSkeleton />
+        </TableSection>
+      </PageStack>
+    );
+  }
 
   const columns: GridColDef<AuditRow>[] = [
     {
@@ -62,7 +80,7 @@ export default function Audit() {
     <PageStack>
       <TableSection title={t("audit")}>
         {rows.length === 0 ? (
-          <Muted>{t("noAudit")}</Muted>
+          <EmptyState icon={<HistoryOutlined />} title={t("noAudit")} />
         ) : (
           <DataTable rows={rows} columns={columns} pageSize={25} />
         )}

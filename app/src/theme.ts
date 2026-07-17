@@ -2,7 +2,10 @@ import { createTheme } from "@mui/material/styles";
 
 // Mimosa: ink primary + mimosa gold accent + warm neutrals. Flat, no gradients.
 // Tuned for one-handed field use - large touch targets, calm surfaces.
+// Inter Variable is self-hosted so weights render identically on every phone.
 const ink = { 50: "#eceef1", 100: "#dfe2e8", 500: "#3a4256", 600: "#101828", 700: "#05070c" };
+const EASE = "cubic-bezier(0.2, 0, 0, 1)";
+const HOVER = `background-color 120ms ${EASE}, border-color 120ms ${EASE}, color 120ms ${EASE}`;
 
 const theme = createTheme({
   palette: {
@@ -18,7 +21,7 @@ const theme = createTheme({
   },
   shape: { borderRadius: 4 },
   typography: {
-    fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+    fontFamily: '"Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
     fontSize: 15,
     fontWeightRegular: 460,
     fontWeightMedium: 600,
@@ -28,14 +31,38 @@ const theme = createTheme({
     button: { textTransform: "none", fontWeight: 680 },
   },
   components: {
-    MuiCssBaseline: { styleOverrides: { body: { WebkitFontSmoothing: "antialiased" } } },
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: { WebkitFontSmoothing: "antialiased", textRendering: "optimizeLegibility" },
+        "::selection": { backgroundColor: "#fbeecf", color: "#3a2a05" },
+        ":focus-visible": {
+          outline: "2px solid #f2b949",
+          outlineOffset: "2px",
+          borderRadius: "4px",
+        },
+        "@media (prefers-reduced-motion: reduce)": {
+          "*, *::before, *::after": {
+            animationDuration: "0.01ms !important",
+            transitionDuration: "0.01ms !important",
+          },
+        },
+      },
+    },
     MuiCard: {
       defaultProps: { elevation: 0 },
       styleOverrides: { root: { border: "1px solid #eae6dd", borderRadius: 4 } },
     },
     MuiButton: {
       defaultProps: { disableElevation: true },
-      styleOverrides: { root: { borderRadius: 4, minHeight: 48, paddingInline: 18 } },
+      styleOverrides: {
+        root: {
+          borderRadius: 4,
+          minHeight: 48,
+          paddingInline: 18,
+          transition: HOVER,
+          "&:active": { transform: "scale(0.985)" },
+        },
+      },
     },
     MuiAppBar: {
       defaultProps: { elevation: 0, color: "inherit" },
@@ -50,6 +77,7 @@ const theme = createTheme({
           borderRadius: 4,
           textTransform: "none",
           fontWeight: 550,
+          transition: HOVER,
           "&.Mui-selected": {
             backgroundColor: ink[600],
             color: "#fff",
@@ -57,6 +85,9 @@ const theme = createTheme({
           },
         },
       },
+    },
+    MuiBottomNavigationAction: {
+      styleOverrides: { root: { transition: HOVER } },
     },
   },
 });

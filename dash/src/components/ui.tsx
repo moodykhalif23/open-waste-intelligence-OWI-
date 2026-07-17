@@ -2,9 +2,13 @@ import type { ReactNode } from "react";
 import Accordion from "@mui/material/Accordion";
 import AccordionDetails from "@mui/material/AccordionDetails";
 import AccordionSummary from "@mui/material/AccordionSummary";
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
+import Grid from "@mui/material/Grid";
+import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import ExpandMoreOutlined from "@mui/icons-material/ExpandMoreOutlined";
@@ -244,7 +248,17 @@ export function StatCard({
             </Box>
           )}
         </Box>
-        <Typography sx={{ fontWeight: 720, letterSpacing: "-0.02em", fontSize: "1.5rem", lineHeight: 1.1, mt: 0.5, color }}>
+        <Typography
+          sx={{
+            fontWeight: 720,
+            letterSpacing: "-0.02em",
+            fontSize: "1.5rem",
+            lineHeight: 1.1,
+            mt: 0.5,
+            fontVariantNumeric: "tabular-nums",
+            color,
+          }}
+        >
           {value}
         </Typography>
         {sub && (
@@ -262,5 +276,107 @@ export function Muted({ children }: { children: ReactNode }) {
     <Typography variant="body2" color="text.secondary">
       {children}
     </Typography>
+  );
+}
+
+// Loading placeholders mirror the loaded layout, so nothing shifts when data lands.
+const SKELETON_SX = { bgcolor: "#f0ede5" };
+
+export function StatRowSkeleton({ count = 3 }: { count?: number }) {
+  return (
+    <Grid container spacing={{ xs: 2, md: 2.5 }}>
+      {Array.from({ length: count }, (_, i) => (
+        <Grid size={{ xs: 12, sm: 12 / count }} key={i}>
+          <Card>
+            <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+              <Skeleton animation="wave" width="45%" sx={SKELETON_SX} />
+              <Skeleton animation="wave" width="30%" height={34} sx={SKELETON_SX} />
+            </CardContent>
+          </Card>
+        </Grid>
+      ))}
+    </Grid>
+  );
+}
+
+export function TableSkeleton({ rows = 6 }: { rows?: number }) {
+  return (
+    <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: "4px", p: 2 }}>
+      <Skeleton animation="wave" width="35%" height={28} sx={SKELETON_SX} />
+      {Array.from({ length: rows }, (_, i) => (
+        <Skeleton animation="wave" height={36} sx={SKELETON_SX} key={i} />
+      ))}
+    </Box>
+  );
+}
+
+export function PageSkeleton() {
+  return (
+    <Stack spacing={{ xs: 2, md: 2.5 }}>
+      <StatRowSkeleton />
+      <TableSkeleton />
+    </Stack>
+  );
+}
+
+// Empty states carry the next action, not just the absence of data — a fresh
+// deploy is ALL empty states, so they are the first-run experience.
+export function EmptyState({
+  icon,
+  title,
+  hint,
+  action,
+}: {
+  icon?: ReactNode;
+  title: ReactNode;
+  hint?: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <Stack spacing={1.25} sx={{ alignItems: "center", textAlign: "center", py: 5 }}>
+      {icon && (
+        <Box
+          sx={{
+            display: "grid",
+            placeItems: "center",
+            width: 56,
+            height: 56,
+            borderRadius: "4px",
+            bgcolor: "#fbeecf",
+            color: "#835a09",
+            "& svg": { fontSize: 30 },
+          }}
+        >
+          {icon}
+        </Box>
+      )}
+      <Typography variant="h6">{title}</Typography>
+      {hint && (
+        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 420 }}>
+          {hint}
+        </Typography>
+      )}
+      {action && <Box sx={{ mt: 0.75 }}>{action}</Box>}
+    </Stack>
+  );
+}
+
+export function ErrorPanel({ message, onRetry, retryLabel }: {
+  message: ReactNode;
+  onRetry: () => void;
+  retryLabel: string;
+}) {
+  return (
+    <Alert
+      severity="error"
+      variant="outlined"
+      action={
+        <Button color="inherit" size="small" onClick={onRetry}>
+          {retryLabel}
+        </Button>
+      }
+    >
+      {message}
+    </Alert>
   );
 }

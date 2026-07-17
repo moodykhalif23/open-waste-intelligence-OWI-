@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 import MenuItem from "@mui/material/MenuItem";
@@ -6,10 +7,20 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import ShowChartOutlined from "@mui/icons-material/ShowChartOutlined";
+import VolunteerActivismOutlined from "@mui/icons-material/VolunteerActivismOutlined";
 import { api, getToken } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import EChart, { lineOption } from "../components/EChart";
-import { Muted, PageStack, SectionCard, StatCard, TableSection } from "../components/ui";
+import {
+  EmptyState,
+  ErrorPanel,
+  PageSkeleton,
+  PageStack,
+  SectionCard,
+  StatCard,
+  TableSection,
+} from "../components/ui";
 import { useI18n } from "../i18n";
 
 const EVENT_TYPES = ["cleanup", "education", "sorting"] as const;
@@ -45,14 +56,20 @@ export default function Volunteers() {
   const { t } = useI18n();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    const [s, e] = await Promise.all([
-      api<Summary>("/api/v1/volunteers/summary"),
-      api<Event[]>("/api/v1/volunteers"),
-    ]);
-    setSummary(s);
-    setEvents(e);
+    try {
+      const [s, e] = await Promise.all([
+        api<Summary>("/api/v1/volunteers/summary"),
+        api<Event[]>("/api/v1/volunteers"),
+      ]);
+      setSummary(s);
+      setEvents(e);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   }, []);
 
   useEffect(() => {
@@ -70,7 +87,14 @@ export default function Volunteers() {
     window.open(URL.createObjectURL(blob), "_blank", "noopener");
   }
 
-  if (summary === null) return <Muted>{t("loading")}</Muted>;
+  if (error !== null) {
+    return (
+      <PageStack>
+        <ErrorPanel message={t("errorLoad")} retryLabel={t("retry")} onRetry={() => void reload()} />
+      </PageStack>
+    );
+  }
+  if (summary === null) return <PageSkeleton />;
 
   const trend = {
     categories: summary.monthly.map((m) => m.month),
@@ -119,7 +143,9 @@ export default function Volunteers() {
         {summary.monthly.length > 0 ? (
           <EChart option={lineOption(trend.categories, trend.values)} />
         ) : (
-          <Muted>{t("noData")}</Muted>
+          <Box sx={{ height: 280, display: "grid", placeItems: "center" }}>
+            <EmptyState icon={<ShowChartOutlined />} title={t("noData")} />
+          </Box>
         )}
       </SectionCard>
 
@@ -127,7 +153,7 @@ export default function Volunteers() {
 
       <TableSection title={t("events")}>
         {events.length === 0 ? (
-          <Muted>{t("noData")}</Muted>
+          <EmptyState icon={<VolunteerActivismOutlined />} title={t("noData")} />
         ) : (
           <DataTable rows={events} columns={eventCols} />
         )}

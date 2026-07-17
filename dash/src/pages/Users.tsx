@@ -7,9 +7,10 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import ManageAccountsOutlinedIcon from "@mui/icons-material/ManageAccountsOutlined";
 import { api, type Role, type User } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import { Muted, PageStack, SectionCard, TableSection } from "../components/ui";
+import { EmptyState, ErrorPanel, PageStack, SectionCard, TableSection, TableSkeleton } from "../components/ui";
 import { useI18n } from "../i18n";
 
 const ROLES: Role[] = ["collector", "coordinator", "viewer", "admin"];
@@ -17,11 +18,17 @@ const ROLES: Role[] = ["collector", "coordinator", "viewer", "admin"];
 export default function Users() {
   const { t } = useI18n();
   const [users, setUsers] = useState<User[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [issued, setIssued] = useState<{ userId: string; token: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
   const reload = useCallback(async () => {
-    setUsers(await api<User[]>("/api/v1/users"));
+    try {
+      setUsers(await api<User[]>("/api/v1/users"));
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
   }, []);
 
   useEffect(() => {
@@ -48,7 +55,29 @@ export default function Users() {
     setCopied(true);
   }
 
-  if (users === null) return <Muted>{t("loading")}</Muted>;
+  if (error) {
+    return (
+      <PageStack>
+        <ErrorPanel
+          message={t("errorLoad")}
+          retryLabel={t("retry")}
+          onRetry={() => {
+            setError(null);
+            setUsers(null);
+            void reload();
+          }}
+        />
+      </PageStack>
+    );
+  }
+
+  if (users === null) {
+    return (
+      <PageStack>
+        <TableSkeleton />
+      </PageStack>
+    );
+  }
 
   const columns: GridColDef<User>[] = [
     { field: "name", headerName: t("name"), flex: 1, minWidth: 130 },
@@ -88,7 +117,11 @@ export default function Users() {
       </SectionCard>
 
       <TableSection title={t("users")}>
-        <DataTable rows={users} columns={columns} />
+        {users.length === 0 ? (
+          <EmptyState icon={<ManageAccountsOutlinedIcon />} title={t("noData")} />
+        ) : (
+          <DataTable rows={users} columns={columns} />
+        )}
 
         {issued && (
           <Alert severity="success" icon={false} sx={{ mt: 2.5 }}>

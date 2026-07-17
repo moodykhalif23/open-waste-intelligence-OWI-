@@ -1,10 +1,19 @@
-import { useEffect, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Grid from "@mui/material/Grid";
-import { api } from "../api";
+import EnergySavingsLeafOutlined from "@mui/icons-material/EnergySavingsLeafOutlined";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import EChart, { hbarOption } from "../components/EChart";
-import { Muted, PageStack, Panel, SectionCard, StatCard } from "../components/ui";
+import {
+  EmptyState,
+  ErrorPanel,
+  PageStack,
+  Panel,
+  SectionCard,
+  StatCard,
+  StatRowSkeleton,
+  TableSkeleton,
+} from "../components/ui";
+import { useApi } from "../useApi";
 import { useI18n, type StringKey } from "../i18n";
 
 interface MaterialCarbon {
@@ -28,13 +37,23 @@ interface Carbon {
 
 export default function Carbon() {
   const { t } = useI18n();
-  const [data, setData] = useState<Carbon | null>(null);
+  const { data, error, retry } = useApi<Carbon>("/api/v1/carbon?days=30");
 
-  useEffect(() => {
-    void api<Carbon>("/api/v1/carbon?days=30").then(setData);
-  }, []);
-
-  if (data === null) return <Muted>{t("loading")}</Muted>;
+  if (error !== null) {
+    return (
+      <PageStack>
+        <ErrorPanel message={t("errorLoad")} retryLabel={t("retry")} onRetry={retry} />
+      </PageStack>
+    );
+  }
+  if (data === null) {
+    return (
+      <PageStack>
+        <StatRowSkeleton count={4} />
+        <TableSkeleton />
+      </PageStack>
+    );
+  }
   const label = (m: string) => t(m as StringKey);
   const range = `${Math.round(data.co2e_low_kg)}–${Math.round(data.co2e_high_kg)}`;
   const ranked = [...data.materials].sort((a, b) => b.co2e_kg - a.co2e_kg);
@@ -62,7 +81,7 @@ export default function Carbon() {
       </Grid>
 
       {data.co2e_avoided_kg === 0 ? (
-        <Muted>{t("noCarbonYet")}</Muted>
+        <EmptyState icon={<EnergySavingsLeafOutlined />} title={t("noCarbonYet")} />
       ) : (
         <SectionCard title={t("co2eByMaterial")}>
           <Grid container spacing={{ xs: 2, md: 2.5 }}>

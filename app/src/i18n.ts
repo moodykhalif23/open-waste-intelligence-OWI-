@@ -73,6 +73,8 @@ const strings = {
     colAction: "Action",
     recNone: "OK",
     noMatches: "No bins match",
+    installTitle: "Install OpenWaste — works offline",
+    installAction: "Install",
   },
   sw: {
     title: "Ripoti ya OWI",
@@ -146,6 +148,8 @@ const strings = {
     colAction: "Hatua",
     recNone: "Sawa",
     noMatches: "Hakuna pipa linalolingana",
+    installTitle: "Sakinisha OpenWaste — inafanya kazi bila mtandao",
+    installAction: "Sakinisha",
   },
 } as const;
 

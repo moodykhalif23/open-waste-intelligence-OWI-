@@ -5,25 +5,32 @@ import Grid from "@mui/material/Grid";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import DownloadIcon from "@mui/icons-material/Download";
 import { api, apiBlob, type Bin, type Site } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import MapView from "../components/MapView";
-import { Muted, PageStack, SectionCard, TableSection } from "../components/ui";
+import { EmptyState, ErrorPanel, PageSkeleton, PageStack, SectionCard, TableSection } from "../components/ui";
 import { useI18n } from "../i18n";
 
 export default function Bins() {
   const { t } = useI18n();
   const [sites, setSites] = useState<Site[]>([]);
   const [bins, setBins] = useState<Bin[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    const [siteList, binList] = await Promise.all([
-      api<Site[]>("/api/v1/sites"),
-      api<Bin[]>("/api/v1/bins"),
-    ]);
-    setSites(siteList);
-    setBins(binList);
+    try {
+      const [siteList, binList] = await Promise.all([
+        api<Site[]>("/api/v1/sites"),
+        api<Bin[]>("/api/v1/bins"),
+      ]);
+      setSites(siteList);
+      setBins(binList);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   }, []);
 
   useEffect(() => {
@@ -40,7 +47,22 @@ export default function Bins() {
     URL.revokeObjectURL(url);
   }
 
-  if (bins === null) return <Muted>{t("loading")}</Muted>;
+  if (error) {
+    return (
+      <PageStack>
+        <ErrorPanel
+          message={t("errorLoad")}
+          retryLabel={t("retry")}
+          onRetry={() => {
+            setError(null);
+            setBins(null);
+            void reload();
+          }}
+        />
+      </PageStack>
+    );
+  }
+  if (bins === null) return <PageSkeleton />;
   const siteName = (id: string) => sites.find((s) => s.id === id)?.name ?? id.slice(0, 8);
 
   const columns: GridColDef<Bin>[] = [
@@ -102,7 +124,11 @@ export default function Bins() {
       )}
 
       <TableSection title={t("bins")}>
-        {bins.length === 0 ? <Muted>{t("noData")}</Muted> : <DataTable rows={bins} columns={columns} />}
+        {bins.length === 0 ? (
+          <EmptyState icon={<DeleteOutlineOutlinedIcon />} title={t("noData")} hint={t("newSite")} />
+        ) : (
+          <DataTable rows={bins} columns={columns} />
+        )}
       </TableSection>
     </PageStack>
   );

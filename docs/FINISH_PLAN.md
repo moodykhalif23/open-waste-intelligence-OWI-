@@ -107,7 +107,9 @@ Researched proposals, not commitments. Three tracks; each item independently shi
 8. **Dumping** (M): scene-level classifier on spotgarbage-GINI (CC BY 4.0) + UrbanDumpSight (verify license) with hard negatives mined from normal route photos.
 9. **Active-learning loop** (M): ✅ core loop shipped (2026-07-17) — review queue serves lowest-confidence predictions first (uncertainty sampling); `GET /api/v1/predictions/export` (admin, audited) emits one deduped label per observation (correction > confirmation; collector fill-taps are direct ground truth for the fill task); `owi_ml.data.export_reviewed` materializes them into `datasets/safi/<class>/` idempotently; trainer takes multiple `--data` roots; `make ml-retrain` = export + retrain on public+local (registration stays a deliberate manual step after eyeballing the gate). Verified live end-to-end. Still open: pseudo-labeling above a confidence threshold with human spot-check ratio, and scheduling the weekly `ml-retrain` run (host cron/Task Scheduler — training env lives outside the containers).
 
-### Track C — Premium UI/UX (80/20 ordered; constraints honored: MUI+ECharts, flat, no gradients, 4px, Mimosa)
+### Track C — Premium UI/UX (constraints honored: MUI+ECharts, flat, no gradients, 4px, Mimosa)
+
+**✅ SHIPPED 2026-07-17** — items 1–10, 12, 13 below, plus the shared EmptyState rollout (the P1 item) across all 16 dash pages. Both apps compile + build green; verified live through Caddy with screenshots in `screens/trackc-*.png`. Still open from this track: type-scale consolidation (14 ad-hoc font sizes → 7-step scale), i18n debt (8 dead keys, untranslated enum values, Overview weekday labels, `t()` interpolation), MapView refit-on-data-change, Layout badge refetch chattiness.
 
 1. **Self-hosted Inter Variable** in both apps (S): the themes specify weights 450/620/690/720 that static system fonts can't render — they silently snap today. One `@fontsource-variable/inter` import + weight remap + ECharts `textStyle.fontFamily`. Single highest-leverage change.
 2. **Tabular numerals everywhere** (S): exists in only 3 places in a metrics product; also fix `DataTable.tsx` cell `display:flex` silently breaking right-alignment of every numeric column.
@@ -122,6 +124,101 @@ Researched proposals, not commitments. Three tracks; each item independently shi
 11. **Type-scale consolidation** (M): 14 ad-hoc font sizes → 7-step scale.
 12. **Login** (S): submit busy state (dead-feeling on slow networks today), Alert + subtle shake on failure, 8 px logo tiles → 4 px.
 13. **Open call for Brian**: the AppBar uses `backdropFilter: blur(8px)` (theme.ts:85) — technically glass; either bless it as the one exception or go solid `#ffffff`.
+
+## Track D — Landing page (✅ SHIPPED 2026-07-17; brief: premium, calm, bold, not vibecoded)
+
+**Built as planned below** — `site/` (Vite vanilla-TS, 8.4 KB CSS + 1.2 KB JS + self-hosted Inter,
+zero external requests), 10 custom inline SVGs, served by Caddy at `LANDING_DOMAIN`
+(default https://localhost:8085) from the same web image; screenshots `screens/landing-*.png`.
+Open follow-ups: set the real canonical/OG URL when a domain exists (placeholder
+`openwaste.example`), add a static OG image, optional Kiswahili version.
+
+**Brief**: informative about mission, sustainability contribution, and the AI; sections transitioned
+with clean dividers (calmness), few cards; custom hand-drawn SVG icons in brand style; intuitive,
+calm, bold. Must not read like a template site.
+
+### D1 — Architecture
+- New `site/` folder: **static Vite + vanilla TS** (no React — this page is content, and it must
+  score perfect on performance/SEO). One HTML file, one stylesheet, one small TS file (scroll
+  reveal + mobile nav only, both behind `prefers-reduced-motion`). Inter Variable self-hosted
+  (`@fontsource-variable/inter`, same as the apps). Zero external requests.
+- Served by Caddy from the `web` image at the root site (`:443` apex / `LANDING_DOMAIN`, default
+  `localhost:8443` root serves the dash today — landing takes `/` on its own domain block, dash
+  keeps :8443, app :8444; local preview via `pnpm dev` in `site/`).
+- SEO/meta: title/description, OpenGraph + Twitter card (og-image rendered from the hero at build
+  time or a static PNG in `site/public`), canonical, `theme-color #f8f6f0`, favicon = existing
+  `icon.svg`.
+
+### D2 — Design system (Mimosa, translated to marketing scale)
+- Tokens: page `#f8f6f0`, ink `#101828` (text + bold blocks), mimosa `#f2b949` (accents only —
+  underlines, icon strokes, small highlights; never large fills behind text), brown `#835a09` /
+  `#3a2a08` (one dark "depth" band, like the login panel), hairline `#eae6dd`. Flat, no gradients,
+  4px radii, no shadows heavier than `0 4px 16px rgba(16,24,40,.06)`.
+- Type scale (bold-but-calm): hero display ~clamp(2.6rem, 6vw, 4.2rem) weight 720 tracking -0.03em;
+  section headings ~2rem/700; body 1.06rem/460 line-height 1.7 max-width 62ch; overline labels
+  0.78rem/640 uppercase tracking 0.08em in brown. Numerals tabular.
+- **Section dividers, not cards** (the calmness device): sections alternate white `#ffffff` /
+  page cream `#f8f6f0` with a 1px `#eae6dd` hairline between; two "moment" dividers use a thin
+  centered gold rule with the bin mark (12px) sitting on it; the sustainability band sits on the
+  dark brown with cream text. Generous rhythm: ~120px vertical padding desktop, 72px mobile.
+- Motion: single pattern — 300ms fade+8px rise on section entry via IntersectionObserver, once,
+  disabled under reduced-motion. Nothing else moves except link underlines (120ms).
+
+### D3 — Custom SVG icon set (hand-drawn, brand style: flat geometric, ink/gold/brown only,
+matching the existing person+bin mark's rounded-rect language, 48×48 viewBox, no icon library)
+1. `photo-signal` — phone with a gold frame corner → the photo-as-sensor idea
+2. `privacy-shield` — shield with a blurred-face dot pattern → blur at ingestion
+3. `sorting-loop` — three arrows folding into the 8-class grid → AI classification
+4. `route-pin` — winding path with gold stop dots → route optimization
+5. `handcart` — mkokoteni silhouette → collection methods incl. manual (proud local detail)
+6. `leaf-scale` — leaf on a balance beam → honest carbon accounting (ranges, not offsets)
+7. `open-ledger` — open book with aggregate bars → Open Data API
+8. `review-loop` — human dot + model square exchanging arrows → active learning
+Each drawn inline in the HTML (no sprite build), `aria-hidden`, ~2.5px stroke or flat fills.
+
+### D4 — Sections + copy direction (informative: mission / sustainability / AI)
+1. **Hero** (white): overline "OPEN-SOURCE WASTE INTELLIGENCE" → display headline ("Every photo a
+   decision." tone — bold, concrete, no hype) → one-paragraph mission → two CTAs (GitHub,
+   "See the dashboard") → below, a real dashboard screenshot in a thin hairline frame (honesty >
+   illustration).
+2. **Mission** (cream, after hairline): the Nairobi/Safi story in 3 short paragraphs — waste ops
+   run on guesswork; a phone photo is the cheapest sensor; open-source so ANY operator (2 trucks
+   or 200) can run it. No card grid — one strong column.
+3. **How it works** (white): 4 steps in a single row (stacked mobile), custom icons 1/3/4/8:
+   snap → AI classifies + privacy-blurs → operations decide (bins, routes) → community sees open
+   data. One hairline under the row, not four cards.
+4. **Sustainability** (dark brown band — THE bold moment): headline stats row (tabular, cream):
+   recovered-material value, CO₂e avoided *as a range*, km-per-tonne route reduction, cleanliness
+   index — each with a one-line honest qualifier ("indicative until sorting-site calibration").
+   Icons 6/4. This section must state the anti-greenwash position explicitly: "never sold as
+   offsets."
+5. **The AI, honestly** (white): what makes it intelligent without buzzwords — 8-class classifier
+   that must pass a frozen golden gate (≥0.80 macro-F1) before it ships; licensed-data-only
+   training policy; the active-learning loop (reviewers correct the least-confident predictions,
+   corrections retrain the model weekly); on-device-class CPU inference. Icon 8 + a small
+   flow diagram (SVG, 3 nodes). Differentiator: most sites claim AI; this one shows the gate.
+6. **Privacy & governance** (cream): no person identification ever; blur at ingestion + 72h
+   quarantine purge; aggregates-only public API (small-cell suppression, 7-day delay); DSAR
+   erasure; append-only audit. Icon 2/7. Short, declarative lines with a hairline list.
+7. **Built for the field** (white): offline-first PWA on low-end Androids, EN+SW from the first
+   screen, works for trucks AND mkokoteni crews (icon 5) — collection methods are configurable.
+8. **Open source / get involved** (cream → footer): Apache-2.0, `make web` deploys the whole
+   platform, link GitHub/docs; minimal ink footer with the mark.
+
+### D5 — Anti-"vibecoded" checklist (enforced at review)
+No gradients, no glassmorphism, no emoji, no stock 3D blobs, no fake logo marquees, no
+"Trusted by 10,000+", no lorem, no generic feature-card grids, no AI-purple. Every number on the
+page must be true of the product today or explicitly framed as a target. Copy in plain English,
+short sentences, zero exclamation marks.
+
+### D6 — Build steps
+1. Scaffold `site/` (vite vanilla-ts, pnpm, Inter package), wire `pnpm dev/build/check`.
+2. Draw the 8 SVGs + section dividers; compose sections with real copy.
+3. Screenshot-frame the dashboard hero image from the live stack into `site/public`.
+4. Caddy: add landing site block (env `LANDING_DOMAIN`, default `:8085` locally so dash/app keep
+   their ports); extend `deploy/web.Dockerfile` to build `site/`.
+5. Verify: Lighthouse-clean (perf ≥95), keyboard nav, reduced-motion, 360px→1440px responsive
+   sweep, screenshots to `screens/landing-*.png`; update STATUS.md.
 
 ## E2E verification runbook (what "everything wired" means)
 

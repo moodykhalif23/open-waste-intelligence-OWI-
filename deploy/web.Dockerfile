@@ -1,4 +1,4 @@
-# Build both frontends, serve them through one Caddy with /api reverse-proxied.
+# Build all three frontends, serve them through one Caddy with /api reverse-proxied.
 FROM node:22-alpine AS build
 RUN corepack enable
 WORKDIR /src
@@ -8,13 +8,18 @@ COPY app/package.json app/pnpm-lock.yaml app/pnpm-workspace.yaml app/
 RUN cd app && pnpm install --frozen-lockfile
 COPY dash/package.json dash/pnpm-lock.yaml dash/pnpm-workspace.yaml dash/
 RUN cd dash && pnpm install --frozen-lockfile
+COPY site/package.json site/pnpm-lock.yaml site/pnpm-workspace.yaml site/
+RUN cd site && pnpm install --frozen-lockfile
 
 COPY app app
 COPY dash dash
+COPY site site
 RUN cd app && pnpm build
 RUN cd dash && pnpm build
+RUN cd site && pnpm build
 
 FROM caddy:2-alpine
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /src/app/dist /srv/app
 COPY --from=build /src/dash/dist /srv/dash
+COPY --from=build /src/site/dist /srv/site

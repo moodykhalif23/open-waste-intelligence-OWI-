@@ -22,6 +22,26 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 
 ## Done
 
+### Track D — landing page (2026-07-17)
+
+- New `site/` — static Vite + vanilla TS (no framework): **8.4 KB CSS + 1.2 KB JS + self-hosted Inter Variable, zero external requests**. Sections alternate white/cream bands cut by hairlines, two gold rule-with-mark "moment" dividers, one dark-brown impact band — dividers instead of cards throughout, per the brief.
+- **10 custom inline SVGs** drawn in the brand's flat geometric language (ink/gold/brown): photo-as-sensor, sorting loop, route pin, open ledger, leaf-on-scale, gate chart, licensed-document seal, human↔model review loop, privacy shield, mkokoteni handcart. No icon library.
+- Content = mission (the Safi story in prose), sustainability (KES/kg, CO₂e *range*, km/tonne, 0–100 index — each with its honest qualifier + the explicit "never sold as offsets" line), **"The AI, honestly"** (the 0.80 golden gate, licensed-data-only policy, the closed review→retrain loop, blur-before-storage), governance hard lines, built-for-the-field (incl. handcarts), open-source deploy.
+- Motion: one pattern only — 300 ms rise-and-fade per section, once, IntersectionObserver, disabled under `prefers-reduced-motion`. Anti-vibecoded checklist honored: no gradients, no emoji, no purple, no fake numbers, zero exclamation marks.
+- Served by Caddy from the same `web` image at `LANDING_DOMAIN` (default **https://localhost:8085**; real domains get automatic TLS); `deploy/web.Dockerfile` builds all three frontends. Verified live alongside dash/app; desktop + mobile screenshots in `screens/landing-*.png`. (During verification: learned headless-Edge clamps window width ~500 px — the "mobile clipping" was the tool, not the page.)
+- Follow-ups noted in FINISH_PLAN: real canonical/OG URL when a domain exists, OG image, optional Kiswahili version.
+
+### Track C — premium UI/UX pass, both apps (2026-07-17)
+
+- **Typography is real now**: Inter Variable self-hosted in dash + app (`@fontsource-variable/inter`, no CDN — works offline/LAN); every fractional weight the themes specify (450/620/690/720) finally renders as designed on all OSes instead of snapping to 400/700. ECharts canvas text uses the same family. Tabular numerals across tables, DataGrid, chips, stat values — and the DataTable flex-cell bug that broke right-alignment of numeric columns is fixed.
+- **Skeletons + honest errors everywhere**: shared `StatRowSkeleton`/`TableSkeleton`/`PageSkeleton` primitives replace all 16 text-only "Loading…" gates (zero layout shift); a `useApi` hook + shared `ErrorPanel` with Retry ends the "failed fetch = stuck on Loading forever" bug on every dash page.
+- **Empty states carry the next action**: shared `EmptyState` (icon tile + title + hint + CTA) replaces every bare "no data" line — including Users' untranslated DataGrid "No rows" overlay and Overview's flat-zero line chart, which now honestly says there's no data instead of drawing a zero line.
+- **Motion baseline** (there was literally zero transition code): 120 ms hover/press on buttons/chips/tabs/nav, press-scale feedback, 200 ms route-content entrance keyed on pathname, a 2 px gold LinearProgress as the lazy-route fallback (was `null` → white flash), all disabled under `prefers-reduced-motion`.
+- **Orientation**: AppBar shows "Section › Page" breadcrumbs (leaf bold), `document.title` is per-page ("Carbon · OpenWaste"), Ctrl+K focuses the jump-to-page search (with a `kbd` hint). Gold `:focus-visible` ring app-wide (WCAG 2.4.7); warm thin scrollbars; mimosa selection color; AppBar backdrop-blur replaced with solid white (glass rule).
+- **Field app installability + ergonomics**: real 192/512 + maskable launcher PNGs rasterized from the brand SVG (manifest + apple-touch-icon), `beforeinstallprompt` banner ("Install OpenWaste — works offline", dismissible, EN+SW), safe-area insets on the bottom nav/snackbar (gesture-nav phones), sticky Save row within thumb reach while a photo is staged, a persistent amber "N reports queued" bar when offline so collectors trust the queue, 48 px settings target, stop-badge style cleanup.
+- Login: busy spinner on submit (dead-feeling on slow networks before), outlined error Alert with a subtle shake, radius snaps. Detail sweep: 6/8 px radius violations → 4 px, off-grid paddings snapped, chart resize via ResizeObserver (reflows on drawer toggle), stale "emerald" comments fixed.
+- Mechanics: 16 dash pages converted in parallel (one agent per file over shared primitives), zero compile errors on first assembly; verified serving via Caddy; screenshots in `screens/`.
+
 ### Track B — active-learning loop closed (B9, 2026-07-17)
 
 - **Uncertainty sampling**: the review queue now serves the model's least-confident predictions first (`payload.confidence` ascending) — reviewer effort lands where a correction teaches the most. Verified live: queue head confidences 0.36/0.37/0.37 out of 280.

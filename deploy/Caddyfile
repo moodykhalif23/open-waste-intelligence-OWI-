@@ -1,5 +1,11 @@
-# Real domains via DASH_DOMAIN / APP_DOMAIN get automatic Let's Encrypt TLS;
-# the defaults serve self-signed HTTPS on ports 8443/8444 for LAN pilots.
+# Real domains via LANDING_DOMAIN / DASH_DOMAIN / APP_DOMAIN get automatic
+# Let's Encrypt TLS; the defaults serve self-signed HTTPS on local ports.
+{$LANDING_DOMAIN:localhost:8085} {
+	encode gzip
+	root * /srv/site
+	file_server
+}
+
 {$DASH_DOMAIN:localhost:8443} {
 	encode gzip
 	handle /api/* {

@@ -2,7 +2,7 @@
 COMPOSE := docker compose --profile prod
 ADMIN_PHONE ?= +254700000000
 
-.PHONY: help web up down restart logs ps smoke seed bootstrap dev build clean backup restore ml-setup ml-data ml-train ml-register
+.PHONY: help web up down restart logs ps smoke seed bootstrap dev build clean backup restore ml-setup ml-data ml-train ml-register ml-export ml-retrain
 
 help: ## Show available targets
 	@echo OpenWaste Intelligence — make targets:
@@ -84,3 +84,10 @@ ml-register: ## Publish + activate the trained model (API_URL, TOKEN, VERSION re
 	cd ml && uv run python -m owi_ml.registry --api $(API_URL) --token $(TOKEN) \
 		--task classify --version $(VERSION) --onnx artifacts/classifier.onnx \
 		--labels artifacts/labels.json --metrics artifacts/metrics.json
+
+ml-export: ## Pull reviewed ground truth into datasets/safi (API_URL, TOKEN required)
+	cd ml && uv run python -m owi_ml.data.export_reviewed --api $(API_URL) --token $(TOKEN)
+
+ml-retrain: ## Weekly cadence: export reviews, retrain on public+local; register manually after checking the gate
+	cd ml && uv run python -m owi_ml.data.export_reviewed --api $(API_URL) --token $(TOKEN)
+	cd ml && uv run --group train python -m owi_ml.train.classify --data datasets/merged datasets/safi

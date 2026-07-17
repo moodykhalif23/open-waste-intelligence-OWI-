@@ -1,1 +1,54 @@
 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+C:\Users\ADMIN\openwaste-intelligence\ml\.venv\Lib\site-packages\huggingface_hub\file_download.py:139: UserWarning: `huggingface_hub` cache-system uses symlinks by default to efficiently store duplicated files but your machine does not support them in C:\Users\ADMIN\.cache\huggingface\hub\models--timm--vit_small_patch14_dinov2.lvd142m. Caching files will still work but in a degraded version that might require more space on your disk. This warning can be disabled by setting the `HF_HUB_DISABLE_SYMLINKS_WARNING` environment variable. For more details, see https://huggingface.co/docs/huggingface_hub/how-to-cache#limitations.
+To support symlinks on Windows, you either need to activate Developer Mode or to run Python as an administrator. In order to activate developer mode, see this article: https://docs.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development
+  warnings.warn(message)
+corpus: 26424 images, 8 classes
+split: train=18507 val=3953 golden=3964
+extracting frozen DINOv2 features (one-off, CPU) ...
+  features 0/18507
+  features 1280/18507
+  features 2560/18507
+  features 3840/18507
+  features 5120/18507
+  features 6400/18507
+  features 7680/18507
+  features 8960/18507
+  features 10240/18507
+  features 11520/18507
+  features 12800/18507
+  features 14080/18507
+  features 15360/18507
+  features 16640/18507
+  features 17920/18507
+  features 0/3953
+  features 1280/3953
+  features 2560/3953
+  features 3840/3953
+epoch 10/80  loss=17.961  val_acc=0.964
+epoch 20/80  loss=17.301  val_acc=0.967
+epoch 30/80  loss=17.047  val_acc=0.970
+epoch 40/80  loss=16.954  val_acc=0.969
+epoch 50/80  loss=16.910  val_acc=0.971
+epoch 60/80  loss=16.867  val_acc=0.971
+epoch 70/80  loss=16.870  val_acc=0.970
+epoch 80/80  loss=16.932  val_acc=0.971
+evaluating on the frozen golden split ...
+  features 0/3964
+  features 1280/3964
+  features 2560/3964
+  features 3840/3964
+C:\Users\ADMIN\openwaste-intelligence\ml\src\owi_ml\train\classify.py:38: DeprecationWarning: You are using the legacy TorchScript-based ONNX export. Starting in PyTorch 2.9, the new torch.export-based ONNX exporter has become the default. Learn more about the new export logic: https://docs.pytorch.org/docs/stable/onnx_export.html. For exporting control flow: https://pytorch.org/tutorials/beginner/onnx/export_control_flow_model_to_onnx_tutorial.html
+  torch.onnx.export(
+C:\Users\ADMIN\openwaste-intelligence\ml\.venv\Lib\site-packages\torch\__init__.py:2278: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if not condition:
+golden macro-F1=0.9543 accuracy=0.9664 (n=3964)
+  e_waste      f1=0.991 (n=227)
+  glass        f1=0.959 (n=551)
+  metal        f1=0.945 (n=323)
+  organic      f1=0.983 (n=258)
+  other_mixed  f1=0.846 (n=165)
+  paper        f1=0.969 (n=889)
+  plastic      f1=0.943 (n=500)
+  textile      f1=0.998 (n=1051)
+exported artifacts\classifier.onnx + labels.json + metrics.json
+gate (macro-F1 >= 0.80): PASS

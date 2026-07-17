@@ -20,11 +20,12 @@ from owi_ml.eval.metrics import EvalReport, evaluate
 DINOV2 = "vit_small_patch14_dinov2.lvd142m"
 
 
-def _gather(data_dir: Path) -> list[tuple[Path, str]]:
+def _gather(data_dirs: list[Path]) -> list[tuple[Path, str]]:
     samples = []
-    for class_dir in sorted(p for p in data_dir.iterdir() if p.is_dir()):
-        for img in class_dir.glob("*.jpg"):
-            samples.append((img, class_dir.name))
+    for data_dir in data_dirs:
+        for class_dir in sorted(p for p in data_dir.iterdir() if p.is_dir()):
+            for img in class_dir.glob("*.jpg"):
+                samples.append((img, class_dir.name))
     return samples
 
 
@@ -61,7 +62,13 @@ def _write_artifacts(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train the T2 material classifier")
-    parser.add_argument("--data", type=Path, required=True, help="folder of <class>/*.jpg")
+    parser.add_argument(
+        "--data",
+        type=Path,
+        required=True,
+        nargs="+",
+        help="one or more folders of <class>/*.jpg (e.g. datasets/merged datasets/safi)",
+    )
     parser.add_argument("--backbone", choices=["dinov2", "mobilenet"], default="dinov2")
     parser.add_argument("--epochs", type=int, default=0, help="0 = per-backbone default")
     parser.add_argument("--batch", type=int, default=32)

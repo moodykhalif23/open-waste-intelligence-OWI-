@@ -22,6 +22,22 @@ These are tracked so we complete them **one module at a time, fully** — not ha
 
 ## Done
 
+### Track B — active-learning loop closed (B9, 2026-07-17)
+
+- **Uncertainty sampling**: the review queue now serves the model's least-confident predictions first (`payload.confidence` ascending) — reviewer effort lands where a correction teaches the most. Verified live: queue head confidences 0.36/0.37/0.37 out of 280.
+- **Training-labels export**: `GET /api/v1/predictions/export?task=classify|fill` (admin, audited) — one deduped label per observation, newest reviewed prediction wins, corrections beat confirmations, collector fill-taps are direct ground truth for the fill task; erased/retention-purged images are excluded.
+- **Corrections → training folders**: `python -m owi_ml.data.export_reviewed` downloads each labeled observation's blurred image into `datasets/safi/<label>/safi_<obs>.jpg` — the exact layout the trainer eats; idempotent (re-runs only pull new reviews). The trainer now accepts multiple `--data` roots, so `--data datasets/merged datasets/safi` fine-tunes public+local, and `--data datasets/safi` alone re-freezes the Safi-local golden set for Gate B.
+- **Cadence**: `make ml-export` / `make ml-retrain` (export + retrain; registering the result stays a deliberate human step after checking the gate). Verified live end-to-end: 3 predictions reviewed (2 confirm + 1 correct→plastic) → export → 3 images in the right class folders → re-run idempotent. **106/106 smoke checks** (2 new).
+
+### Track B — classifier past the golden gate on licensed public data (2026-07-17)
+
+- **Gate A PASSED: golden macro-F1 0.9543** (gate ≥ 0.80), accuracy 96.6% on a 3,964-image frozen golden split — up from the 0.73 TrashNet-only baseline. Per-class F1 ≥ 0.846 everywhere; the three classes the old model could never predict are now the strongest (e_waste 0.991, organic 0.983, textile 0.998). Registered + activated as `classify/dinov2-v1` (artifact in the object store).
+- **Corpus**: manifest-driven downloader (`data/download.py`) pulls TrashNet (MIT, 2,528) + Garbage Dataset v2 (CC BY 4.0, 36,777, anonymous kagglehub) folded to the 8 OWI classes; **license policy is code-enforced** (`ml/DATA_LICENSES.md` + per-source `shippable` flag — NC/unverifiable sources can't reach the training tree).
+- **Dedup mattered**: cross-source dHash (`data/dedupe.py`) removed **12,881 duplicates (33% of raw)** before the hash-frozen split — without it the gate score would have been leak-inflated. Final corpus 26,424 unique images.
+- **Recipe for a GPU-less machine**: DINOv2 ViT-S (Apache-2.0, timm) frozen backbone + inverse-frequency-weighted linear head (cosine LR, label smoothing); one bounded CPU feature pass (~3 h on the pilot laptop), head trains in minutes and is instantly re-trainable. ONNX export unchanged on the worker's 224²/ImageNet contract; per-class F1 persisted in `metrics.json`. `--backbone mobilenet` keeps the old path; ConvNeXt fine-tune is the GPU upgrade path.
+- **Inference backfill** (`POST /api/v1/admin/inference/backfill`, admin, audited): enqueues every observation active models haven't scored — activation is now retroactive. Verified live: 280 observations backfilled, worker drained the queue, **review queue holds 280 predictions and Composition computes (`sufficient=true`) for the first time from a legitimately gated model**. (Seeded demo images are synthetic noise, so demo shares are meaningless by design — real field photos produce real composition.)
+- Honest remaining line: **Gate B** — re-freeze a Safi-local golden set from review-queue corrections before claiming production accuracy on Nairobi street photos; public-set accuracy does not transfer automatically. Tooling: `uv` now installed on the dev machine; ml lockfile carries `timm` + `kagglehub`.
+
 ### Enterprise Track A part 2 — per-org config, MFA, readiness, notifications (2026-07-16)
 
 - **Per-org operational config** (migration 0016): `fuel_price_kes_per_l` and `waste_density_kg_per_l` on `org_settings` (nullable → deployment default); consumed by route demand (`_bin_demand`), collection-weight estimates, and the savings report; partial-PATCH `/api/v1/admin/settings`; dash Settings covers every knob.

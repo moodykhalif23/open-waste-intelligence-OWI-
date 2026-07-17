@@ -617,6 +617,17 @@ def main() -> None:
         org_zip.headers.get("content-type", ""),
     )
 
+    labels_export = client.get("/api/v1/predictions/export", headers=admin)
+    check(
+        "training labels export serves reviewed ground truth",
+        labels_export.status_code == 200 and isinstance(labels_export.json(), list),
+        labels_export.text[:100],
+    )
+    check(
+        "training labels export is admin-only",
+        client.get("/api/v1/predictions/export", headers=device_auth).status_code == 403,
+    )
+
     backfill = client.post("/api/v1/admin/inference/backfill", headers=admin)
     check(
         "inference backfill enqueues unscored observations",

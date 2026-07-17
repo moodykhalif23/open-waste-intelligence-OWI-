@@ -4,13 +4,15 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import Float, func, select
 from sqlalchemy.orm import Session
 
+from owi_api.analytics.composition import effective_material
 from owi_api.analytics.review import apply_review
 from owi_api.audit import client_ip, record_audit
 from owi_api.db import get_session
 from owi_api.models.enums import PredictionTask, ReviewStatus, UserRole
+from owi_api.models.observation import Observation
 from owi_api.models.prediction import Prediction
 from owi_api.routers.auth import require_roles
 from owi_api.security import TokenClaims
@@ -58,8 +60,13 @@ def review_queue(
             Prediction.review_status == ReviewStatus.UNREVIEWED,
         )
     )
+    # Uncertainty sampling: surface the model's least-confident predictions first,
+    # so reviewer effort lands where a correction teaches the most.
+    confidence = Prediction.payload["confidence"].astext.cast(Float)
     rows = session.scalars(
-        base.where(Prediction.review_status == status).order_by(Prediction.created_at).limit(limit)
+        base.where(Prediction.review_status == status)
+        .order_by(confidence.asc().nulls_last(), Prediction.created_at)
+        .limit(limit)
     ).all()
     return ReviewQueueOut(
         unreviewed=unreviewed or 0,
@@ -75,6 +82,87 @@ def review_queue(
             for p in rows
         ],
     )
+
+
+class TrainingLabelOut(BaseModel):
+    observation_id: uuid.UUID
+    label: str
+    source: str  # confirmed | corrected | fill_tap
+
+
+@router.get("/export", response_model=list[TrainingLabelOut])
+def export_training_labels(
+    request: Request,
+    claims: Annotated[TokenClaims, require_roles(UserRole.ADMIN)],
+    session: Annotated[Session, Depends(get_session)],
+    task: PredictionTask = PredictionTask.CLASSIFY,
+) -> list[TrainingLabelOut]:
+    """Reviewed ground truth for retraining — the output side of the active-learning
+    loop. One label per observation; the newest reviewed prediction wins."""
+    rows: list[TrainingLabelOut] = []
+    seen: set[uuid.UUID] = set()
+
+    if task is PredictionTask.FILL:
+        # A collector's tap at the bin is direct ground truth, ahead of any review.
+        for obs_id, tap in session.execute(
+            select(Observation.id, Observation.human_fill_tap).where(
+                Observation.org_id == claims.org_id,
+                Observation.deleted_at.is_(None),
+                Observation.image_deleted_at.is_(None),
+                Observation.human_fill_tap.is_not(None),
+            )
+        ):
+            seen.add(obs_id)
+            rows.append(TrainingLabelOut(observation_id=obs_id, label=tap.value, source="fill_tap"))
+
+    reviewed = session.execute(
+        select(Prediction)
+        .join(Observation, Observation.id == Prediction.observation_id)
+        .where(
+            Prediction.org_id == claims.org_id,
+            Prediction.task == task,
+            Prediction.deleted_at.is_(None),
+            Prediction.review_status != ReviewStatus.UNREVIEWED,
+            Observation.deleted_at.is_(None),
+            Observation.image_deleted_at.is_(None),
+        )
+        .order_by(Prediction.observation_id, Prediction.created_at.desc())
+    ).scalars()
+    key = "material" if task is PredictionTask.CLASSIFY else "fill_band"
+    for pred in reviewed:
+        if pred.observation_id in seen:
+            continue
+        seen.add(pred.observation_id)
+        if task is PredictionTask.CLASSIFY:
+            label = effective_material(pred.payload, pred.corrected_payload, pred.review_status)
+        else:
+            payload = (
+                pred.corrected_payload
+                if pred.review_status is ReviewStatus.CORRECTED and pred.corrected_payload
+                else pred.payload
+            )
+            raw = payload.get(key)
+            label = raw if isinstance(raw, str) else None
+        if label:
+            rows.append(
+                TrainingLabelOut(
+                    observation_id=pred.observation_id,
+                    label=label,
+                    source=pred.review_status.value,
+                )
+            )
+
+    record_audit(
+        session,
+        org_id=claims.org_id,
+        actor_user_id=claims.user_id,
+        action="training_labels.export",
+        entity="prediction",
+        ip=client_ip(request),
+        detail={"task": task.value, "labels": len(rows)},
+    )
+    session.commit()
+    return rows
 
 
 @router.post("/{prediction_id}/review", response_model=PredictionOut)

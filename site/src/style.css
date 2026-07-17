@@ -397,19 +397,14 @@ img {
   padding-block: var(--pad-hero) calc(var(--pad-hero) + 28px);
 }
 
-.hero-grid {
+.hero-inner {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-  align-items: center;
-  gap: clamp(36px, 5vw, 64px);
+  justify-items: center;
+  text-align: center;
 }
 
-/* The hero photo fills the right half of the band, from the topbar down to
-   the wave that carries it into the next section. */
-.hero-photo {
-  align-self: stretch;
-  margin-top: calc(-1 * var(--pad-hero));
-  margin-bottom: calc(-1 * (var(--pad-hero) + 28px));
+.hero-inner h1 {
+  max-width: 16ch;
 }
 
 /* ---------- split sections ---------- */
@@ -424,7 +419,6 @@ img {
 .split .side-photo {
   align-self: stretch;
   min-height: 380px;
-  width: 100%;
 }
 
 /* ---------- steps ---------- */
@@ -634,16 +628,9 @@ img {
   .field-grid {
     grid-template-columns: 1fr;
   }
-  .hero-grid,
   .split,
   .impact-split {
     grid-template-columns: 1fr;
-  }
-  .hero-photo {
-    align-self: auto;
-    margin-top: 0;
-    margin-inline: calc(-1 * var(--gutter));
-    aspect-ratio: 16 / 10;
   }
   .split .side-photo {
     align-self: auto;

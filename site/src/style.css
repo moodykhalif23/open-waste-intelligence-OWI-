@@ -17,8 +17,8 @@
   --ease: cubic-bezier(0.2, 0, 0, 1);
   --gutter: clamp(20px, 5vw, 40px);
   --wave-h: clamp(42px, 7vw, 80px);
-  --pad-band: clamp(64px, 9vw, 110px);
-  --pad-hero: clamp(72px, 10vw, 130px);
+  --pad-band: clamp(52px, 6.5vw, 84px);
+  --pad-hero: clamp(60px, 7.5vw, 96px);
   --wave-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 64' preserveAspectRatio='none'%3E%3Cpath d='M0 34C220 66 480 2 740 30C1000 58 1240 10 1440 34V64H0Z'/%3E%3C/svg%3E");
 }
 
@@ -63,15 +63,6 @@ body {
   padding-inline: var(--gutter);
 }
 
-/* Pull an element flush to the viewport edge from inside .wrap. */
-.bleed-l {
-  margin-left: calc((min(1100px, 100vw) - 100vw) / 2 - var(--gutter));
-}
-
-.bleed-r {
-  margin-right: calc((min(1100px, 100vw) - 100vw) / 2 - var(--gutter));
-}
-
 .narrow {
   max-width: 760px;
 }
@@ -90,11 +81,6 @@ section {
 
 .band-cream {
   background: var(--paper);
-}
-
-.band-brown {
-  background: var(--brown-deep);
-  color: #f4efe4;
 }
 
 /* ---------- wave dividers ----------
@@ -125,7 +111,6 @@ section {
 
 .w-cream { --to: var(--paper); }
 .w-white { --to: var(--white); }
-.w-brown { --to: var(--brown-deep); }
 .w-ink   { --to: var(--ink); }
 
 /* ---------- type ---------- */
@@ -137,10 +122,6 @@ section {
   text-transform: uppercase;
   color: var(--brown);
   margin-bottom: 14px;
-}
-
-.overline-gold {
-  color: var(--gold);
 }
 
 h1 {
@@ -163,10 +144,6 @@ h2 {
   margin-bottom: 28px;
 }
 
-h2.on-dark {
-  color: #f8f6f0;
-}
-
 h3 {
   font-size: 1.06rem;
   font-weight: 680;
@@ -179,9 +156,15 @@ p {
   max-width: 62ch;
 }
 
-.split p + p,
+.prose p + p,
 .narrow p + p {
-  margin-top: 1.1em;
+  margin-top: 0.95em;
+}
+
+/* A standfirst under an h2 — the h2's own margin already spaces it. */
+.section-lede {
+  color: var(--muted);
+  max-width: 60ch;
 }
 
 .lede {
@@ -214,23 +197,28 @@ code {
 .brand {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: clamp(10px, 1vw, 14px);
   font-weight: 720;
-  font-size: 1.1rem;
+  font-size: clamp(1.12rem, 1.5vw, 1.42rem);
   letter-spacing: -0.02em;
   color: var(--ink);
   text-decoration: none;
 }
 
+/* The mark the dashboard and field app already use, so the brand reads as one
+   product rather than three. */
 .brand-mark {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
-  background: var(--gold);
-  color: var(--brown-deep);
-  font-size: 1.05rem;
+  display: block;
+  width: clamp(38px, 4.2vw, 54px);
+  height: auto;
+  flex-shrink: 0;
+}
+
+/* On the ink footer the mark's dark figure vanishes — stand it on a light plate. */
+.on-plate {
+  background: var(--paper);
+  border-radius: 13px;
+  padding: 5px;
 }
 
 .topnav {
@@ -328,64 +316,9 @@ code {
   margin-bottom: 18px;
 }
 
-.chip-dark {
-  background: rgba(242, 185, 73, 0.16);
-  color: var(--gold);
-  flex-shrink: 0;
-  margin: 0;
-}
-
-/* ---------- photos ----------
-   Photos are structural, not cards: square corners, no shadows, flush with
-   the viewport edge and with the wave outlines. */
-
+/* Artwork only — the page carries its weight in type, not stock photography. */
 img {
   max-width: 100%;
-}
-
-.hero-photo img,
-.side-photo img,
-.banner-photo img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* Pull a photo down through the section padding so the next wave cuts it. */
-.flush-b {
-  margin-bottom: calc(-1 * var(--pad-band));
-}
-
-.banner-photo {
-  height: clamp(300px, 38vw, 460px);
-  margin-inline: calc((min(1100px, 100vw) - 100vw) / 2 - var(--gutter));
-  margin-bottom: clamp(32px, 5vw, 52px);
-  position: relative;
-}
-
-/* The banner carries its own wave-shaped edges, top and bottom. */
-.banner-photo::before,
-.banner-photo::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: var(--wave-h);
-  background-color: var(--white);
-}
-
-.banner-photo::before {
-  top: 0;
-  -webkit-mask: var(--wave-mask) center / 100% 100% no-repeat;
-  mask: var(--wave-mask) center / 100% 100% no-repeat;
-  transform: scale(-1);
-}
-
-.banner-photo::after {
-  bottom: 0;
-  -webkit-mask: var(--wave-mask) center / 100% 100% no-repeat;
-  mask: var(--wave-mask) center / 100% 100% no-repeat;
 }
 
 /* ---------- hero ---------- */
@@ -404,24 +337,39 @@ img {
   max-width: 16ch;
 }
 
-/* ---------- split sections ---------- */
+/* ---------- product surfaces ---------- */
 
-.split {
+.surfaces {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
-  align-items: center;
-  gap: clamp(36px, 5vw, 72px);
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(32px, 5vw, 64px);
+  margin-top: clamp(28px, 4vw, 44px);
 }
 
-/* Capped: stretching a photo to the copy length turns it into a slab that
-   dwarfs the section. flush-b ones stay bottom-anchored for the wave cut. */
-.split .side-photo {
-  align-self: center;
-  height: clamp(300px, 30vw, 430px);
+.surface > p {
+  color: var(--muted);
+  font-size: 0.97rem;
 }
 
-.split .side-photo.flush-b {
-  align-self: end;
+.surface-list {
+  list-style: none;
+  display: grid;
+  gap: 11px;
+  margin-top: 20px;
+}
+
+.surface-list li {
+  display: flex;
+  gap: 12px;
+  font-size: 0.97rem;
+  line-height: 1.55;
+}
+
+.surface-list i {
+  color: var(--brown);
+  font-size: 0.8rem;
+  margin-top: 7px;
+  flex-shrink: 0;
 }
 
 /* ---------- steps ---------- */
@@ -446,78 +394,18 @@ img {
   color: var(--muted);
 }
 
-/* ---------- impact (dark band) ---------- */
-
-.impact-split {
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-  margin-top: 14px;
-}
-
-.impact-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: clamp(28px, 4vw, 44px);
-}
-
-.impact > i {
-  color: var(--gold);
-  font-size: 1.2rem;
-  margin-bottom: 12px;
-  display: block;
-}
-
-.impact-figure {
-  font-size: clamp(1.4rem, 2.4vw, 1.85rem);
-  font-weight: 720;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-  color: var(--gold);
-  margin-bottom: 8px;
-}
-
-.impact-label {
-  font-size: 0.94rem;
-  line-height: 1.6;
-  color: #d9d0bd;
-}
-
-.honesty {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-top: 56px;
-  border-top: 1px solid rgba(234, 230, 221, 0.2);
-  padding-top: 28px;
-}
-
-.honesty p {
-  color: #d9d0bd;
-  font-size: 0.98rem;
-  max-width: 70ch;
-}
-
-.honesty em {
-  color: var(--gold);
-  font-style: normal;
-  font-weight: 620;
-}
-
-/* ---------- ai + field grids ---------- */
-
-.ai-grid,
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: clamp(32px, 4vw, 56px) clamp(36px, 5vw, 72px);
-  margin-top: clamp(24px, 4vw, 44px);
-}
+/* ---------- feature grid ---------- */
 
 .field-grid {
+  display: grid;
   grid-template-columns: repeat(3, 1fr);
-  margin-top: 0;
+  gap: clamp(32px, 4vw, 56px) clamp(36px, 5vw, 72px);
 }
 
-.ai-item p,
+.problem-grid {
+  margin-top: clamp(36px, 5vw, 58px);
+}
+
 .field-item p {
   font-size: 0.97rem;
   color: var(--muted);
@@ -631,21 +519,8 @@ img {
   .field-grid {
     grid-template-columns: 1fr;
   }
-  .split,
-  .impact-split {
+  .surfaces {
     grid-template-columns: 1fr;
-  }
-  .split .side-photo,
-  .split .side-photo.flush-b {
-    align-self: auto;
-    min-height: 0;
-    height: auto;
-    margin-inline: calc(-1 * var(--gutter));
-    aspect-ratio: 16 / 10;
-  }
-  .banner-photo {
-    height: auto;
-    aspect-ratio: 16 / 10;
   }
   .topnav {
     display: none;
@@ -656,13 +531,8 @@ img {
 }
 
 @media (max-width: 560px) {
-  .steps,
-  .impact-grid,
-  .ai-grid {
+  .steps {
     grid-template-columns: 1fr;
-  }
-  .honesty {
-    align-items: flex-start;
   }
   .footer-row {
     flex-direction: column;

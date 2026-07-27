@@ -30,7 +30,6 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 76px;
 }
 
 body {
@@ -202,10 +201,8 @@ code {
 
 /* ---------- topbar ---------- */
 
+/* Scrolls away with the page — it is a masthead, not a persistent chrome bar. */
 .topbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
   display: flex;
   align-items: center;
   gap: 28px;
@@ -416,9 +413,15 @@ img {
   gap: clamp(36px, 5vw, 72px);
 }
 
+/* Capped: stretching a photo to the copy length turns it into a slab that
+   dwarfs the section. flush-b ones stay bottom-anchored for the wave cut. */
 .split .side-photo {
-  align-self: stretch;
-  min-height: 380px;
+  align-self: center;
+  height: clamp(300px, 30vw, 430px);
+}
+
+.split .side-photo.flush-b {
+  align-self: end;
 }
 
 /* ---------- steps ---------- */
@@ -632,9 +635,11 @@ img {
   .impact-split {
     grid-template-columns: 1fr;
   }
-  .split .side-photo {
+  .split .side-photo,
+  .split .side-photo.flush-b {
     align-self: auto;
     min-height: 0;
+    height: auto;
     margin-inline: calc(-1 * var(--gutter));
     aspect-ratio: 16 / 10;
   }

@@ -2,14 +2,15 @@
 COMPOSE := docker compose --profile prod
 ADMIN_PHONE ?= +254700000000
 
-.PHONY: help web up down restart logs ps smoke seed bootstrap dev dash app site build clean backup restore ml-setup ml-data ml-train ml-register ml-export ml-retrain
+.PHONY: help web front up down restart logs ps smoke seed bootstrap dev dash app site build clean backup restore ml-setup ml-data ml-train ml-register ml-export ml-retrain
 
 help: ## Show available targets
 	@echo OpenWaste Intelligence — make targets:
 	@echo   web        Build + start the backend platform (API :8000 + infrastructure)
-	@echo   dash       Run the dashboard against the API (http://localhost:5174)
-	@echo   app        Run the field PWA against the API (https://localhost:5173)
-	@echo   site       Run the landing page (http://localhost:5175)
+	@echo   front      Run all three frontends together (site, dash, app)
+	@echo   dash       Run the dashboard alone (http://localhost:5174)
+	@echo   app        Run the field PWA alone (https://localhost:5173)
+	@echo   site       Run the landing page alone (http://localhost:5175)
 	@echo   up         Start without rebuilding
 	@echo   down       Stop all services
 	@echo   restart    Restart app services (api, worker, scheduler)
@@ -24,22 +25,24 @@ help: ## Show available targets
 	@echo   dev        Print source dev-server commands
 	@echo   clean      Stop and remove volumes (DESTROYS local data)
 
-# Frontends are not containerised: they build and run outside Docker and talk to
-# this API over HTTP. Start them with `make dash` / `make app` / `make site`.
+
 web:
 	$(COMPOSE) up -d --build
 	@echo api          http://localhost:8000
 	@echo label studio http://localhost:8080
-	@echo frontends    make dash ^| make app ^| make site
+	@echo frontends    make front
 
-dash: ## Run the dashboard dev server against the API
-	cd dash && pnpm install && pnpm dev
+front: ## Run site + dash + app together, one Ctrl-C stops all three
+	node scripts/frontends.mjs
 
-app: ## Run the field PWA dev server against the API
-	cd app && pnpm install && pnpm dev
+dash: ## Run the dashboard dev server alone
+	node scripts/frontends.mjs dash
 
-site: ## Run the landing page dev server
-	cd site && pnpm install && pnpm dev
+app: ## Run the field PWA dev server alone
+	node scripts/frontends.mjs app
+
+site: ## Run the landing page dev server alone
+	node scripts/frontends.mjs site
 
 up: ## Start without rebuilding
 	$(COMPOSE) up -d

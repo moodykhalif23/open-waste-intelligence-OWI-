@@ -1,14 +1,18 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 
-export default defineConfig({
-  // Env (VITE_*) comes from the single repo-root .env; /api is same-origin,
-  // proxied in dev and served by the reverse proxy in production.
-  envDir: "..",
-  server: {
-    proxy: {
-      "/api": { target: "http://127.0.0.1:8000", changeOrigin: true },
-    },
-  },
-  plugins: [react()],
+export default defineConfig(({ mode }) => {
+  // Env (VITE_*) comes from the single repo-root .env. The API runs in Docker and
+  // this frontend does not, so /api is proxied here in dev and preview; deployed
+  // builds either sit behind a proxy or set VITE_API_URL to the API origin.
+  const env = loadEnv(mode, "..", "");
+  const proxy = {
+    "/api": { target: env.OWI_API_PROXY || "http://127.0.0.1:8000", changeOrigin: true },
+  };
+  return {
+    envDir: "..",
+    server: { proxy },
+    preview: { proxy },
+    plugins: [react()],
+  };
 });

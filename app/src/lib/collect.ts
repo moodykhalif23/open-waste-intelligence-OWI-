@@ -1,3 +1,5 @@
+import { apiUrl } from "./api";
+
 export interface BinHealth {
   bin_id: string;
   qr_code: string;
@@ -29,7 +31,7 @@ export interface Route {
 }
 
 async function authed(path: string, token: string, init?: RequestInit): Promise<Response> {
-  const response = await fetch(path, {
+  const response = await fetch(apiUrl(path), {
     ...init,
     headers: {
       Authorization: `Bearer ${token}`,

@@ -1,11 +1,13 @@
 const TOKEN_KEY = "owi-dash-token";
+const API_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+export const apiUrl = (path: string) => `${API_URL}${path}`;
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
 export const setToken = (token: string) => localStorage.setItem(TOKEN_KEY, token);
 export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
 
 async function request(path: string, init?: RequestInit): Promise<Response> {
-  const response = await fetch(path, {
+  const response = await fetch(apiUrl(path), {
     ...init,
     headers: {
       Authorization: `Bearer ${getToken() ?? ""}`,
@@ -37,7 +39,7 @@ export class LoginError extends Error {
 }
 
 export async function login(phone: string, password: string, otp?: string): Promise<void> {
-  const response = await fetch("/api/v1/auth/login", {
+  const response = await fetch(apiUrl("/api/v1/auth/login"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ phone, password, otp: otp || null }),

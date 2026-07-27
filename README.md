@@ -43,11 +43,13 @@ Open Data API
 ## Run it
 
 ```sh
-# create the repo-root .env with secrets — see docs/11-deployment.md for the template
-make web               # builds + starts the whole platform
+# create the repo-root .env with secrets — see docs/deployment.md for the template
+make web               # builds + starts the backend (API, workers, db, storage)
+make dash              # dashboard, in another terminal
+make app               # field PWA, in another terminal
 ```
 
-Dashboard at `https://localhost:8443`, field app at `https://localhost:8444` (accept the self-signed cert once per device), Label Studio at `http://localhost:8080`. `make help` lists all targets. First run: `make bootstrap ORG="Safi" NAME="Admin" PHONE="+2547..." PASSWORD="..."`.
+Docker runs the backend only. The three frontends (`dash`, `app`, `site`) build and run outside Docker and consume the API over HTTP: `http://localhost:8000`, proxied at `/api` by their dev servers. Dashboard at `http://localhost:5174`, field app at `https://localhost:5173` (accept the self-signed cert once per device), landing page at `http://localhost:5175`, Label Studio at `http://localhost:8080`. `make help` lists all targets. First run: `make bootstrap ORG="Safi" NAME="Admin" PHONE="+2547..." PASSWORD="..."`.
 
 Contributors: see [CONTRIBUTING.md](CONTRIBUTING.md).
 

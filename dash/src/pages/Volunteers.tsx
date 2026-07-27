@@ -9,7 +9,7 @@ import Typography from "@mui/material/Typography";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import ShowChartOutlined from "@mui/icons-material/ShowChartOutlined";
 import VolunteerActivismOutlined from "@mui/icons-material/VolunteerActivismOutlined";
-import { api, getToken } from "../api";
+import { api, apiUrl, getToken } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import EChart, { lineOption } from "../components/EChart";
 import {
@@ -80,7 +80,7 @@ export default function Volunteers() {
     const end = new Date().toISOString().slice(0, 10);
     const url = `/api/v1/volunteers/report?start=2000-01-01&end=${end}`;
     // Authenticated GET: fetch with the token, then open the HTML blob in a new tab to print.
-    const response = await fetch(url, {
+    const response = await fetch(apiUrl(url), {
       headers: { Authorization: `Bearer ${getToken() ?? ""}` },
     });
     const blob = await response.blob();

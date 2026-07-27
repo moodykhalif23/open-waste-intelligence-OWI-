@@ -1,3 +1,4 @@
+import { apiUrl } from "./api";
 import { listQueued, remove, type QueuedReport } from "./queue";
 
 export interface SyncOutcome {
@@ -45,7 +46,7 @@ function forgetSynced(id: string): void {
 
 // Do-not-use: the server hard-deletes the photo and retires the record.
 export async function eraseObservation(token: string, id: string): Promise<void> {
-  const response = await fetch(`/api/v1/observations/${id}`, {
+  const response = await fetch(apiUrl(`/api/v1/observations/${id}`), {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -64,7 +65,7 @@ export async function syncQueue(token: string): Promise<SyncOutcome> {
   form.append("meta", JSON.stringify(sendable.map(toMeta)));
   for (const report of sendable) form.append("files", report.image, `${report.id}.jpg`);
 
-  const response = await fetch("/api/v1/observations/batch", {
+  const response = await fetch(apiUrl("/api/v1/observations/batch"), {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: form,

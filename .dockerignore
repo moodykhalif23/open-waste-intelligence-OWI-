@@ -7,3 +7,7 @@ ml/
 docs/
 .git/
 .env
+# Frontends are not built in any image — they run outside Docker against the API.
+app/
+dash/
+site/

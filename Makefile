@@ -2,14 +2,17 @@
 COMPOSE := docker compose --profile prod
 ADMIN_PHONE ?= +254700000000
 
-.PHONY: help web up down restart logs ps smoke seed bootstrap dev build clean backup restore ml-setup ml-data ml-train ml-register ml-export ml-retrain
+.PHONY: help web up down restart logs ps smoke seed bootstrap dev dash app site build clean backup restore ml-setup ml-data ml-train ml-register ml-export ml-retrain
 
 help: ## Show available targets
 	@echo OpenWaste Intelligence — make targets:
-	@echo   web        Build + start the whole platform (dashboard :8443, field app :8444)
+	@echo   web        Build + start the backend platform (API :8000 + infrastructure)
+	@echo   dash       Run the dashboard against the API (http://localhost:5174)
+	@echo   app        Run the field PWA against the API (https://localhost:5173)
+	@echo   site       Run the landing page (http://localhost:5175)
 	@echo   up         Start without rebuilding
 	@echo   down       Stop all services
-	@echo   restart    Restart app services (api, worker, scheduler, web)
+	@echo   restart    Restart app services (api, worker, scheduler)
 	@echo   logs       Tail logs from all services
 	@echo   ps         Show service status
 	@echo   build      Build images only
@@ -21,12 +24,22 @@ help: ## Show available targets
 	@echo   dev        Print source dev-server commands
 	@echo   clean      Stop and remove volumes (DESTROYS local data)
 
+# Frontends are not containerised: they build and run outside Docker and talk to
+# this API over HTTP. Start them with `make dash` / `make app` / `make site`.
 web:
 	$(COMPOSE) up -d --build
-	@echo dashboard    https://localhost:8443
-	@echo field app    https://localhost:8444
+	@echo api          http://localhost:8000
 	@echo label studio http://localhost:8080
-	@echo (accept the self-signed certificate once per device)
+	@echo frontends    make dash ^| make app ^| make site
+
+dash: ## Run the dashboard dev server against the API
+	cd dash && pnpm install && pnpm dev
+
+app: ## Run the field PWA dev server against the API
+	cd app && pnpm install && pnpm dev
+
+site: ## Run the landing page dev server
+	cd site && pnpm install && pnpm dev
 
 up: ## Start without rebuilding
 	$(COMPOSE) up -d
@@ -35,7 +48,7 @@ down: ## Stop all services
 	$(COMPOSE) down
 
 restart: ## Restart app services
-	$(COMPOSE) restart api worker scheduler web
+	$(COMPOSE) restart api worker scheduler
 
 logs: ## Tail logs
 	$(COMPOSE) logs -f
@@ -65,8 +78,9 @@ restore: ## Restore the latest db dump (DESTRUCTIVE; requires CONFIRM=yes)
 
 dev: ## Print source dev-server commands
 	@echo cd api  ^&^& uv run uvicorn owi_api.main:app --reload
-	@echo cd dash ^&^& pnpm dev
-	@echo cd app  ^&^& pnpm dev
+	@echo cd dash ^&^& pnpm dev   ^(or: make dash^)
+	@echo cd app  ^&^& pnpm dev   ^(or: make app^)
+	@echo cd site ^&^& pnpm dev   ^(or: make site^)
 
 clean: ## Stop and remove volumes (DESTROYS local data)
 	$(COMPOSE) down -v

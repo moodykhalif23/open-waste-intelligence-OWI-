@@ -1,12 +1,15 @@
 # Deployment
 
-One `docker compose` runs the whole platform: Postgres+PostGIS, Redis, MinIO, Label Studio, the API, the inference worker, the maintenance scheduler, and a Caddy web server that serves both frontends and reverse-proxies `/api`. Target: a single VPS (≤ USD 50/month) or an on-prem mini-PC.
+One `docker compose` runs the backend: Postgres+PostGIS, Redis, MinIO, Label Studio, the API, the inference worker, and the maintenance scheduler. Target: a single VPS (≤ USD 50/month) or an on-prem mini-PC.
+
+The three frontends (`dash`, `app`, `site`) are **not** containerised. They are static Vite builds produced outside Docker and served by whatever you prefer — a static host (Netlify, Cloudflare Pages, S3), an existing nginx/Caddy on the box, or `pnpm preview` for a pilot. They consume the API over HTTP; nothing in the compose stack depends on them.
 
 ## Prerequisites
 
 - Docker Engine + Compose plugin (Linux VPS) or Docker Desktop (mini-PC/Windows)
+- Node 22 + pnpm, wherever the frontends get built (a CI runner or your laptop — not the server)
 - 2 GB RAM minimum, 4 GB comfortable; ~10 GB disk to start
-- Optional: two DNS records (dashboard + field app) pointing at the server — Caddy then provisions Let's Encrypt TLS automatically
+- TLS for the API and for whatever serves the frontends. The field app needs a secure context (camera + geolocation), so it must be served over HTTPS
 
 ## Steps
 
@@ -24,38 +27,49 @@ OWI_JWT_SECRET=<random, 32+ chars>
 LABEL_STUDIO_USERNAME=<admin email>
 LABEL_STUDIO_PASSWORD=<random>
 LABEL_STUDIO_USER_TOKEN=<random hex>
-DASH_DOMAIN=dash.example.org   # omit both for LAN mode (self-signed on :8443/:8444)
-APP_DOMAIN=app.example.org
+# Origins the frontends are served from — required whenever they call the API
+# cross-origin (i.e. VITE_API_URL is set rather than a same-origin /api proxy).
+OWI_CORS_ORIGINS=["https://dash.example.org","https://app.example.org"]
 EOF
 # generate values with: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 
-# 2. Build and start everything (make web wraps this):
+# 2. Build and start the backend (make web wraps this):
 make web        # or: docker compose --profile prod up -d --build
 
 # 3. First organization + admin:
 docker compose exec api uv run python -m owi_api.bootstrap \
   --org "Safi Cleaners and Recyclers" --name "Admin" --phone "+2547..." --password "..."
+
+# 4. Build the frontends and publish the dist/ folders to your static host:
+VITE_API_URL=https://api.example.org pnpm --dir dash build   # → dash/dist
+VITE_API_URL=https://api.example.org pnpm --dir app  build   # → app/dist
+pnpm --dir site build                                        # → site/dist (no API calls)
 ```
+
+`VITE_API_URL` is baked in at build time. Leave it unset when the frontend is served from the same origin as the API (a proxy in front of both forwarding `/api` → `api:8000`) — then no CORS entry is needed either.
 
 Migrations run automatically when the `api` container starts. Model weights are baked into the image at build time (SHA256-pinned), so the privacy gate never depends on a runtime download.
 
 ## What runs where
 
-| Service                        | Role                                                      | Exposed                                          |
-| ------------------------------ | --------------------------------------------------------- | ------------------------------------------------ |
-| `web` (Caddy)                | dashboard + field PWA statics,`/api` reverse proxy, TLS | 80/443 (domains) or 8443/8444 (LAN, self-signed) |
-| `api`                        | FastAPI: ingestion, registry, auth, analytics             | 8000 (behind the proxy in production)            |
-| `worker`                     | RQ batch inference jobs                                   | —                                               |
-| `scheduler`                  | hourly maintenance (quarantine purge)                     | —                                               |
-| `db` / `redis` / `minio` | Postgres+PostGIS / queue / object store                   | internal (+ dev ports)                           |
-| `labelstudio`                | labeling UI for the Safi Waste Dataset                    | 8080                                             |
+| Service                        | Role                                            | Exposed                               |
+| ------------------------------ | ----------------------------------------------- | ------------------------------------- |
+| `api`                        | FastAPI: ingestion, registry, auth, analytics   | 8000 (put TLS in front in production) |
+| `worker`                     | RQ batch inference jobs                         | —                                    |
+| `scheduler`                  | hourly maintenance (quarantine purge)           | —                                    |
+| `db` / `redis` / `minio` | Postgres+PostGIS / queue / object store         | internal (+ dev ports)                |
+| `labelstudio`                | labeling UI for the Safi Waste Dataset          | 8080                                  |
+| *(not in Docker)* `dash`   | dashboard SPA — static`dist/`, calls the API  | wherever you host it                  |
+| *(not in Docker)* `app`    | field PWA — static`dist/`, calls the API      | wherever you host it (HTTPS required) |
+| *(not in Docker)* `site`   | landing page — static`dist/`, no API calls    | wherever you host it                  |
 
-LAN mode (no domains): open `https://<server-ip>:8443` (dashboard) and `https://<server-ip>:8444` (field app) and accept the self-signed certificate once per device.
+Local pilot without a static host: run the frontends from source against the containerised API — `make dash` (`http://localhost:5174`), `make app` (`https://localhost:5173`, accept the self-signed certificate once per device), `make site` (`http://localhost:5175`). Their dev servers proxy `/api` to `http://127.0.0.1:8000`; point that elsewhere with `OWI_API_PROXY` in `.env`.
 
 ## Production checklist
 
 - [ ] `.env` secrets are unique and random — the API **refuses to boot** in production with dev defaults
-- [ ] Firewall: expose only 80/443 (and 8080 if labelers are remote); keep 5432/6379/9000 internal
+- [ ] Firewall: expose only the API behind TLS (and 8080 if labelers are remote); keep 5432/6379/9000 internal
+- [ ] `OWI_CORS_ORIGINS` lists exactly the frontend origins — no wildcard; unset it when the frontends are same-origin with the API
 - [X] Backups are automated in compose: `db-backup` (nightly rotated pg_dump → `var/backups/postgres`, keeps 14 daily / 8 weekly / 6 monthly) and `minio-backup` (daily image mirror → `var/backups/minio`, quarantine excluded, deletions propagate). `make backup` runs one now; `make restore CONFIRM=yes` restores the newest dump. Copy `var/backups/` off-box (rsync/rclone) — an off-site copy must honor the same erasure rules
 - [ ] Run one restore drill per phase (`make backup && make restore CONFIRM=yes`, then the smoke suite)
 - [ ] Provision collector phones: dashboard login → issue device tokens (or `POST /api/v1/auth/device-tokens`)
@@ -84,5 +98,8 @@ straight-line distances only, nothing else changes.
 
 ```sh
 git pull
-docker compose --profile prod up -d --build   # rebuilds changed images, restarts, re-migrates
+docker compose --profile prod up -d --build   # backend: rebuilds changed images, restarts, re-migrates
+pnpm --dir dash build && pnpm --dir app build && pnpm --dir site build   # frontends: redeploy dist/
 ```
+
+Backend and frontends deploy independently — a frontend change never rebuilds an image, and an API deploy never interrupts static hosting.

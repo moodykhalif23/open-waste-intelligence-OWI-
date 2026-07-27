@@ -4,26 +4,29 @@ ADMIN_PHONE ?= +254700000000
 
 .PHONY: help web front up down restart logs ps smoke seed bootstrap dev dash app site build clean backup restore ml-setup ml-data ml-train ml-register ml-export ml-retrain
 
+# make runs these through cmd.exe or sh depending on where it was invoked. Only
+# plain text survives both — no parens, ampersands or pipes — and sh's echo eats
+# repeated spaces, so single-space "name - description" is the one stable format.
 help: ## Show available targets
-	@echo OpenWaste Intelligence — make targets:
-	@echo   web        Build + start the backend platform (API :8000 + infrastructure)
-	@echo   front      Run all three frontends together (site, dash, app)
-	@echo   dash       Run the dashboard alone (http://localhost:5174)
-	@echo   app        Run the field PWA alone (https://localhost:5173)
-	@echo   site       Run the landing page alone (http://localhost:5175)
-	@echo   up         Start without rebuilding
-	@echo   down       Stop all services
-	@echo   restart    Restart app services (api, worker, scheduler)
-	@echo   logs       Tail logs from all services
-	@echo   ps         Show service status
-	@echo   build      Build images only
-	@echo   smoke      Run the end-to-end smoke suite (needs PASSWORD=...)
-	@echo   seed       Load a realistic demo dataset (needs PASSWORD=...)
-	@echo   bootstrap  Sync the admin login from .env (OWI_ADMIN_PHONE / OWI_ADMIN_PASSWORD)
-	@echo   backup     Run an immediate backup (db dump + image mirror)
-	@echo   restore    Restore the latest db dump (DESTRUCTIVE, needs CONFIRM=yes)
-	@echo   dev        Print source dev-server commands
-	@echo   clean      Stop and remove volumes (DESTROYS local data)
+	@echo OpenWaste Intelligence - make targets:
+	@echo web - Build + start the backend, API :8000 plus infrastructure
+	@echo front - Run all three frontends together: site, dash, app
+	@echo dash - Run the dashboard alone on http://localhost:5174
+	@echo app - Run the field PWA alone on https://localhost:5173
+	@echo site - Run the landing page alone on http://localhost:5175
+	@echo up - Start without rebuilding
+	@echo down - Stop all services
+	@echo restart - Restart api, worker, scheduler
+	@echo logs - Tail logs from all services
+	@echo ps - Show service status
+	@echo build - Build images only
+	@echo smoke - Run the end-to-end smoke suite, needs PASSWORD=...
+	@echo seed - Load a realistic demo dataset, needs PASSWORD=...
+	@echo bootstrap - Sync the admin login from .env
+	@echo backup - Run an immediate backup, db dump plus image mirror
+	@echo restore - Restore the latest db dump. DESTRUCTIVE, needs CONFIRM=yes
+	@echo dev - Print source dev-server commands
+	@echo clean - Stop and remove volumes. DESTROYS local data
 
 
 web:
@@ -80,10 +83,8 @@ restore: ## Restore the latest db dump (DESTRUCTIVE; requires CONFIRM=yes)
 	sh deploy/restore.sh --yes
 
 dev: ## Print source dev-server commands
-	@echo cd api  ^&^& uv run uvicorn owi_api.main:app --reload
-	@echo cd dash ^&^& pnpm dev   ^(or: make dash^)
-	@echo cd app  ^&^& pnpm dev   ^(or: make app^)
-	@echo cd site ^&^& pnpm dev   ^(or: make site^)
+	@echo api        cd api, then uv run uvicorn owi_api.main:app --reload
+	@echo frontends  make front - or make dash / make app / make site
 
 clean: ## Stop and remove volumes (DESTROYS local data)
 	$(COMPOSE) down -v

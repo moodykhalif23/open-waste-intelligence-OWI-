@@ -9,9 +9,6 @@ x-owi-env: &owi-env
   OWI_S3_ACCESS_KEY: ${MINIO_ROOT_USER}
   OWI_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
   OWI_JWT_SECRET: ${OWI_JWT_SECRET}
-  # Optional tuning from .env — without these lines the containers never see them.
-  # Road distances are the default; the API falls back to straight-line while
-  # OSRM prepares its extract on first boot.
   OWI_OSRM_URL: ${OWI_OSRM_URL:-http://osrm:5000}
   OWI_FUEL_PRICE_KES_PER_L: ${OWI_FUEL_PRICE_KES_PER_L:-0}
   OWI_PUBLIC_API_DELAY_DAYS: ${OWI_PUBLIC_API_DELAY_DAYS:-7}

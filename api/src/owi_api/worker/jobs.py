@@ -2,6 +2,7 @@ import logging
 import uuid
 from functools import lru_cache
 
+import numpy as np
 import onnxruntime
 from sqlalchemy import exists, select
 from sqlalchemy.orm import Session
@@ -58,7 +59,10 @@ def _score(session: Session, obs: Observation, model: MLModel, image_bytes: byte
 
     session_onnx = _session_for(model.artifact_ref)
     input_name = session_onnx.get_inputs()[0].name
-    logits = session_onnx.run(None, {input_name: preprocess(image_bytes)})[0]
+    # ORT types outputs as a union (dense, sparse, sequence, map); a classifier
+    # head is always one dense array, and asarray fails loudly if it is not.
+    outputs = session_onnx.run(None, {input_name: preprocess(image_bytes)})
+    logits = np.asarray(outputs[0], dtype=np.float32)
     label, confidence, scores = top_prediction(logits, model.labels)
 
     key = "fill_band" if model.task.value == "fill" else "material"

@@ -26,7 +26,7 @@ from owi_api.routers import (
 
 
 def create_app() -> FastAPI:
-    settings.assert_production_safe()
+    settings.assert_configured()
 
     app = FastAPI(title="OpenWaste Intelligence API", version="0.1.0")
     if settings.cors_origins:

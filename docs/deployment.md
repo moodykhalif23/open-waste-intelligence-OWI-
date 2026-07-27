@@ -27,6 +27,11 @@ OWI_JWT_SECRET=<random, 32+ chars>
 LABEL_STUDIO_USERNAME=<admin email>
 LABEL_STUDIO_PASSWORD=<random>
 LABEL_STUDIO_USER_TOKEN=<random hex>
+# Dashboard admin login — the single place this credential is written down.
+OWI_ADMIN_PHONE=+2547...
+OWI_ADMIN_PASSWORD=<random, 8+ chars>
+OWI_ADMIN_NAME=Admin
+OWI_ORG_NAME=<your organization>
 # Origins the frontends are served from — required whenever they call the API
 # cross-origin (i.e. VITE_API_URL is set rather than a same-origin /api proxy).
 OWI_CORS_ORIGINS=["https://dash.example.org","https://app.example.org"]
@@ -35,10 +40,7 @@ EOF
 
 # 2. Build and start the backend (make web wraps this):
 make web        # or: docker compose --profile prod up -d --build
-
-# 3. First organization + admin:
-docker compose exec api uv run python -m owi_api.bootstrap \
-  --org "Safi Cleaners and Recyclers" --name "Admin" --phone "+2547..." --password "..."
+#    The organization and admin user are created from .env on first boot.
 
 # 4. Build the frontends and publish the dist/ folders to your static host:
 VITE_API_URL=https://api.example.org pnpm --dir dash build   # → dash/dist
@@ -47,6 +49,24 @@ pnpm --dir site build                                        # → site/dist (no
 ```
 
 `VITE_API_URL` is baked in at build time. Leave it unset when the frontend is served from the same origin as the API (a proxy in front of both forwarding `/api` → `api:8000`) — then no CORS entry is needed either.
+
+## The dashboard login
+
+`.env` is the source of truth. `OWI_ADMIN_PHONE` / `OWI_ADMIN_PASSWORD` are read on
+every `up`: the admin is created if missing, and the password is re-synced if it
+changed. Only the argon2 hash is written to Postgres — the plaintext exists solely
+in `.env` (gitignored), so it can be read and rotated in one place but never
+recovered from a database dump.
+
+```sh
+# forgot it, or want to rotate it
+$EDITOR .env          # change OWI_ADMIN_PASSWORD
+make up               # re-syncs; every existing dashboard session is signed out
+```
+
+Rotating bumps `token_version`, which invalidates outstanding JWTs. Leave the two
+variables empty and the database is left untouched — useful once accounts are
+managed from the dashboard itself.
 
 Migrations run automatically when the `api` container starts. Model weights are baked into the image at build time (SHA256-pinned), so the privacy gate never depends on a runtime download.
 

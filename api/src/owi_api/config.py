@@ -3,34 +3,43 @@ from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-_DEV_DEFAULTS = {
-    "jwt_secret": "dev-only-secret-change-me-before-deploying",
-    "s3_secret_key": "owi-secret-change-me",
-    "database_url": "postgresql+psycopg://owi:owi@localhost:5432/owi",
-}
+# The stand-in shipped in example.env. Boots a fresh clone, refused in
+# production — a copied template must never become a live deployment.
+_PLACEHOLDER = "replace-me"
+_MUST_BE_REAL = ("database_url", "jwt_secret", "s3_secret_key", "admin_password")
 
 
 class Settings(BaseSettings):
-    # Secrets live in the repo-root .env (shared with docker-compose), never in code.
+    # Every credential is read from the repo-root .env in *every* environment —
+    # none carry a working default, so a dev value cannot reach production by
+    # accident. `cp example.env .env` documents the full set.
     model_config = SettingsConfigDict(
         env_prefix="OWI_", env_file=(".env", "../.env"), extra="ignore"
     )
 
     environment: Literal["dev", "production"] = "dev"
     cors_origins: list[str] = []
-    database_url: str = "postgresql+psycopg://owi:owi@localhost:5432/owi"
+    database_url: str
     redis_url: str = "redis://localhost:6379/0"
 
     storage_driver: Literal["local", "s3"] = "local"
     storage_root: Path = Path("var/objects")
     s3_endpoint: str = "localhost:9000"
-    s3_access_key: str = "owi"
-    s3_secret_key: str = "owi-secret-change-me"
+    s3_access_key: str = ""
+    s3_secret_key: str = ""
     s3_bucket: str = "owi-images"
     s3_secure: bool = False
 
-    # HS256 requires ≥32 bytes; deployments must override via OWI_JWT_SECRET.
-    jwt_secret: str = "dev-only-secret-change-me-before-deploying"
+    # The dashboard admin login lives in .env so it can be read and rotated in
+    # one place. Only its argon2 hash is ever written to the database; unset
+    # values mean "leave whatever is already there alone".
+    admin_phone: str = ""
+    admin_password: str = ""
+    admin_name: str = "Admin"
+    org_name: str = ""
+
+    # HS256 requires ≥32 bytes; set OWI_JWT_SECRET in .env.
+    jwt_secret: str
     access_token_ttl_hours: int = 12
     # Collector phones stay signed in for months; revocation is per-user via token_version.
     device_token_ttl_days: int = 180
@@ -62,13 +71,18 @@ class Settings(BaseSettings):
     wa_token: str = ""
     wa_phone_number_id: str = ""
 
-    def assert_production_safe(self) -> None:
-        """Refusing to boot beats silently running a public API on dev credentials."""
+    def assert_configured(self) -> None:
+        """Refusing to boot beats silently running a public API on template values."""
+        if self.storage_driver == "s3" and not (self.s3_access_key and self.s3_secret_key):
+            raise RuntimeError("storage_driver=s3 needs OWI_S3_ACCESS_KEY and OWI_S3_SECRET_KEY")
         if self.environment != "production":
             return
-        leaked = [name for name, value in _DEV_DEFAULTS.items() if getattr(self, name) == value]
-        if leaked:
-            raise RuntimeError(f"production run with dev-default secrets: {', '.join(leaked)}")
+        if len(self.jwt_secret) < 32:
+            raise RuntimeError("OWI_JWT_SECRET must be at least 32 characters in production")
+        unset = [name for name in _MUST_BE_REAL if _PLACEHOLDER in getattr(self, name)]
+        if unset:
+            raise RuntimeError(f"production run with example.env values: {', '.join(unset)}")
 
 
-settings = Settings()
+# The required fields come from .env at runtime, which mypy cannot see.
+settings = Settings()  # type: ignore[call-arg]

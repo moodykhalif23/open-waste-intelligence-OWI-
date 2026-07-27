@@ -17,6 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
+      # No credential is defaulted in code, so config only loads from a .env.
+      - run: cp example.env .env
+        working-directory: .
       - run: uv sync
       - run: uv run ruff check .
       - run: uv run ruff format --check .

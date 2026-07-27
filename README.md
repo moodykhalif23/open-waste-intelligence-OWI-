@@ -49,7 +49,9 @@ make dash              # dashboard, in another terminal
 make app               # field PWA, in another terminal
 ```
 
-Docker runs the backend only. The three frontends (`dash`, `app`, `site`) build and run outside Docker and consume the API over HTTP: `http://localhost:8000`, proxied at `/api` by their dev servers. Dashboard at `http://localhost:5174`, field app at `https://localhost:5173` (accept the self-signed cert once per device), landing page at `http://localhost:5175`, Label Studio at `http://localhost:8080`. `make help` lists all targets. First run: `make bootstrap ORG="Safi" NAME="Admin" PHONE="+2547..." PASSWORD="..."`.
+Docker runs the backend only. The three frontends (`dash`, `app`, `site`) build and run outside Docker and consume the API over HTTP: `http://localhost:8000`, proxied at `/api` by their dev servers. Dashboard at `http://localhost:5174`, field app at `https://localhost:5173` (accept the self-signed cert once per device), landing page at `http://localhost:5175`, Label Studio at `http://localhost:8080`. `make help` lists all targets.
+
+The dashboard login comes from `.env` (`OWI_ADMIN_PHONE` / `OWI_ADMIN_PASSWORD`) and is applied on every `make up`; only its hash is stored in the database. Change the value there and `make up` to rotate it.
 
 Contributors: see [CONTRIBUTING.md](CONTRIBUTING.md).
 

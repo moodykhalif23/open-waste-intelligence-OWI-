@@ -9,6 +9,12 @@ x-owi-env: &owi-env
   OWI_S3_ACCESS_KEY: ${MINIO_ROOT_USER}
   OWI_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
   OWI_JWT_SECRET: ${OWI_JWT_SECRET}
+  # Dashboard admin login: .env is the source of truth, the db only ever holds
+  # the argon2 hash. Change it here and `make up` rotates it.
+  OWI_ADMIN_PHONE: ${OWI_ADMIN_PHONE:-}
+  OWI_ADMIN_PASSWORD: ${OWI_ADMIN_PASSWORD:-}
+  OWI_ADMIN_NAME: ${OWI_ADMIN_NAME:-Admin}
+  OWI_ORG_NAME: ${OWI_ORG_NAME:-}
   # Frontends build and run outside Docker, so they reach the API cross-origin.
   OWI_CORS_ORIGINS: ${OWI_CORS_ORIGINS:-[]}
   OWI_OSRM_URL: ${OWI_OSRM_URL:-http://osrm:5000}
@@ -86,11 +92,12 @@ services:
       - ls-data:/label-studio/data
 
   # One-shot: migrations run exactly once per `up`, never raced by app replicas.
+  # The admin sync rides along so .env stays the source of truth for the login.
   migrate:
     build: ./api
     profiles: [prod]
     environment: *owi-env
-    command: uv run alembic upgrade head
+    command: sh -c "uv run alembic upgrade head && uv run python -m owi_api.bootstrap"
     restart: "no"
     depends_on:
       db:

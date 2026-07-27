@@ -18,7 +18,7 @@ help: ## Show available targets
 	@echo   build      Build images only
 	@echo   smoke      Run the end-to-end smoke suite (needs PASSWORD=...)
 	@echo   seed       Load a realistic demo dataset (needs PASSWORD=...)
-	@echo   bootstrap  Create first org + admin (ORG, NAME, PHONE, PASSWORD)
+	@echo   bootstrap  Sync the admin login from .env (OWI_ADMIN_PHONE / OWI_ADMIN_PASSWORD)
 	@echo   backup     Run an immediate backup (db dump + image mirror)
 	@echo   restore    Restore the latest db dump (DESTRUCTIVE, needs CONFIRM=yes)
 	@echo   dev        Print source dev-server commands
@@ -65,8 +65,8 @@ smoke: ## Run the smoke suite against the running API
 seed: ## Load a realistic demo dataset (idempotent; safe to re-run)
 	cd api && uv run python scripts/seed.py http://127.0.0.1:8000 $(ADMIN_PHONE) $(PASSWORD)
 
-bootstrap: ## Create first org + admin
-	$(COMPOSE) exec api uv run python -m owi_api.bootstrap --org "$(ORG)" --name "$(NAME)" --phone "$(PHONE)" --password "$(PASSWORD)"
+bootstrap: ## Sync the admin login from .env (also runs automatically on every up)
+	$(COMPOSE) exec api uv run python -m owi_api.bootstrap
 
 backup: ## Run an immediate backup (db dump + image mirror)
 	$(COMPOSE) exec db-backup /backup.sh

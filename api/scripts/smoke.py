@@ -7,12 +7,24 @@ import struct
 import sys
 import time
 import uuid
+from datetime import UTC, datetime, timedelta
 
 import cv2
 import httpx
 import numpy as np
 
 failures: list[str] = []
+NOW = datetime.now(UTC)
+
+
+def captured(days_ago: int, hour: int, minute: int = 0) -> str:
+    """Bin health only looks back 21 days, so timestamps must be relative to the run."""
+    at = (NOW - timedelta(days=days_ago)).replace(hour=hour, minute=minute, second=0, microsecond=0)
+    return at.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def day(days_ago: int) -> str:
+    return (NOW - timedelta(days=days_ago)).strftime("%Y-%m-%d")
 
 
 def check(name: str, condition: bool, detail: str = "") -> None:
@@ -128,14 +140,14 @@ def main() -> None:
     run_seed = uuid.uuid4().int % 2**31
     gps_image, bin_image = make_jpeg(run_seed), make_jpeg(run_seed + 1)
     meta = [
-        {"captured_at": "2026-07-12T10:00:00Z", "lat": -1.2921, "lng": 36.8219, "fill_tap": "high"},
+        {"captured_at": captured(1, 10), "lat": -1.2921, "lng": 36.8219, "fill_tap": "high"},
         {
-            "captured_at": "2026-07-12T10:05:00Z",
+            "captured_at": captured(1, 10, 5),
             "bin_qr": bin_data["qr_code"],
             "fill_tap": "overflowing",
         },
-        {"captured_at": "2026-07-12T10:06:00Z", "bin_qr": "nonexistent-code"},
-        {"captured_at": "2026-07-12T10:07:00Z", "lat": -1.29, "lng": 36.82},
+        {"captured_at": captured(1, 10, 6), "bin_qr": "nonexistent-code"},
+        {"captured_at": captured(1, 10, 7), "lat": -1.29, "lng": 36.82},
     ]
     files = [
         ("files", ("a.jpg", gps_image, "image/jpeg")),
@@ -165,8 +177,8 @@ def main() -> None:
     check("duplicate deduplicated", again.json()["results"][0]["status"] == "duplicate")
 
     quality_meta = [
-        {"captured_at": "2026-07-13T10:00:00Z", "lat": -1.29, "lng": 36.82},
-        {"captured_at": "2026-07-13T10:01:00Z", "lat": -1.29, "lng": 36.82},
+        {"captured_at": captured(1, 11), "lat": -1.29, "lng": 36.82},
+        {"captured_at": captured(1, 11, 1), "lat": -1.29, "lng": 36.82},
     ]
     quality = client.post(
         "/api/v1/observations/batch",
@@ -186,9 +198,9 @@ def main() -> None:
     )
 
     fill_meta = [
-        {"captured_at": "2026-07-11T08:00:00Z", "bin_qr": bin_data["qr_code"], "fill_tap": "low"},
-        {"captured_at": "2026-07-12T08:00:00Z", "bin_qr": bin_data["qr_code"], "fill_tap": "half"},
-        {"captured_at": "2026-07-13T08:00:00Z", "bin_qr": bin_data["qr_code"], "fill_tap": "high"},
+        {"captured_at": captured(3, 8), "bin_qr": bin_data["qr_code"], "fill_tap": "low"},
+        {"captured_at": captured(2, 8), "bin_qr": bin_data["qr_code"], "fill_tap": "half"},
+        {"captured_at": captured(1, 8), "bin_qr": bin_data["qr_code"], "fill_tap": "high"},
     ]
     client.post(
         "/api/v1/observations/batch",
@@ -299,7 +311,7 @@ def main() -> None:
         "/api/v1/volunteers",
         headers=admin,
         json={
-            "occurred_on": "2026-07-01",
+            "occurred_on": day(30),
             "event_type": "cleanup",
             "area": "Estate A",
             "organizer": "Wanjiru",
@@ -319,7 +331,7 @@ def main() -> None:
     report = client.get(
         "/api/v1/volunteers/report",
         headers=admin,
-        params={"start": "2026-01-01", "end": "2026-12-31"},
+        params={"start": day(365), "end": day(-1)},
     )
     check(
         "grant report renders",
@@ -355,11 +367,7 @@ def main() -> None:
     dump_obs = client.post(
         "/api/v1/observations/batch",
         headers=device_auth,
-        data={
-            "meta": json.dumps(
-                [{"captured_at": "2026-07-13T09:00:00Z", "lat": -1.30, "lng": 36.80}]
-            )
-        },
+        data={"meta": json.dumps([{"captured_at": captured(1, 9), "lat": -1.30, "lng": 36.80}])},
         files=[("files", ("street.jpg", make_jpeg(run_seed + 20), "image/jpeg"))],
     ).json()["results"][0]
     check("street observation created", dump_obs["status"] == "created")
@@ -390,7 +398,7 @@ def main() -> None:
     interv = client.post(
         f"/api/v1/dumping/sites/{site_id}/interventions",
         headers=admin,
-        json={"kind": "cleanup", "performed_on": "2026-07-13", "notes": "cleared"},
+        json={"kind": "cleanup", "performed_on": day(1), "notes": "cleared"},
     )
     check("intervention recorded", interv.status_code == 201)
     sites = client.get("/api/v1/dumping/sites", headers=admin).json()

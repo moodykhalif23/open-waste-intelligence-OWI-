@@ -18,6 +18,8 @@ From the repo root:
 make ml-setup     # install the training stack (PyTorch, torchvision, …)
 make ml-data      # download TrashNet + Garbage Dataset v2 into ml/datasets/merged (deduped)
 make ml-train     # train the material classifier → golden-set macro-F1 → ONNX in ml/artifacts/
+(cd ml && PYTHONPATH=src:../api/src ../api/.venv/bin/python -m owi_ml.eval.report)
+                 # ONNX golden-set report → ml/reports/classifier-evaluation.md
 make ml-register API_URL=http://localhost:8000 TOKEN=<admin-jwt> VERSION=v1   # publish + activate
 ```
 
@@ -28,6 +30,17 @@ macro-F1 gate used for release, and exports `classifier.onnx` + `labels.json` + 
 `make ml-export` pulls reviewed ground truth into `datasets/safi`; `make ml-retrain` exports and
 retrains on public + local data. Activating a model makes the batch worker score observations
 into the review queue.
+
+The ONNX evaluation report runs the exported artifact (not just the in-memory training head)
+against the same deterministic frozen golden split using the API's production preprocessing.
+It includes a confusion matrix, per-class precision/recall/F1, extra `other_mixed` analysis,
+and linked representative images. The current merged corpus contains licensed public TrashNet
+and Garbage Dataset v2 photos; this report is not a substitute for evaluation on local field data.
+The report command uses the API environment for ONNX Runtime and must be run from `ml/`.
+
+`TOKEN` for `ml-register` is the admin JWT returned as `access_token` by
+`POST /api/v1/auth/login`; it is not a device token or Label Studio token. Sign in with
+`OWI_ADMIN_PHONE` and `OWI_ADMIN_PASSWORD` from the repo-root `.env` to obtain a fresh one.
 
 Base checks (no training stack needed): `uv run ruff check . && uv run mypy && uv run pytest`
 

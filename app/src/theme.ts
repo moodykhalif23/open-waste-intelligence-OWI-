@@ -35,6 +35,8 @@ const theme = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         body: { WebkitFontSmoothing: "antialiased", textRendering: "optimizeLegibility" },
+        "html, body": { scrollbarWidth: "none", msOverflowStyle: "none" },
+        "html::-webkit-scrollbar, body::-webkit-scrollbar": { display: "none" },
         "::selection": { backgroundColor: "#fbeecf", color: "#3a2a05" },
         ":focus-visible": {
           outline: "2px solid #f2b949",

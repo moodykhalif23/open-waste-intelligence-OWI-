@@ -468,15 +468,6 @@ export default function App() {
                 </Box>
 
                 <Paper variant="outlined" sx={{ p: 2 }}>
-                  <Stack
-                    direction="row"
-                    sx={{ alignItems: "baseline", justifyContent: "space-between", mb: recent.length ? 0.5 : 0 }}
-                  >
-                    <Typography sx={{ fontWeight: 660 }}>{tr("recentReports")}</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontVariantNumeric: "tabular-nums" }}>
-                      {recent.length}
-                    </Typography>
-                  </Stack>
                   {recent.length === 0 ? (
                     <Stack spacing={0.5} sx={{ alignItems: "center", textAlign: "center", py: 2.5 }}>
                       <Box

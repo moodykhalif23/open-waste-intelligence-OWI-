@@ -296,9 +296,11 @@ export default function App() {
         sx={{ flex: 1, p: 2, pb: 12, display: "flex", flexDirection: "column", gap: 1.5 }}
       >
         <Box sx={{ pt: 0.5, pb: 0.5 }}>
-          <Typography sx={{ fontSize: "1.9rem", fontWeight: 780, letterSpacing: "-0.025em", lineHeight: 1.1 }}>
-            {tr(tab === "report" ? "tabReport" : tab === "collect" ? "tabCollect" : "tabInsights")}
-          </Typography>
+          {tab !== "report" && (
+            <Typography sx={{ fontSize: "1.9rem", fontWeight: 780, letterSpacing: "-0.025em", lineHeight: 1.1 }}>
+              {tr(tab === "collect" ? "tabCollect" : "tabInsights")}
+            </Typography>
+          )}
           <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 540, mt: 0.25 }}>
             {todayLabel(lang)}
           </Typography>
@@ -338,19 +340,16 @@ export default function App() {
             )}
 
             {!scanning && !staged && (
-              <Paper variant="outlined" sx={{ p: 2 }}>
-                <Stack
-                  direction="row"
-                  sx={{ alignItems: "center", justifyContent: "space-between", mb: 1.5, minHeight: 24 }}
-                >
-                  <Typography
-                    variant="overline"
-                    sx={{ color: "text.secondary", fontWeight: 700, letterSpacing: "0.08em", lineHeight: 1.6 }}
-                  >
-                    {tr("newReport")}
-                  </Typography>
-                  {binQr && <Chip size="small" color="success" variant="outlined" label={tr("binLinked", { code: binQr })} />}
-                </Stack>
+              <Stack spacing={1.5}>
+                {binQr && (
+                  <Chip
+                    size="small"
+                    color="success"
+                    variant="outlined"
+                    label={tr("binLinked", { code: binQr })}
+                    sx={{ alignSelf: "flex-start" }}
+                  />
+                )}
                 <Button
                   fullWidth
                   variant="contained"
@@ -382,11 +381,10 @@ export default function App() {
                   variant="outlined"
                   startIcon={<QrCodeScannerOutlined />}
                   onClick={() => setScanning(true)}
-                  sx={{ mt: 1.5 }}
                 >
                   {tr("scanBin")}
                 </Button>
-              </Paper>
+              </Stack>
             )}
 
             {staged && (

@@ -528,14 +528,19 @@ export default function App() {
         sx={{
           position: "fixed",
           bottom: 0,
-          left: 0,
-          right: 0,
+          left: 8,
+          right: 8,
           maxWidth: 480,
           mx: "auto",
           borderTop: "1px solid",
+          borderLeft: "1px solid",
+          borderRight: "1px solid",
           borderColor: "divider",
-          borderTopLeftRadius: "16px",
-          borderTopRightRadius: "16px",
+          borderTopLeftRadius: "20px",
+          borderTopRightRadius: "20px",
+          borderBottomLeftRadius: 0,
+          borderBottomRightRadius: 0,
+          overflow: "hidden",
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >

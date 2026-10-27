@@ -31,7 +31,7 @@ import QrScan from "./components/QrScan";
 import { t, type Lang, type StringKey } from "./i18n";
 import { compressImage, type QualityWarning } from "./lib/compress";
 import { getFix, type GpsFix } from "./lib/gps";
-import { enqueue, listQueued, type FillBand } from "./lib/queue";
+import { FILL_BANDS, enqueue, listQueued, type FillBand } from "./lib/queue";
 import { loadSettings, saveSettings, type AppSettings } from "./lib/settings";
 import {
   SyncError,
@@ -40,8 +40,6 @@ import {
   syncQueue,
   type RecentReport,
 } from "./lib/sync";
-
-const FILL_BANDS: FillBand[] = ["empty", "low", "half", "high", "overflowing"];
 
 // Chromium-only event; not in lib.dom, so declare the minimal surface we use.
 interface BeforeInstallPromptEvent extends Event {

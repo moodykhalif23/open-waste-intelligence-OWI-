@@ -9,7 +9,7 @@ import Typography from "@mui/material/Typography";
 import { LoginError, login } from "../api";
 import { useI18n } from "../i18n";
 
-function BinMark({ size = 30, color = "#f2b949" }: { size?: number; color?: string }) {
+function BinMark({ size, color }: { size: number; color: string }) {
   return (
     <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden>
       <path d="M22 26h20l-2 24a3 3 0 0 1-3 2.7H27a3 3 0 0 1-3-2.7z" fill={color} />

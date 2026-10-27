@@ -1,6 +1,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 
 export type FillBand = "empty" | "low" | "half" | "high" | "overflowing";
+export const FILL_BANDS: FillBand[] = ["empty", "low", "half", "high", "overflowing"];
 
 export interface QueuedReport {
   id: string;

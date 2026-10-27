@@ -20,18 +20,17 @@ import HistoryOutlined from "@mui/icons-material/HistoryOutlined";
 import TuneOutlined from "@mui/icons-material/TuneOutlined";
 import type { StringKey } from "./i18n";
 
-// A leaf destination. `end` marks index-style matching (exact path only).
+// A leaf destination.
 export interface NavLeaf {
   path: string;
   key: StringKey;
   icon?: ReactElement;
-  end?: boolean;
 }
 
 // A top-level sidebar entry. When `children` is set, the entry is a grouped
 // section: the sidebar shows one item and the sub-pages become an in-content
 // tab bar (see SectionNav) instead of crowding the rail.
-export interface NavEntry {
+interface NavEntry {
   path: string;
   key: StringKey;
   icon: ReactNode;
@@ -39,7 +38,7 @@ export interface NavEntry {
 }
 
 export const NAV: NavEntry[] = [
-  { path: "/", key: "overview", icon: <DashboardOutlined />, },
+  { path: "/", key: "overview", icon: <DashboardOutlined /> },
   { path: "/collect", key: "collectToday", icon: <PlaylistAddCheckOutlined /> },
   { path: "/routes", key: "routes", icon: <AltRouteOutlined /> },
   {

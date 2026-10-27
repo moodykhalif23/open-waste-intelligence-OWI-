@@ -4,12 +4,12 @@ import { defineConfig, loadEnv } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 // HTTPS in dev: camera and geolocation are blocked in insecure contexts,
-// and phone-on-LAN testing is the whole point of this spike.
+// and the app is tested on phones over the LAN.
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, "..", "");
   // Same-origin /api avoids mixed-content blocking (HTTPS page → HTTP API) and
   // keeps the API reachable while it runs in Docker and this app does not.
-  // Preview gets the same proxy: no reverse proxy fronts the built app anymore.
+  // Preview gets the same proxy so a built app works without a reverse proxy.
   const proxy = {
     "/api": { target: env.OWI_API_PROXY || "http://127.0.0.1:8000", changeOrigin: true },
   };

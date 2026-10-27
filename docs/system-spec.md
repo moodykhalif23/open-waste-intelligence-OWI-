@@ -1,18 +1,18 @@
 # System Spec & Engineering Standards
 
-This doc pins the decisions [03-architecture.md](03-architecture.md) left open, and sets the engineering standards all code follows from day one. Where this doc and 03 differ, this doc wins (it is newer and records resolved ADRs).
+This doc records the resolved architecture decisions and sets the engineering standards all code follows.
 
 ## Languages
 
 | Layer                               | Language              | Runtime / tooling                                              |
 | ----------------------------------- | --------------------- | -------------------------------------------------------------- |
-| Backend API, ingestion, workers, ML | **Python 3.12** | uv (env + deps), ruff (lint + format), pytest, mypy on`api/` |
-| Dashboard + field app (PWA)         | **TypeScript**  | Vite, pnpm, eslint + prettier                                  |
+| Backend API, ingestion, workers, ML | **Python 3.12** | uv (env + deps), ruff (lint + format), pytest, mypy on `api/` and `ml/` |
+| Dashboard + field app (PWA)         | **TypeScript**  | Vite, pnpm, eslint                                             |
 | Infra                               | YAML / SQL            | Docker Compose, Alembic migrations                             |
 
 Python everywhere on the server because OpenCV, ONNX Runtime, and OR-Tools are Python-native — one language from ingestion to analytics. TypeScript everywhere in the browser because the field app is a PWA (ADR-6), so dashboard and field app share one toolchain.
 
-## Resolved ADRs (were open in 03/04)
+## Resolved ADRs
 
 ### ADR-6: Field app is a PWA, not Flutter
 
@@ -26,7 +26,7 @@ Ultralytics YOLOv8/11 is AGPL-3.0. OWI promises "all code Apache-2.0, any compon
 
 Every chart in every surface (dashboard, reports, public pages) uses Apache ECharts (Apache-2.0, canvas-based, fast at our data volumes, themeable to our flat UI). No second chart library, ever — consistency and bundle size beat per-chart convenience.
 
-## Pinned component versions of the 03 table
+## Pinned components
 
 | Component         | Pinned choice                                                                |
 | ----------------- | ---------------------------------------------------------------------------- |
@@ -40,7 +40,7 @@ Every chart in every surface (dashboard, reports, public pages) uses Apache ECha
 | Routing           | OR-Tools + self-hosted OSRM (OSM Kenya extract)                              |
 | Dashboard         | React 18 + Vite + TypeScript + Apache ECharts                                |
 | Field app         | PWA: Vite + React + TypeScript, Workbox service worker, IndexedDB sync queue |
-| Reports           | Server-side HTML → PDF (WeasyPrint)                                         |
+| Reports           | Print-optimised HTML; the browser's Save-as-PDF produces the A4 report      |
 | Auth              | JWT + roles (admin / coordinator / collector / viewer / api-consumer)        |
 | Deployment        | Docker Compose, single VPS or on-prem mini-PC                                |
 
@@ -51,6 +51,7 @@ Every chart in every surface (dashboard, reports, public pages) uses Apache ECha
 /ml       training, eval, dataset tooling, model registry
 /app      field PWA (collector)
 /dash     ops dashboard (React + ECharts)
+/site     public landing page (static)
 /docs     this documentation
 docker-compose.yml at the repo root: dev/pilot services (Postgres+PostGIS, Redis, MinIO)
 ```
@@ -74,7 +75,7 @@ docker-compose.yml at the repo root: dev/pilot services (Postgres+PostGIS, Redis
 - All strings in i18n files (English + Swahili) from the first screen; nothing hardcoded.
 - Data displays follow the product vision's plain tabular style (e.g., the Bin #43 card) — numbers first, chrome last.
 
-### Governance in code (from [08-data-governance-ethics.md](08-data-governance-ethics.md))
+### Governance in code
 
 - Privacy gate runs at ingestion, before primary storage; originals containing people are quarantined and deleted ≤ 72 h after blur verification.
 - Open API endpoints can only read from aggregate tables — no code path from public routes to raw observations or images.
@@ -84,9 +85,5 @@ docker-compose.yml at the repo root: dev/pilot services (Postgres+PostGIS, Redis
 
 - `docker compose up` at the repo root brings up Postgres+PostGIS, Redis, MinIO.
 - `/api`: `uv sync && uv run alembic upgrade head && uv run uvicorn owi_api.main:app --reload`.
-- CI (GitHub Actions): ruff + mypy + pytest on `/api`; tsc + eslint + build on `/app` and `/dash`.
+- CI (GitHub Actions): ruff + mypy + pytest on `/api` and `/ml`; tsc + eslint + build on `/app` and `/dash`.
 - Licenses: Apache-2.0 (code) — add `LICENSE` at first public release per README's pending confirmation.
-
-## Build progress
-
-Tracked in one place only: [STATUS.md](STATUS.md).

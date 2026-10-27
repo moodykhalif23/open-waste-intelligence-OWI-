@@ -23,10 +23,10 @@ echarts.use([
 
 type ChartOption = echarts.EChartsCoreOption;
 
-export const INK = "#201a10";
-export const MUTED = "#6b6456";
-export const LINE = "#eae6dd";
-export const ACCENT = "#101828";
+const INK = "#201a10";
+const MUTED = "#6b6456";
+const LINE = "#eae6dd";
+const ACCENT = "#101828";
 
 // Validated categorical palette (dataviz skill, light surface: worst adjacent
 // CVD ΔE 24.2). Contrast WARN on aqua/yellow/magenta is relieved by the direct
@@ -122,11 +122,7 @@ export function barOption(categories: string[], values: number[]): ChartOption {
 }
 
 // Horizontal bars — ranking of labelled magnitudes (biggest on top).
-export function hbarOption(
-  categories: string[],
-  values: number[],
-  color = ACCENT,
-): ChartOption {
+export function hbarOption(categories: string[], values: number[]): ChartOption {
   return {
     animation: false,
     grid: { left: 8, right: 44, top: 8, bottom: 8, containLabel: true },
@@ -138,7 +134,7 @@ export function hbarOption(
         type: "bar",
         data: values,
         barMaxWidth: 20,
-        itemStyle: { color, borderRadius: [0, 4, 4, 0] },
+        itemStyle: { color: ACCENT, borderRadius: [0, 4, 4, 0] },
         label: { show: true, position: "right", color: MUTED, fontSize: 11 },
       },
     ],
@@ -166,7 +162,7 @@ export function lineOption(categories: string[], values: number[]): ChartOption 
   };
 }
 
-export interface Slice {
+interface Slice {
   name: string;
   value: number;
   color?: string;

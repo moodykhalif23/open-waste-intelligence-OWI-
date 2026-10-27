@@ -5,13 +5,9 @@ import type {} from "@mui/x-data-grid/themeAugmentation";
 // solid fills and soft tints, never gradients. Inter Variable is self-hosted,
 // so the fractional weights below render exactly as specified on every OS.
 const ink = {
-  50: "#eceef1",
-  100: "#dfe2e8",
-  200: "#c2c7d0",
   500: "#3a4256",
   600: "#101828",
   700: "#05070c",
-  800: "#05070c",
 };
 
 const border = "#eae6dd";
@@ -43,12 +39,9 @@ const theme = createTheme({
     fontSize: 15,
     fontWeightRegular: 450,
     fontWeightMedium: 600,
-    h1: { fontWeight: 720, letterSpacing: "-0.02em" },
-    h2: { fontWeight: 700, letterSpacing: "-0.02em" },
     h4: { fontWeight: 720, letterSpacing: "-0.02em", fontSize: "1.6rem" },
     h5: { fontWeight: 700, letterSpacing: "-0.015em", fontSize: "1.28rem" },
     h6: { fontWeight: 690, letterSpacing: "-0.01em", fontSize: "1.08rem" },
-    subtitle1: { fontWeight: 600 },
     subtitle2: { fontWeight: 620 },
     body1: { fontWeight: 460 },
     body2: { fontWeight: 460, lineHeight: 1.6 },
@@ -215,8 +208,6 @@ const theme = createTheme({
       styleOverrides: {
         root: { fontVariantNumeric: "tabular-nums" },
         cell: {
-          // Wrapping cells use display:flex; numeric columns must keep their right edge.
-          "&.MuiDataGrid-cell--textRight": { justifyContent: "flex-end" },
           "&:focus-within": { outline: "2px solid #f2b949", outlineOffset: "-2px" },
         },
         columnHeader: {

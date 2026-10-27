@@ -20,6 +20,7 @@ import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import EChart, { donutOption, heatmapOption, hbarOption, RISK_HUE } from "./EChart";
 import { fetchBinHealth, type BinHealth } from "../lib/collect";
+import { FILL_BANDS } from "../lib/queue";
 import { t, type Lang, type StringKey } from "../i18n";
 
 type Risk = "high" | "medium" | "low";
@@ -29,7 +30,6 @@ type Load =
   | { kind: "error" }
   | { kind: "data"; bins: BinHealth[] };
 
-const BANDS = ["empty", "low", "half", "high", "overflowing"] as const;
 const RISK_ORDER: Risk[] = ["high", "medium", "low"];
 const MAX_SITES = 8;
 
@@ -113,7 +113,7 @@ export default function Insights({ lang, token }: { lang: Lang; token: string })
       .slice(0, MAX_SITES)
       .map(([name]) => name);
     const idx = new Map(sites.map((s, i) => [s, i]));
-    const grid = sites.map(() => new Array<number>(BANDS.length).fill(0));
+    const grid = sites.map(() => new Array<number>(FILL_BANDS.length).fill(0));
     for (const b of bins) {
       const row = idx.get(b.site_name);
       if (row === undefined) continue;
@@ -123,14 +123,14 @@ export default function Insights({ lang, token }: { lang: Lang; token: string })
     const data: [number, number, number][] = [];
     let max = 0;
     for (let r = 0; r < sites.length; r++)
-      for (let c = 0; c < BANDS.length; c++) {
+      for (let c = 0; c < FILL_BANDS.length; c++) {
         const v = grid[r]![c] ?? 0;
         if (v > 0) {
           data.push([c, r, v]);
           if (v > max) max = v;
         }
       }
-    return { sites, labels: BANDS.map((b) => tr(b)), data, max };
+    return { sites, labels: FILL_BANDS.map((b) => tr(b)), data, max };
   }, [bins, lang]);
 
   const top = useMemo(() => {

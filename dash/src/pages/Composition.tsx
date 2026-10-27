@@ -145,11 +145,7 @@ export default function Composition() {
           </SectionCard>
 
           <TableSection>
-            {data.materials.length === 0 ? (
-              <EmptyState icon={<DonutLargeOutlined />} title={t("noComposition")} />
-            ) : (
-              <DataTable rows={data.materials} columns={columns} getRowId={(r) => r.material} />
-            )}
+            <DataTable rows={data.materials} columns={columns} getRowId={(r) => r.material} />
           </TableSection>
         </>
       )}

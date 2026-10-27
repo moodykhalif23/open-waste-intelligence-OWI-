@@ -6,7 +6,7 @@ import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import CheckCircle from "@mui/icons-material/CheckCircle";
-import EChart, { ringOption } from "./EChart";
+import EChart, { RISK_HUE, ringOption } from "./EChart";
 import { t, type Lang, type StringKey } from "../i18n";
 import {
   collectStop,
@@ -22,12 +22,6 @@ type Load =
   | { kind: "error" }
   | { kind: "routes"; routes: Route[] }
   | { kind: "list"; bins: BinHealth[] };
-
-const RISK_COLOR: Record<string, string> = {
-  high: "#c0392b",
-  medium: "#b4791a",
-  low: "#0e7a55",
-};
 
 export default function CollectList({ lang, token }: { lang: Lang; token: string }) {
   const tr = (key: StringKey, vars?: Record<string, string | number>) => t(lang, key, vars);
@@ -78,7 +72,7 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                 <Box
-                  sx={{ width: 9, height: 9, borderRadius: "50%", flexShrink: 0, bgcolor: RISK_COLOR[bin.overflow_risk] }}
+                  sx={{ width: 9, height: 9, borderRadius: "50%", flexShrink: 0, bgcolor: RISK_HUE[bin.overflow_risk] }}
                   aria-hidden
                 />
                 <Typography sx={{ fontWeight: 600, fontSize: "0.92rem" }} noWrap>

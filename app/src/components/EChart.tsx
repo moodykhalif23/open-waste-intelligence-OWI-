@@ -1,4 +1,4 @@
-import { BarChart, HeatmapChart, LineChart, PieChart } from "echarts/charts";
+import { BarChart, HeatmapChart, PieChart } from "echarts/charts";
 import {
   GridComponent,
   LegendComponent,
@@ -12,7 +12,6 @@ import { useEffect, useRef } from "react";
 
 echarts.use([
   BarChart,
-  LineChart,
   PieChart,
   HeatmapChart,
   GridComponent,
@@ -39,7 +38,7 @@ export const RISK_HUE: Record<string, string> = {
   low: "#0e7a55",
 };
 
-// Emerald single-hue ramp, light→dark, for sequential (heatmap) magnitude.
+// Ink single-hue ramp, light→dark, for sequential (heatmap) magnitude.
 const SEQUENTIAL = ["#eceef1", "#c2c7d0", "#3a4256", "#3a4256", "#05070c"];
 
 // Responsive by container, not window: a ResizeObserver keeps the chart fitted
@@ -72,7 +71,7 @@ const flatTooltip = {
   extraCssText: "box-shadow: 0 4px 16px rgba(16,24,40,0.10); border-radius: 4px;",
 };
 
-export interface Slice {
+interface Slice {
   name: string;
   value: number;
   color?: string;

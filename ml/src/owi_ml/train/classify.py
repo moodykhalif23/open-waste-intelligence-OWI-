@@ -89,8 +89,8 @@ def main() -> None:
             return False
 
     samples = _gather(args.data)
-    dropped = [p for p, _ in samples if not readable(p)]
-    samples = [(p, label) for p, label in samples if p not in set(dropped)]
+    dropped = {p for p, _ in samples if not readable(p)}
+    samples = [(p, label) for p, label in samples if p not in dropped]
     if dropped:
         print(f"skipped {len(dropped)} unreadable image(s)")
     if not samples:

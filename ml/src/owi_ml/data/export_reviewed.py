@@ -5,7 +5,7 @@
 Downloads each labeled observation's (blurred) image via the staff image endpoint into
 <out>/<label>/safi_<observation_id>.jpg — the layout the trainer consumes, so
 `--data datasets/merged datasets/safi` fine-tunes on public + local ground truth and
-`--data datasets/safi` alone re-freezes a local golden set (Gate B). Idempotent:
+`--data datasets/safi` alone re-freezes a local golden set. Idempotent:
 existing files are skipped, so a weekly run only pulls new reviews.
 """
 

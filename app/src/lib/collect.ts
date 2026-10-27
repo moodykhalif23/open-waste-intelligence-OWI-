@@ -10,13 +10,10 @@ export interface BinHealth {
   recommendation: "collect_today" | "schedule_soon" | "no_action";
 }
 
-export interface RouteStop {
+interface RouteStop {
   id: string;
   seq: number;
-  bin_id: string;
   qr_code: string;
-  lat: number;
-  lng: number;
   collected: boolean;
 }
 
@@ -25,8 +22,6 @@ export interface Route {
   truck_name: string;
   method: string;
   planned_km: number;
-  planned_fuel_l: number;
-  bins_served: number;
   stops: RouteStop[];
 }
 

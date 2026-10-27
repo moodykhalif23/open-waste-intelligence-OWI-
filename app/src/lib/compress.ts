@@ -11,7 +11,7 @@ const BLURRY_BELOW = 15;
 
 export type QualityWarning = "dark" | "bright" | "blurry";
 
-export interface CapturedImage {
+interface CapturedImage {
   blob: Blob;
   warning: QualityWarning | null;
 }

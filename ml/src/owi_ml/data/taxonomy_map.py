@@ -1,14 +1,3 @@
-OWI_CLASSES = [
-    "plastic",
-    "glass",
-    "metal",
-    "paper",
-    "organic",
-    "e_waste",
-    "textile",
-    "other_mixed",
-]
-
 # Public-dataset category names (TACO, TrashNet, Roboflow) → OWI top-level class.
 # Public data pretrains generic material appearance; the local set fine-tunes the rest.
 _SOURCE_TO_OWI = {

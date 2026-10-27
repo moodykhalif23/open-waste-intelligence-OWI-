@@ -1,4 +1,4 @@
-# 05 — Data Model & APIs
+# Data Model & APIs
 
 ## Core entities
 

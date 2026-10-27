@@ -2,9 +2,8 @@
 
     python -m owi_ml.data.download
 
-Manifest-driven: every source declares its verified license and a `shippable` flag —
-the enforcement point for ml/DATA_LICENSES.md. Non-shippable sources never reach the
-training tree. Fetchers write <out>/<owi_class>/<source>_<n>.jpg (source prefix keeps
+Every source declares its verified license; sets that cannot be redistributed are not
+listed. Fetchers write <out>/<owi_class>/<source>_<n>.jpg (the source prefix keeps
 filenames collision-free and the hash-based split stable), then the tree is deduped.
 """
 
@@ -33,7 +32,6 @@ GDV2_KAGGLE = "sumn2u/garbage-classification-v2"
 class Source:
     key: str
     license: str
-    shippable: bool
     fetch: Callable[[Path, str], dict[str, int]]
 
 
@@ -89,8 +87,8 @@ def fetch_gdv2(out: Path, key: str) -> dict[str, int]:
 
 
 SOURCES = [
-    Source("trashnet", "MIT", True, fetch_trashnet),
-    Source("gdv2", "CC BY 4.0", True, fetch_gdv2),
+    Source("trashnet", "MIT", fetch_trashnet),
+    Source("gdv2", "CC BY 4.0", fetch_gdv2),
 ]
 
 
@@ -98,9 +96,6 @@ def main() -> None:
     totals: dict[str, int] = {}
     manifest: dict[str, str] = {}
     for source in SOURCES:
-        if not source.shippable:
-            print(f"skipping {source.key}: {source.license} is not shippable (eval-only)")
-            continue
         print(f"fetching {source.key} ({source.license}) ...")
         counts = source.fetch(OUT_DIR, source.key)
         manifest[source.key] = source.license

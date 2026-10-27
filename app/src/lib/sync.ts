@@ -1,7 +1,7 @@
 import { apiUrl } from "./api";
 import { listQueued, remove, type QueuedReport } from "./queue";
 
-export interface SyncOutcome {
+interface SyncOutcome {
   sent: number;
   rejected: number;
   remaining: number;

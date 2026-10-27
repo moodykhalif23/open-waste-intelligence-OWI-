@@ -1,8 +1,8 @@
 # OWI Dashboard (`/dash`)
 
-Ops dashboard for coordinators and directors: composition views, bin health, collect-today list, review queue, reports.
+Ops dashboard for coordinators and admins: collect-today list, route planning, composition, recycling value, carbon, cleanliness, dumping hotspots, review queue, field reports, volunteer events, users, open-data API keys, audit trail and settings.
 
-Stack: React + Vite + TypeScript + **Apache ECharts** (the only chart library, ever). UI rules: flat, no gradients, responsive, fast, EN+SW i18n from the first screen.
+Stack: React + Vite + TypeScript + MUI + **Apache ECharts** (the only chart library, ever). UI rules: flat, no gradients, responsive, fast, EN+SW i18n from the first screen.
 
 ## Run
 
@@ -11,6 +11,6 @@ pnpm install
 pnpm dev            # http://localhost:5174 — /api is proxied to the local API, no URL config
 ```
 
-Sign in with a coordinator/admin account. Pages: Overview (report volume + fill-level charts, stat tiles), Bins (registry admin + printable QR download), Reports (latest observations with photos).
+Sign in with a coordinator/admin account.
 
 Checks: `pnpm check` (tsc + eslint).

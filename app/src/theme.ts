@@ -3,7 +3,7 @@ import { createTheme } from "@mui/material/styles";
 // Mimosa: ink primary + mimosa gold accent + warm neutrals. Flat, no gradients.
 // Tuned for one-handed field use - large touch targets, calm surfaces.
 // Inter Variable is self-hosted so weights render identically on every phone.
-const ink = { 50: "#eceef1", 100: "#dfe2e8", 500: "#3a4256", 600: "#101828", 700: "#05070c" };
+const ink = { 500: "#3a4256", 600: "#101828", 700: "#05070c" };
 const EASE = "cubic-bezier(0.2, 0, 0, 1)";
 const HOVER = `background-color 120ms ${EASE}, border-color 120ms ${EASE}, color 120ms ${EASE}`;
 

@@ -53,29 +53,22 @@ export function PageHeader({
 }
 
 // A titled card with an optional right-aligned action (button, filter, badge).
-// `flush` drops the card chrome (border/shadow/padding) so it can be nested
-// inside another card without doubling borders and padding.
 export function SectionCard({
   title,
   subtitle,
   action,
-  flush,
   collapsible,
-  defaultExpanded,
   children,
 }: {
   title?: ReactNode;
   subtitle?: ReactNode;
   action?: ReactNode;
-  flush?: boolean;
   collapsible?: boolean;
-  defaultExpanded?: boolean;
   children: ReactNode;
 }) {
   if (collapsible) {
     return (
       <Accordion
-        defaultExpanded={defaultExpanded}
         disableGutters
         elevation={0}
         sx={{
@@ -125,7 +118,6 @@ export function SectionCard({
       {children}
     </>
   );
-  if (flush) return <Box>{body}</Box>;
   return (
     <Card>
       <CardContent>{body}</CardContent>
@@ -167,15 +159,7 @@ export function TableSection({
 }
 
 // A light bordered surface for grouping content inside a card (no shadow).
-export function Panel({
-  title,
-  action,
-  children,
-}: {
-  title?: ReactNode;
-  action?: ReactNode;
-  children: ReactNode;
-}) {
+export function Panel({ children }: { children: ReactNode }) {
   return (
     <Box
       sx={{
@@ -186,39 +170,23 @@ export function Panel({
         bgcolor: "background.paper",
       }}
     >
-      {(title || action) && (
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 1.5,
-            mb: 1.5,
-          }}
-        >
-          {typeof title === "string" ? <Typography variant="h6">{title}</Typography> : title}
-          {action}
-        </Box>
-      )}
       {children}
     </Box>
   );
 }
 
-// A big headline number with a caption - the stat tile. Optional icon accent
-// and sub line. Flat: a soft tinted icon chip, never a gradient.
+// A big headline number with a caption - the stat tile. Optional icon accent.
+// Flat: a soft tinted icon chip, never a gradient.
 export function StatCard({
   label,
   value,
   color,
   icon,
-  sub,
 }: {
   label: string;
   value: ReactNode;
   color?: string;
   icon?: ReactNode;
-  sub?: ReactNode;
 }) {
   return (
     <Card sx={{ height: "100%" }}>
@@ -261,11 +229,6 @@ export function StatCard({
         >
           {value}
         </Typography>
-        {sub && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-            {sub}
-          </Typography>
-        )}
       </CardContent>
     </Card>
   );
@@ -325,12 +288,10 @@ export function EmptyState({
   icon,
   title,
   hint,
-  action,
 }: {
   icon?: ReactNode;
   title: ReactNode;
   hint?: ReactNode;
-  action?: ReactNode;
 }) {
   return (
     <Stack spacing={1.25} sx={{ alignItems: "center", textAlign: "center", py: 5 }}>
@@ -356,7 +317,6 @@ export function EmptyState({
           {hint}
         </Typography>
       )}
-      {action && <Box sx={{ mt: 0.75 }}>{action}</Box>}
     </Stack>
   );
 }

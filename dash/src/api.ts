@@ -3,7 +3,7 @@ const API_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 export const apiUrl = (path: string) => `${API_URL}${path}`;
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
-export const setToken = (token: string) => localStorage.setItem(TOKEN_KEY, token);
+const setToken = (token: string) => localStorage.setItem(TOKEN_KEY, token);
 export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
 
 async function request(path: string, init?: RequestInit): Promise<Response> {

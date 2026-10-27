@@ -5,7 +5,7 @@
 Anchored by a real operating partner — **Safi Cleaners and Recyclers**, a Community-Based Organization (CBO) with active waste collection operations, community members, and access to municipalities, schools, estates, and businesses.
 
 > Not another waste management app. Instead of saying *"there is garbage here,"* OWI answers:
-> How much? What type? How fast is it accumulating? How long before overfslow? How efficient are collections? Which neighborhoods need more bins? Which routes waste fuel? Which recyclables are most common? Which locations are repeatedly littered?
+> How much? What type? How fast is it accumulating? How long before overflow? How efficient are collections? Which neighborhoods need more bins? Which routes waste fuel? Which recyclables are most common? Which locations are repeatedly littered?
 
 ## The pipeline
 
@@ -33,7 +33,7 @@ Open Data API
 | - | ----------------------------- | ----------------------------------------------------------------------- |
 | 1 | Waste Classification          | What kinds of waste, in what proportions, where, over time              |
 | 2 | Bin Health Monitoring         | Fill level, overflow risk, and collect-now recommendations per bin      |
-| 3 | Illegal Dumping Detection     | Find*locations* (never people) that need intervention                 |
+| 3 | Illegal Dumping Detection     | Find *locations* (never people) that need intervention                 |
 | 4 | Collection Route Optimization | "Google Maps for garbage collection" — which bins today, in what order |
 | 5 | Recycling Intelligence        | Material counts, estimated value (KES), and partner matching            |
 | 6 | Community Cleanliness Index   | A comparable score per neighborhood to organize and measure clean-ups   |

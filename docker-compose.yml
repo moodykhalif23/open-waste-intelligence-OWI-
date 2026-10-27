@@ -198,6 +198,7 @@ services:
     image: curlimages/curl:8.11.1
     profiles: [prod]
     restart: "no"
+    user: root
     command: >
       sh -c "test -f /data/region.osm.pbf ||
       curl -L --fail -o /data/region.osm.pbf

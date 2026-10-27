@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Alert from "@mui/material/Alert";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
@@ -22,6 +22,9 @@ import PhotoCameraOutlined from "@mui/icons-material/PhotoCameraOutlined";
 import Circle from "@mui/icons-material/Circle";
 import CloseOutlined from "@mui/icons-material/CloseOutlined";
 import CloudDoneOutlined from "@mui/icons-material/CloudDoneOutlined";
+import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
+import TaskAltOutlined from "@mui/icons-material/TaskAltOutlined";
+import WifiOffOutlined from "@mui/icons-material/WifiOffOutlined";
 import InstallMobileOutlined from "@mui/icons-material/InstallMobileOutlined";
 import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
 import QrCodeScannerOutlined from "@mui/icons-material/QrCodeScannerOutlined";
@@ -209,8 +212,9 @@ export default function App() {
       }}
     >
       <AppBar position="sticky">
-        <Toolbar sx={{ gap: 1 }}>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+        <Toolbar sx={{ gap: 1, minHeight: { xs: 56 } }}>
+          <Box component="img" src="/icon.svg" alt="" sx={{ width: 28, height: 28, borderRadius: "8px" }} />
+          <Typography sx={{ flexGrow: 1, fontWeight: 680, fontSize: "1rem", letterSpacing: "-0.01em" }}>
             {tr("title")}
           </Typography>
           <Chip
@@ -265,12 +269,40 @@ export default function App() {
       </Drawer>
 
       {!online && queueCount > 0 && (
-        <Box sx={{ bgcolor: "#fbeecf", color: "#835a09", px: 2, py: 0.75, fontSize: "0.85rem" }}>
-          {tr("queued", { n: queueCount })}
-        </Box>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            mx: 2,
+            mt: 2,
+            px: 2,
+            py: 1.25,
+            borderRadius: "14px",
+            bgcolor: "#fbeecf",
+            color: "#835a09",
+            fontSize: "0.9rem",
+            fontWeight: 600,
+          }}
+        >
+          <WifiOffOutlined fontSize="small" />
+          <span>{tr("queued", { n: queueCount })}</span>
+        </Stack>
       )}
 
-      <Box sx={{ flex: 1, p: 2, pb: 10, display: "flex", flexDirection: "column", gap: 2 }}>
+      <Box
+        key={tab}
+        className="rise-stack"
+        sx={{ flex: 1, p: 2, pb: 12, display: "flex", flexDirection: "column", gap: 1.5 }}
+      >
+        <Box sx={{ pt: 0.5, pb: 0.5 }}>
+          <Typography sx={{ fontSize: "1.9rem", fontWeight: 780, letterSpacing: "-0.025em", lineHeight: 1.1 }}>
+            {tr(tab === "report" ? "tabReport" : tab === "collect" ? "tabCollect" : "tabInsights")}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 540, mt: 0.25 }}>
+            {todayLabel(lang)}
+          </Typography>
+        </Box>
         {tab === "collect" && <CollectList lang={lang} token={settings.token} />}
         {tab === "insights" && <Insights lang={lang} token={settings.token} />}
 
@@ -323,12 +355,12 @@ export default function App() {
                   fullWidth
                   variant="contained"
                   onClick={() => fileInput.current?.click()}
-                  sx={{ minHeight: 176, borderRadius: "12px", flexDirection: "column", gap: 1.25, px: 2 }}
+                  sx={{ minHeight: 188, borderRadius: "16px", flexDirection: "column", gap: 1.25, px: 2 }}
                 >
                   <Box
                     sx={{
-                      width: 60,
-                      height: 60,
+                      width: 66,
+                      height: 66,
                       borderRadius: "50%",
                       bgcolor: "secondary.main",
                       color: "primary.main",
@@ -366,7 +398,7 @@ export default function App() {
                   component="img"
                   src={previewUrl ?? undefined}
                   alt=""
-                  sx={{ width: "100%", borderRadius: "12px", display: "block" }}
+                  sx={{ width: "100%", borderRadius: "18px", display: "block" }}
                 />
                 {qualityText && <Alert severity="warning">{qualityText}</Alert>}
                 <Typography variant="body2" color="text.secondary">
@@ -380,7 +412,7 @@ export default function App() {
                   exclusive
                   value={fillTap}
                   onChange={(_, val: FillBand | null) => val && setFillTap(val)}
-                  sx={{ gap: 1, "& .MuiToggleButtonGroup-grouped": { border: "1px solid", borderColor: "divider", borderRadius: "10px !important", minHeight: 54 } }}
+                  sx={{ gap: 1, "& .MuiToggleButtonGroup-grouped": { border: "1px solid", borderColor: "divider", borderRadius: "12px !important", minHeight: 56 } }}
                 >
                   {FILL_BANDS.map((band) => (
                     <ToggleButton key={band} value={band}>
@@ -412,21 +444,28 @@ export default function App() {
 
             {!scanning && !staged && (
               <>
-                <Paper variant="outlined" sx={{ display: "flex", alignItems: "stretch" }}>
-                  <Stat value={queueCount} label={tr("statWaiting")} />
-                  <Divider orientation="vertical" flexItem />
-                  <Stat value={sentToday} label={tr("statSentToday")} />
-                  {queueCount > 0 && (
-                    <>
-                      <Divider orientation="vertical" flexItem />
-                      <Box sx={{ display: "grid", placeItems: "center", px: 1.5 }}>
-                        <Button variant="contained" size="small" disabled={!online} onClick={() => void runSync()}>
+                <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+                  <Widget
+                    icon={<CloudUploadOutlined fontSize="small" />}
+                    value={queueCount}
+                    label={tr("statWaiting")}
+                    action={
+                      queueCount > 0 ? (
+                        <Button
+                          fullWidth
+                          size="small"
+                          variant="contained"
+                          disabled={!online}
+                          onClick={() => void runSync()}
+                          sx={{ mt: 1.5, minHeight: 40 }}
+                        >
                           {tr("syncNow")}
                         </Button>
-                      </Box>
-                    </>
-                  )}
-                </Paper>
+                      ) : null
+                    }
+                  />
+                  <Widget icon={<TaskAltOutlined fontSize="small" />} value={sentToday} label={tr("statSentToday")} />
+                </Box>
 
                 <Paper variant="outlined" sx={{ p: 2 }}>
                   <Stack
@@ -440,19 +479,32 @@ export default function App() {
                   </Stack>
                   {recent.length === 0 ? (
                     <Stack spacing={0.5} sx={{ alignItems: "center", textAlign: "center", py: 2.5 }}>
-                      <CloudDoneOutlined sx={{ fontSize: 34, color: "text.secondary", opacity: 0.55, mb: 0.5 }} />
+                      <Box
+                        sx={{
+                          width: 56,
+                          height: 56,
+                          borderRadius: "50%",
+                          bgcolor: "#fbeecf",
+                          color: "#835a09",
+                          display: "grid",
+                          placeItems: "center",
+                          mb: 1,
+                        }}
+                      >
+                        <CloudDoneOutlined sx={{ fontSize: 28 }} />
+                      </Box>
                       <Typography sx={{ fontWeight: 620 }}>{tr("noReports")}</Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 260 }}>
                         {tr("noReportsHint")}
                       </Typography>
                     </Stack>
                   ) : (
-                    <Stack divider={<Divider />}>
+                    <Stack divider={<Divider sx={{ ml: 0 }} />}>
                       {recent.map((r) => (
                         <Stack
                           key={r.id}
                           direction="row"
-                          sx={{ alignItems: "center", justifyContent: "space-between", py: 0.5 }}
+                          sx={{ alignItems: "center", justifyContent: "space-between", py: 0.75 }}
                         >
                           <Box>
                             <Typography sx={{ fontWeight: 620, fontSize: "0.95rem", fontVariantNumeric: "tabular-nums" }}>
@@ -549,17 +601,52 @@ export default function App() {
   );
 }
 
-function Stat({ value, label }: { value: number; label: string }) {
+function Widget({
+  icon,
+  value,
+  label,
+  action,
+}: {
+  icon: ReactNode;
+  value: number;
+  label: string;
+  action?: ReactNode;
+}) {
   return (
-    <Box sx={{ flex: 1, px: 2, py: 1.5, minWidth: 0 }}>
-      <Typography sx={{ fontSize: "1.6rem", fontWeight: 720, lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>
+    <Paper variant="outlined" sx={{ p: 2, minWidth: 0 }}>
+      <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem", fontWeight: 600 }} noWrap>
+          {label}
+        </Typography>
+        <Box
+          sx={{
+            width: 30,
+            height: 30,
+            borderRadius: "50%",
+            bgcolor: "background.default",
+            color: "text.secondary",
+            display: "grid",
+            placeItems: "center",
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </Box>
+      </Stack>
+      <Typography sx={{ fontSize: "2rem", fontWeight: 760, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
         {value}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem", fontWeight: 560 }} noWrap>
-        {label}
-      </Typography>
-    </Box>
+      {action}
+    </Paper>
   );
+}
+
+function todayLabel(lang: Lang): string {
+  return new Date().toLocaleDateString(lang === "sw" ? "sw-KE" : "en-KE", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
 }
 
 function isToday(iso: string): boolean {

@@ -5,6 +5,7 @@ import { createTheme } from "@mui/material/styles";
 // Inter Variable is self-hosted so weights render identically on every phone.
 const ink = { 500: "#3a4256", 600: "#101828", 700: "#05070c" };
 const EASE = "cubic-bezier(0.2, 0, 0, 1)";
+const SPRING = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 const HOVER = `background-color 120ms ${EASE}, border-color 120ms ${EASE}, color 120ms ${EASE}`;
 
 const theme = createTheme({
@@ -19,7 +20,7 @@ const theme = createTheme({
     text: { primary: "#201a10", secondary: "#6b6456" },
     divider: "#eae6dd",
   },
-  shape: { borderRadius: 10 },
+  shape: { borderRadius: 14 },
   typography: {
     fontFamily: '"Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
     fontSize: 15,
@@ -40,6 +41,15 @@ const theme = createTheme({
           outlineOffset: "2px",
           borderRadius: "6px",
         },
+        "@keyframes owi-rise": {
+          from: { opacity: 0, transform: "translateY(12px) scale(0.985)" },
+          to: { opacity: 1, transform: "none" },
+        },
+        ".rise-stack > *": { animation: `owi-rise 460ms ${SPRING} both` },
+        ".rise-stack > *:nth-child(2)": { animationDelay: "50ms" },
+        ".rise-stack > *:nth-child(3)": { animationDelay: "100ms" },
+        ".rise-stack > *:nth-child(4)": { animationDelay: "150ms" },
+        ".rise-stack > *:nth-child(n + 5)": { animationDelay: "200ms" },
         "@media (prefers-reduced-motion: reduce)": {
           "*, *::before, *::after": {
             animationDuration: "0.01ms !important",
@@ -50,17 +60,17 @@ const theme = createTheme({
     },
     MuiCard: {
       defaultProps: { elevation: 0 },
-      styleOverrides: { root: { border: "1px solid #eae6dd", borderRadius: 10 } },
+      styleOverrides: { root: { border: "1px solid #eae6dd", borderRadius: 18 } },
     },
     MuiButton: {
       defaultProps: { disableElevation: true },
       styleOverrides: {
         root: {
-          borderRadius: 10,
-          minHeight: 48,
+          borderRadius: 14,
+          minHeight: 50,
           paddingInline: 18,
-          transition: HOVER,
-          "&:active": { transform: "scale(0.985)" },
+          transition: `${HOVER}, transform 180ms ${SPRING}`,
+          "&:active": { transform: "scale(0.97)" },
         },
       },
     },
@@ -70,14 +80,15 @@ const theme = createTheme({
         root: { backgroundColor: "#ffffff", borderBottom: "1px solid #eae6dd", color: "#201a10" },
       },
     },
-    MuiOutlinedInput: { styleOverrides: { root: { borderRadius: 10 } } },
+    MuiOutlinedInput: { styleOverrides: { root: { borderRadius: 12 } } },
     MuiToggleButton: {
       styleOverrides: {
         root: {
-          borderRadius: 10,
+          borderRadius: 12,
           textTransform: "none",
           fontWeight: 550,
-          transition: HOVER,
+          transition: `${HOVER}, transform 180ms ${SPRING}`,
+          "&:active": { transform: "scale(0.97)" },
           "&.Mui-selected": {
             backgroundColor: ink[600],
             color: "#fff",
@@ -86,10 +97,26 @@ const theme = createTheme({
         },
       },
     },
-    MuiPaper: { defaultProps: { elevation: 0 } },
+    MuiPaper: {
+      defaultProps: { elevation: 0 },
+      styleOverrides: { rounded: { borderRadius: 18 } },
+    },
     MuiChip: { styleOverrides: { root: { fontWeight: 600 } } },
+    MuiIconButton: {
+      styleOverrides: {
+        root: { transition: `transform 180ms ${SPRING}`, "&:active": { transform: "scale(0.9)" } },
+      },
+    },
+    MuiBottomNavigation: { styleOverrides: { root: { height: 64 } } },
     MuiBottomNavigationAction: {
-      styleOverrides: { root: { transition: HOVER, "&.Mui-selected": { fontWeight: 700 } } },
+      styleOverrides: {
+        root: {
+          transition: HOVER,
+          "& .MuiSvgIcon-root": { transition: `transform 240ms ${SPRING}` },
+          "&.Mui-selected": { fontWeight: 700 },
+          "&.Mui-selected .MuiSvgIcon-root": { transform: "translateY(-2px) scale(1.1)" },
+        },
+      },
     },
   },
 });

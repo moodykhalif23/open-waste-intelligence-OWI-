@@ -2,7 +2,7 @@
 COMPOSE := docker compose --profile prod
 ADMIN_PHONE ?= +254700000000
 
-.PHONY: help web front up down restart logs ps smoke seed bootstrap dev dash app site build clean backup restore ml-setup ml-data ml-train ml-register ml-export ml-retrain
+.PHONY: help web front up down restart logs ps status smoke seed bootstrap dev dash app site build clean backup restore ml-setup ml-data ml-train ml-register ml-export ml-retrain
 
 # make runs these through cmd.exe or sh depending on where it was invoked. Only
 # plain text survives both — no parens, ampersands or pipes — and sh's echo eats
@@ -18,7 +18,7 @@ help: ## Show available targets
 	@echo down - Stop all services
 	@echo restart - Restart api, worker, scheduler
 	@echo logs - Tail logs from all services
-	@echo ps - Show service status
+	@echo ps - Show service status, also: make status
 	@echo build - Build images only
 	@echo smoke - Run the end-to-end smoke suite, needs PASSWORD=...
 	@echo seed - Load a realistic demo dataset, needs PASSWORD=...
@@ -59,7 +59,7 @@ restart: ## Restart app services
 logs: ## Tail logs
 	$(COMPOSE) logs -f
 
-ps: ## Service status
+ps status: ## Service status
 	$(COMPOSE) ps
 
 build: ## Build images only

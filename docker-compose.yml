@@ -56,20 +56,20 @@ services:
       retries: 12
 
   minio:
-    # Digest-pinned: `latest` mutates under you; a reviewed bump beats a surprise one.
-    image: minio/minio:latest@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    image: bitnamilegacy/minio:2025.7.23-debian-12-r5@sha256:6dabb4a2088c9a79908de3bc05f4586c23ad2182c8908e7e3acbf61c1467fb20
     restart: unless-stopped
-    command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      # Alias for the readiness probe; the credentials are URL-safe tokens.
+      MC_HOST_local: http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@localhost:9000
     ports:
       - "9000:9000"
       - "9001:9001"
     volumes:
-      - minio-data:/data
+      - minio-data:/bitnami/minio/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD-SHELL", "MC_CONFIG_DIR=/tmp/.mc mc ready local"]
       interval: 5s
       timeout: 3s
       retries: 12
@@ -168,9 +168,11 @@ services:
   # Daily image mirror into ./var/backups/minio. Governance: quarantine originals are
   # excluded and deletions propagate (--remove), so erased images never survive in backups.
   minio-backup:
-    image: minio/mc:latest@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+    image: bitnamilegacy/minio-client:2025.7.21-debian-12-r3@sha256:73bd39f7899a0cef12b8dd5df13aa93a3ed1aaa44236542442e9ac76819ac158
     profiles: [prod]
     restart: unless-stopped
+    # Root, as the old minio/mc image was: the bind-mounted backup dir is root-owned.
+    user: root
     entrypoint: /bin/sh
     command:
       - -c

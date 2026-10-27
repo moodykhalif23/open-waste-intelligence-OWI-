@@ -2,8 +2,12 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from redis import Redis
+from sqlalchemy import text
 
 from owi_api.config import settings
+from owi_api.db import SessionLocal
+from owi_api.ingestion.storage import get_object_store
 from owi_api.routers import (
     admin,
     analytics,
@@ -73,12 +77,6 @@ def create_app() -> FastAPI:
     @app.get("/readyz")
     def readyz(response: Response) -> dict[str, str]:
         """Readiness: healthz says the process runs; this says it can serve."""
-        from redis import Redis
-        from sqlalchemy import text
-
-        from owi_api.db import SessionLocal
-        from owi_api.ingestion.storage import get_store
-
         checks: dict[str, str] = {}
         try:
             with SessionLocal() as session:
@@ -92,7 +90,7 @@ def create_app() -> FastAPI:
         except Exception:
             checks["redis"] = "down"
         try:
-            checks["storage"] = "ok" if get_store(settings).ready() else "down"
+            checks["storage"] = "ok" if get_object_store().ready() else "down"
         except Exception:
             checks["storage"] = "down"
         if any(state != "ok" for state in checks.values()):

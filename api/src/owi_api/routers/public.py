@@ -1,9 +1,6 @@
-"""Open Data API — aggregates only, ward-level, small cells suppressed, 7-day delayed.
-
-A hard governance boundary: no raw images, no coordinates, no bin identifiers ever leave
-here. Consumers authenticate with a free API key (identify + rate-limit); the data served
-is ward x week aggregates that pass the suppression floor and the delay window.
-"""
+"""Open Data API: ward x week aggregates only, small cells suppressed, 7-day delayed.
+Governance hard line: no raw images, coordinates or bin identifiers ever leave here.
+Consumers authenticate with a free API key that identifies and rate-limits them."""
 
 import csv
 import io
@@ -32,6 +29,7 @@ from owi_api.audit import client_ip, record_audit
 from owi_api.config import settings
 from owi_api.db import get_session
 from owi_api.models.api_key import ApiKey
+from owi_api.models.cleanliness import CleanlinessDaily
 from owi_api.models.enums import FillBand, PredictionTask, UserRole
 from owi_api.models.observation import Observation
 from owi_api.models.prediction import Prediction
@@ -351,8 +349,6 @@ def cleanliness_public(
     ward: str | None = None,
     format: Annotated[str, Query(pattern="^(json|csv)$")] = "json",
 ) -> CleanlinessOut | Response:
-    from owi_api.models.cleanliness import CleanlinessDaily
-
     start, end = _window(weeks)
     # Backing (bins + observations) gates suppression, same floor as the other endpoints.
     backing_bins: dict[tuple[str, str], set[uuid.UUID | None]] = defaultdict(set)

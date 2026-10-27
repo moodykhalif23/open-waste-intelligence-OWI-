@@ -82,11 +82,6 @@ def _hotp(key: bytes, counter: int) -> str:
     return f"{code:0{TOTP_DIGITS}d}"
 
 
-def totp_now(secret_b32: str, at: float | None = None) -> str:
-    key = base64.b32decode(secret_b32)
-    return _hotp(key, int((time.time() if at is None else at) // TOTP_STEP_S))
-
-
 def verify_totp(secret_b32: str, code: str, at: float | None = None, window: int = 1) -> bool:
     """±window steps of clock drift tolerated — field phones are rarely NTP-perfect."""
     try:

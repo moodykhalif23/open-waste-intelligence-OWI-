@@ -16,7 +16,7 @@ from owi_api.db import get_session
 from owi_api.ingestion.person_onnx import OnnxPersonDetector
 from owi_api.ingestion.privacy import PersonDetector
 from owi_api.ingestion.service import ingest_observation, quarantine_key
-from owi_api.ingestion.storage import ObjectStore, get_store
+from owi_api.ingestion.storage import ObjectStore, get_object_store
 from owi_api.models.enums import PredictionTask, UserRole
 from owi_api.models.observation import Observation
 from owi_api.models.prediction import Prediction
@@ -35,10 +35,6 @@ STAFF = (UserRole.ADMIN, UserRole.COORDINATOR, UserRole.COLLECTOR, UserRole.VIEW
 router = APIRouter(prefix="/api/v1/observations", tags=["observations"])
 
 _meta_list = TypeAdapter(list[ObservationIn])
-
-
-def get_object_store() -> ObjectStore:
-    return get_store(settings)
 
 
 # Session loading costs ~100ms and the model is immutable — share one instance.

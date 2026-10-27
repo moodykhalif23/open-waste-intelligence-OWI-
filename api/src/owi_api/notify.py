@@ -1,8 +1,5 @@
 """Outbound messages: Africa's Talking SMS or WhatsApp Cloud, console when unconfigured.
-
-Console fallback means every deployment can exercise the notification path
-end-to-end before buying provider credits.
-"""
+The console fallback lets a deployment exercise the whole path before buying credits."""
 
 import logging
 

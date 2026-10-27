@@ -4,7 +4,7 @@ from typing import Protocol
 
 from minio import Minio
 
-from owi_api.config import Settings
+from owi_api.config import Settings, settings
 
 
 class ObjectStore(Protocol):
@@ -71,9 +71,12 @@ class S3Store:
         return bool(self._client.bucket_exists(self._bucket))
 
 
-def get_store(settings: Settings) -> ObjectStore:
+def get_store(config: Settings) -> ObjectStore:
     return (
-        LocalStore(settings.storage_root)
-        if settings.storage_driver == "local"
-        else S3Store(settings)
+        LocalStore(config.storage_root) if config.storage_driver == "local" else S3Store(config)
     )
+
+
+def get_object_store() -> ObjectStore:
+    """FastAPI dependency: the store this deployment is configured for."""
+    return get_store(settings)

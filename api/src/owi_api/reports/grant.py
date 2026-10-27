@@ -4,7 +4,6 @@ from html import escape
 from owi_api.analytics.volunteer import VolunteerSummary
 
 # Print-optimized standalone HTML — the browser's Save-as-PDF gives a clean A4 report.
-# A later hardening step can render this same markup server-side for pixel-stable PDF.
 _STYLE = """
   * { box-sizing: border-box; margin: 0; }
   body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;

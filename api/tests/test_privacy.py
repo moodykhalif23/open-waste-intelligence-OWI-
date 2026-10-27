@@ -30,14 +30,13 @@ def test_clean_image_passes_through_unmodified() -> None:
     image = noisy_image()
     original = encode(image)
     result = apply_privacy_gate(image, original, StubDetector([]))
-    assert result == GateResult(original, PrivacyStatus.CLEAN, 0)
+    assert result == GateResult(original, PrivacyStatus.CLEAN)
 
 
 def test_person_region_is_blurred() -> None:
     image = noisy_image()
     result = apply_privacy_gate(image, encode(image), StubDetector([(100, 50, 60, 100)]))
     assert result.status is PrivacyStatus.BLURRED
-    assert result.person_count == 1
 
     blurred = cv2.imdecode(np.frombuffer(result.image_bytes, np.uint8), cv2.IMREAD_COLOR)
     region = blurred[60:140, 110:150].astype(np.float64)

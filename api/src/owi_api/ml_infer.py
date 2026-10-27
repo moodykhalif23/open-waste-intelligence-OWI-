@@ -14,7 +14,7 @@ def preprocess(image_bytes: bytes) -> np.ndarray:
         raise ValueError("not a decodable image")
     image = cv2.cvtColor(cv2.resize(image, (SIDE, SIDE)), cv2.COLOR_BGR2RGB)
     normalized = (image.astype(np.float32) / 255.0 - _MEAN) / _STD
-    # ascontiguousarray gives a typed return (plain numpy arithmetic infers as Any) and the
+    # ascontiguousarray gives mypy a typed ndarray; plain numpy arithmetic infers as Any.
     return np.ascontiguousarray(normalized.transpose(2, 0, 1)[np.newaxis, :], dtype=np.float32)
 
 

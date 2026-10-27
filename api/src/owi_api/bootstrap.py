@@ -1,12 +1,7 @@
 """Sync the admin login from .env: python -m owi_api.bootstrap --help
 
-The password lives in the repo-root .env so it can be read and rotated in one
-place. Only its argon2 hash reaches the database — the plaintext is never
-stored, and it cannot be read back out of Postgres.
-
-Idempotent: safe to run on every boot. The row is only touched when the
-password in .env differs from the hash on record.
-"""
+Idempotent, safe on every boot: only the argon2 hash reaches the database, and the
+row is touched only when the password in .env no longer matches that hash."""
 
 import argparse
 

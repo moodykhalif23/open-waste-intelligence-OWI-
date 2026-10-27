@@ -1,6 +1,6 @@
 import pytest
 
-from owi_api.analytics.review import apply_review, ground_truth
+from owi_api.analytics.review import apply_review
 from owi_api.models.enums import ReviewStatus
 
 
@@ -29,11 +29,3 @@ def test_double_review_rejected() -> None:
 def test_unknown_action_rejected() -> None:
     with pytest.raises(ValueError, match="unknown review action"):
         apply_review(ReviewStatus.UNREVIEWED, "delete", None)
-
-
-def test_ground_truth_selection() -> None:
-    pred = {"fill_band": "half"}
-    corrected = {"fill_band": "high"}
-    assert ground_truth(ReviewStatus.CONFIRMED, pred, None) == pred
-    assert ground_truth(ReviewStatus.CORRECTED, pred, corrected) == corrected
-    assert ground_truth(ReviewStatus.UNREVIEWED, pred, None) is None

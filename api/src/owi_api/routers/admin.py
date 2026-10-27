@@ -17,7 +17,7 @@ from owi_api.audit import client_ip, record_audit
 from owi_api.config import settings
 from owi_api.db import get_session
 from owi_api.digest import send_overflow_digest
-from owi_api.ingestion.storage import ObjectStore, get_store
+from owi_api.ingestion.storage import ObjectStore, get_object_store
 from owi_api.maintenance import purge_expired_images, purge_expired_quarantine
 from owi_api.models import (
     Bin,
@@ -47,12 +47,9 @@ from owi_api.models.org_settings import OrgSettings
 from owi_api.org_config import org_settings_row
 from owi_api.routers.auth import require_roles
 from owi_api.security import TokenClaims
+from owi_api.worker.queue import enqueue_inference
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
-
-
-def get_object_store() -> ObjectStore:
-    return get_store(settings)
 
 
 @router.post("/analytics/refresh")
@@ -176,8 +173,6 @@ def backfill_inference(
 ) -> dict[str, int]:
     """Enqueue scoring for observations the active models haven't seen — makes
     activating a model retroactive instead of new-ingests-only."""
-    from owi_api.worker.queue import enqueue_inference
-
     model_ids = list(
         session.scalars(
             select(MLModel.id).where(
@@ -282,7 +277,7 @@ def list_notifications(
 
 
 # Every org-scoped table an operator owns on exit. Images live in the object
-# store under images/{org_id}/ and are copied separately .
+# store under images/{org_id}/ and are copied separately.
 EXPORT_MODELS = [
     Site,
     Bin,

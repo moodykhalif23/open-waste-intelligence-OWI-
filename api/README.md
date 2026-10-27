@@ -13,7 +13,7 @@ uv run uvicorn owi_api.main:app --reload
 ```
 
 Worker: `uv run rq worker inference --url redis://localhost:6379/0`
-Maintenance scheduler (hourly quarantine purge): `uv run python -m owi_api.scheduler`
+Maintenance scheduler (hourly: quarantine + retention purge, analytics refresh, overflow digest): `uv run python -m owi_api.scheduler`
 
 ## First-time setup
 

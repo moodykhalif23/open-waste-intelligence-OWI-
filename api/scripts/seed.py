@@ -17,7 +17,6 @@ import numpy as np
 
 # Nairobi CBD anchor — every site/bin sits a few km around here.
 NAIROBI = (-1.2921, 36.8219)
-FILL_BANDS = ["empty", "low", "half", "high", "overflowing"]
 
 # Per-profile 14-reading fill patterns (oldest -> newest). "fast" bins end overflowing
 # so they surface as collect-today / route candidates; "slow" bins stay low.

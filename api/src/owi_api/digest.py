@@ -16,11 +16,11 @@ from owi_api.notify import send
 DIGEST_KIND = "overflow_digest"
 
 
-def build_digest(rows: list[tuple[str, str, float]], total: int) -> str:
-    head = f"OWI: {total} bin(s) need collection today."
+def build_digest(rows: list[tuple[str, str, float]]) -> str:
+    head = f"OWI: {len(rows)} bin(s) need collection today."
     lines = [f"- {site} {qr} {round(fill)}%" for site, qr, fill in rows[:5]]
-    if total > 5:
-        lines.append(f"...and {total - 5} more")
+    if len(rows) > 5:
+        lines.append(f"...and {len(rows) - 5} more")
     return "\n".join([head, *lines])
 
 
@@ -70,7 +70,7 @@ def send_overflow_digest(session: Session, only_if_unsent_today: bool = True) ->
         due = _due_bins(session, org_id)
         if not due:
             continue
-        body = build_digest(due, len(due))
+        body = build_digest(due)
         for phone in phones:
             status, provider, error = send(settings.notify_channel, phone, body)
             session.add(

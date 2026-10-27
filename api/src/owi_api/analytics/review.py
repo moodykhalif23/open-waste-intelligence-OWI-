@@ -24,16 +24,3 @@ def apply_review(
             raise ValueError("correction requires a corrected payload")
         return ReviewOutcome(ReviewStatus.CORRECTED, correction)
     raise ValueError(f"unknown review action: {action}")
-
-
-def ground_truth(
-    status: ReviewStatus,
-    payload: dict[str, object],
-    corrected_payload: dict[str, object] | None,
-) -> dict[str, object] | None:
-    """The label to train on: correction if corrected, prediction if confirmed, else none."""
-    if status is ReviewStatus.CORRECTED:
-        return corrected_payload
-    if status is ReviewStatus.CONFIRMED:
-        return payload
-    return None

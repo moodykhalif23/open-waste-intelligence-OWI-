@@ -20,7 +20,6 @@ class PersonDetector(Protocol):
 class GateResult:
     image_bytes: bytes
     status: PrivacyStatus
-    person_count: int
 
 
 def _expand(box: Box, shape: tuple[int, ...]) -> Box:
@@ -43,7 +42,7 @@ def apply_privacy_gate(
     """Blur people before anything is persisted — a governance requirement, not an option."""
     boxes = detector.detect(image)
     if not boxes:
-        return GateResult(original_bytes, PrivacyStatus.CLEAN, 0)
+        return GateResult(original_bytes, PrivacyStatus.CLEAN)
 
     image = image.copy()
     for box in boxes:
@@ -51,4 +50,4 @@ def apply_privacy_gate(
     ok, encoded = cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, 85])
     if not ok:
         raise ValueError("failed to re-encode blurred image")
-    return GateResult(encoded.tobytes(), PrivacyStatus.BLURRED, len(boxes))
+    return GateResult(encoded.tobytes(), PrivacyStatus.BLURRED)

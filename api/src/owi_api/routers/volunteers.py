@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from owi_api.analytics.carbon import carbon_report, load_factors
-from owi_api.analytics.volunteer import EventFacts, MonthPoint, VolunteerSummary, summarize
+from owi_api.analytics.volunteer import EventFacts, MonthPoint, summarize
 from owi_api.db import get_session
 from owi_api.models.enums import EventType, UserRole
 from owi_api.models.registry import Organization
@@ -111,8 +111,7 @@ def summary(
     start: date = date(2000, 1, 1),
     end: date = date(2100, 1, 1),
 ) -> SummaryOut:
-    s: VolunteerSummary = summarize(_facts(_load(session, requester.org_id, start, end)))
-    return SummaryOut(**s.__dict__)
+    return SummaryOut(**summarize(_facts(_load(session, requester.org_id, start, end))).__dict__)
 
 
 @router.get("/report")

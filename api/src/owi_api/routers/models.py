@@ -8,19 +8,14 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from owi_api.audit import client_ip, record_audit
-from owi_api.config import settings
 from owi_api.db import get_session
-from owi_api.ingestion.storage import ObjectStore, get_store
+from owi_api.ingestion.storage import ObjectStore, get_object_store
 from owi_api.models.enums import PredictionTask, UserRole
 from owi_api.models.prediction import MLModel
 from owi_api.routers.auth import require_roles
 from owi_api.security import TokenClaims
 
 router = APIRouter(prefix="/api/v1/models", tags=["models"])
-
-
-def get_object_store() -> ObjectStore:
-    return get_store(settings)
 
 
 class ModelIn(BaseModel):

@@ -27,7 +27,7 @@ class CleanlinessResult:
 
 
 def cleanliness_index(values: dict[str, float], observations: int) -> CleanlinessResult:
-    """Weighted 0-100 area score, renormalized over available components (docs/05 formula)."""
+    """Weighted 0-100 area score, renormalized over the components that have data."""
     components = [
         Component(name, round(value, 1), WEIGHTS[name])
         for name, value in values.items()

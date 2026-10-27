@@ -8,10 +8,8 @@ logger = logging.getLogger(__name__)
 
 
 class OsrmMatrix:
-    """Road distances from a self-hosted OSRM table service — the default in the
-    containerized stack. Falls back to straight-line distances when OSRM is
-    unreachable (e.g. still preparing its extract on first boot): a degraded
-    plan beats a failed one."""
+    """Road distances from self-hosted OSRM. Falls back to straight-line distances when
+    OSRM is unreachable (e.g. still preparing its extract): a degraded plan beats none."""
 
     def __init__(self, base_url: str) -> None:
         self._base_url = base_url.rstrip("/")

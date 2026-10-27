@@ -130,6 +130,37 @@ def _truck_out(truck: Truck) -> TruckOut:
     )
 
 
+def _active_trucks(session: Session, org_id: uuid.UUID) -> list[Truck]:
+    return list(
+        session.scalars(
+            select(Truck).where(
+                Truck.org_id == org_id, Truck.deleted_at.is_(None), Truck.active.is_(True)
+            )
+        )
+    )
+
+
+def _depot(session: Session, truck: Truck) -> GeoPoint:
+    lat, lng = session.execute(
+        select(func.ST_Y(Truck.depot), func.ST_X(Truck.depot)).where(Truck.id == truck.id)
+    ).one()
+    return (lng, lat)
+
+
+def _collect_today_bins(session: Session, org_id: uuid.UUID) -> list[uuid.UUID]:
+    return list(
+        session.scalars(
+            select(BinHealthDaily.bin_id)
+            .where(
+                BinHealthDaily.org_id == org_id,
+                BinHealthDaily.overflow_risk != OverflowRisk.LOW,
+            )
+            .order_by(BinHealthDaily.bin_id, BinHealthDaily.date.desc())
+            .distinct(BinHealthDaily.bin_id)
+        )
+    )
+
+
 @router.post("/trucks", response_model=TruckOut, status_code=201)
 def create_truck(
     body: TruckIn,
@@ -154,12 +185,7 @@ def list_trucks(
     requester: Annotated[TokenClaims, Depends(get_current_user)],
     session: Annotated[Session, Depends(get_session)],
 ) -> list[TruckOut]:
-    trucks = session.scalars(
-        select(Truck).where(
-            Truck.org_id == requester.org_id, Truck.deleted_at.is_(None), Truck.active.is_(True)
-        )
-    )
-    return [_truck_out(t) for t in trucks]
+    return [_truck_out(t) for t in _active_trucks(session, requester.org_id)]
 
 
 def _bin_demand(session: Session, org_id: uuid.UUID, bin_ids: list[uuid.UUID]) -> list[Stop]:
@@ -261,23 +287,12 @@ def routes_savings(
     requester: Annotated[TokenClaims, require_roles(*PLANNERS)],
     session: Annotated[Session, Depends(get_session)],
 ) -> SavingsOut:
-    trucks = list(
-        session.scalars(
-            select(Truck).where(
-                Truck.org_id == requester.org_id,
-                Truck.deleted_at.is_(None),
-                Truck.active.is_(True),
-            )
-        )
-    )
+    trucks = _active_trucks(session, requester.org_id)
     if not trucks:
         raise HTTPException(status_code=400, detail="no active trucks — add one first")
 
     fuel_rate = fleet_fuel_rate((t.method, t.fuel_l_per_100km) for t in trucks)
-    depot_row = session.execute(
-        select(func.ST_Y(Truck.depot), func.ST_X(Truck.depot)).where(Truck.id == trucks[0].id)
-    ).one()
-    depot = (depot_row[1], depot_row[0])
+    depot = _depot(session, trucks[0])
     matrix = get_distance_matrix(settings.osrm_url or None)
 
     all_bins = list(
@@ -285,17 +300,7 @@ def routes_savings(
             select(Bin.id).where(Bin.org_id == requester.org_id, Bin.deleted_at.is_(None))
         )
     )
-    today_bins = list(
-        session.scalars(
-            select(BinHealthDaily.bin_id)
-            .where(
-                BinHealthDaily.org_id == requester.org_id,
-                BinHealthDaily.overflow_risk != OverflowRisk.LOW,
-            )
-            .order_by(BinHealthDaily.bin_id, BinHealthDaily.date.desc())
-            .distinct(BinHealthDaily.bin_id)
-        )
-    )
+    today_bins = _collect_today_bins(session, requester.org_id)
 
     baseline = _scenario(
         _bin_demand(session, requester.org_id, all_bins), len(trucks), depot, matrix, fuel_rate
@@ -352,38 +357,11 @@ def collect_stop(
     refresh_bin(session, stop.bin_id)
 
 
-def _active_trucks(session: Session, org_id: uuid.UUID) -> list[Truck]:
-    return list(
-        session.scalars(
-            select(Truck).where(
-                Truck.org_id == org_id, Truck.deleted_at.is_(None), Truck.active.is_(True)
-            )
-        )
-    )
-
-
-def _collect_today_bins(session: Session, org_id: uuid.UUID) -> list[uuid.UUID]:
-    return list(
-        session.scalars(
-            select(BinHealthDaily.bin_id)
-            .where(
-                BinHealthDaily.org_id == org_id,
-                BinHealthDaily.overflow_risk != OverflowRisk.LOW,
-            )
-            .order_by(BinHealthDaily.bin_id, BinHealthDaily.date.desc())
-            .distinct(BinHealthDaily.bin_id)
-        )
-    )
-
-
 def _plan_and_persist(
     session: Session, org_id: uuid.UUID, bin_ids: list[uuid.UUID], trucks: list[Truck]
 ) -> list[RouteOut]:
     stops = _bin_demand(session, org_id, bin_ids)
-    depot_row = session.execute(
-        select(func.ST_Y(Truck.depot), func.ST_X(Truck.depot)).where(Truck.id == trucks[0].id)
-    ).one()
-    depot = (depot_row[1], depot_row[0])
+    depot = _depot(session, trucks[0])
     specs = [TruckSpec(str(t.id), t.capacity_kg) for t in trucks]
 
     try:

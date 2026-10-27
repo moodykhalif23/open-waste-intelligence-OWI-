@@ -149,6 +149,17 @@ def list_partners(
     ]
 
 
+def _partner_rows(session: Session, org_id: uuid.UUID) -> list[tuple[str, list[str], float]]:
+    return [
+        (p.name, p.materials_accepted, p.min_kg_per_month)
+        for p in session.scalars(
+            select(RecyclingPartner).where(
+                RecyclingPartner.org_id == org_id, RecyclingPartner.deleted_at.is_(None)
+            )
+        )
+    ]
+
+
 def _collected_kg(session: Session, org_id: uuid.UUID, start: datetime) -> float:
     total = session.scalar(
         select(func.coalesce(func.sum(CollectionEvent.estimated_weight_kg), 0.0)).where(
@@ -170,28 +181,18 @@ def _value(session: Session, org_id: uuid.UUID, days: int) -> ValueOut:
     shares = {m: 100 * c / total_n for m, c in counts.items()} if total_n else {}
     report = value_report(total_kg, shares, _current_prices(session, org_id))
 
-    partners = [
-        (p.materials_accepted, p.min_kg_per_month)
-        for p in session.scalars(
-            select(RecyclingPartner).where(
-                RecyclingPartner.org_id == org_id, RecyclingPartner.deleted_at.is_(None)
-            )
-        )
-    ]
+    partners = _partner_rows(session, org_id)
     monthly_factor = 30 / days
-    out_materials = []
-    for m in report.materials:
-        kg_month = m.kg * monthly_factor
-        n_partners = sum(1 for acc, min_kg in partners if m.material in acc and kg_month >= min_kg)
-        out_materials.append(
-            MaterialValueOut(
-                material=m.material,
-                kg=m.kg,
-                kes_per_kg=m.kes_per_kg,
-                value_kes=m.value_kes,
-                partners=n_partners,
-            )
+    out_materials = [
+        MaterialValueOut(
+            material=m.material,
+            kg=m.kg,
+            kes_per_kg=m.kes_per_kg,
+            value_kes=m.value_kes,
+            partners=len(match_partners(m.material, m.kg * monthly_factor, partners)),
         )
+        for m in report.materials
+    ]
     return ValueOut(
         window_days=days,
         total_kg=report.total_kg,
@@ -220,15 +221,7 @@ def match(
     material: str,
     kg_per_month: float,
 ) -> MatchOut:
-    partners = [
-        (p.name, p.materials_accepted, p.min_kg_per_month)
-        for p in session.scalars(
-            select(RecyclingPartner).where(
-                RecyclingPartner.org_id == requester.org_id,
-                RecyclingPartner.deleted_at.is_(None),
-            )
-        )
-    ]
+    partners = _partner_rows(session, requester.org_id)
     return MatchOut(partners=match_partners(material, kg_per_month, partners))
 
 

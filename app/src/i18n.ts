@@ -75,6 +75,13 @@ const strings = {
     noMatches: "No bins match",
     installTitle: "Install OpenWaste — works offline",
     installAction: "Install",
+    newReport: "New report",
+    captureHint: "Photo, then fill level — about 20 seconds",
+    statWaiting: "Waiting to send",
+    statSentToday: "Sent today",
+    noReports: "No reports sent yet",
+    noReportsHint: "Saved reports show here once they reach the server",
+    today: "Today",
   },
   sw: {
     title: "Ripoti ya OWI",
@@ -150,6 +157,13 @@ const strings = {
     noMatches: "Hakuna pipa linalolingana",
     installTitle: "Sakinisha OpenWaste — inafanya kazi bila mtandao",
     installAction: "Sakinisha",
+    newReport: "Ripoti mpya",
+    captureHint: "Picha, kisha kiwango cha kujaa — kama sekunde 20",
+    statWaiting: "Zinasubiri kutumwa",
+    statSentToday: "Zimetumwa leo",
+    noReports: "Hakuna ripoti zilizotumwa bado",
+    noReportsHint: "Ripoti zilizohifadhiwa huonekana hapa zikifika kwenye seva",
+    today: "Leo",
   },
 } as const;
 

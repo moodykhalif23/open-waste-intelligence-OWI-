@@ -19,7 +19,7 @@ const theme = createTheme({
     text: { primary: "#201a10", secondary: "#6b6456" },
     divider: "#eae6dd",
   },
-  shape: { borderRadius: 4 },
+  shape: { borderRadius: 10 },
   typography: {
     fontFamily: '"Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
     fontSize: 15,
@@ -38,7 +38,7 @@ const theme = createTheme({
         ":focus-visible": {
           outline: "2px solid #f2b949",
           outlineOffset: "2px",
-          borderRadius: "4px",
+          borderRadius: "6px",
         },
         "@media (prefers-reduced-motion: reduce)": {
           "*, *::before, *::after": {
@@ -50,13 +50,13 @@ const theme = createTheme({
     },
     MuiCard: {
       defaultProps: { elevation: 0 },
-      styleOverrides: { root: { border: "1px solid #eae6dd", borderRadius: 4 } },
+      styleOverrides: { root: { border: "1px solid #eae6dd", borderRadius: 10 } },
     },
     MuiButton: {
       defaultProps: { disableElevation: true },
       styleOverrides: {
         root: {
-          borderRadius: 4,
+          borderRadius: 10,
           minHeight: 48,
           paddingInline: 18,
           transition: HOVER,
@@ -70,11 +70,11 @@ const theme = createTheme({
         root: { backgroundColor: "#ffffff", borderBottom: "1px solid #eae6dd", color: "#201a10" },
       },
     },
-    MuiOutlinedInput: { styleOverrides: { root: { borderRadius: 4 } } },
+    MuiOutlinedInput: { styleOverrides: { root: { borderRadius: 10 } } },
     MuiToggleButton: {
       styleOverrides: {
         root: {
-          borderRadius: 4,
+          borderRadius: 10,
           textTransform: "none",
           fontWeight: 550,
           transition: HOVER,
@@ -86,8 +86,10 @@ const theme = createTheme({
         },
       },
     },
+    MuiPaper: { defaultProps: { elevation: 0 } },
+    MuiChip: { styleOverrides: { root: { fontWeight: 600 } } },
     MuiBottomNavigationAction: {
-      styleOverrides: { root: { transition: HOVER } },
+      styleOverrides: { root: { transition: HOVER, "&.Mui-selected": { fontWeight: 700 } } },
     },
   },
 });

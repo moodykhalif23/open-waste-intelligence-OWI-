@@ -4,6 +4,7 @@ import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
@@ -18,7 +19,9 @@ import Typography from "@mui/material/Typography";
 import BottomNavigation from "@mui/material/BottomNavigation";
 import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import PhotoCameraOutlined from "@mui/icons-material/PhotoCameraOutlined";
+import Circle from "@mui/icons-material/Circle";
 import CloseOutlined from "@mui/icons-material/CloseOutlined";
+import CloudDoneOutlined from "@mui/icons-material/CloudDoneOutlined";
 import InstallMobileOutlined from "@mui/icons-material/InstallMobileOutlined";
 import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
 import QrCodeScannerOutlined from "@mui/icons-material/QrCodeScannerOutlined";
@@ -180,6 +183,9 @@ export default function App() {
     saveSettings(next);
   }
 
+  const sentToday = recent.filter((r) => isToday(r.at)).length;
+  const staged = !scanning && previewUrl !== null;
+
   const qualityText =
     warning === "dark"
       ? tr("qualityDark")
@@ -209,9 +215,14 @@ export default function App() {
           </Typography>
           <Chip
             size="small"
-            color={online ? "success" : "error"}
-            variant={online ? "filled" : "outlined"}
+            variant="outlined"
+            icon={<Circle sx={{ fontSize: 9 }} />}
             label={online ? tr("online") : tr("offline")}
+            sx={{
+              fontWeight: 600,
+              borderColor: "divider",
+              "& .MuiChip-icon": { color: online ? "success.main" : "error.main", ml: 1 },
+            }}
           />
           <IconButton
             aria-label={tr("settings")}
@@ -294,26 +305,68 @@ export default function App() {
               />
             )}
 
-            {!scanning && (
-              <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+            {!scanning && !staged && (
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Stack
+                  direction="row"
+                  sx={{ alignItems: "center", justifyContent: "space-between", mb: 1.5, minHeight: 24 }}
+                >
+                  <Typography
+                    variant="overline"
+                    sx={{ color: "text.secondary", fontWeight: 700, letterSpacing: "0.08em", lineHeight: 1.6 }}
+                  >
+                    {tr("newReport")}
+                  </Typography>
+                  {binQr && <Chip size="small" color="success" variant="outlined" label={tr("binLinked", { code: binQr })} />}
+                </Stack>
                 <Button
+                  fullWidth
+                  variant="contained"
+                  onClick={() => fileInput.current?.click()}
+                  sx={{ minHeight: 176, borderRadius: "12px", flexDirection: "column", gap: 1.25, px: 2 }}
+                >
+                  <Box
+                    sx={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: "50%",
+                      bgcolor: "secondary.main",
+                      color: "primary.main",
+                      display: "grid",
+                      placeItems: "center",
+                    }}
+                  >
+                    <PhotoCameraOutlined sx={{ fontSize: 32 }} />
+                  </Box>
+                  <Typography component="span" sx={{ fontSize: "1.25rem", fontWeight: 720, lineHeight: 1.2 }}>
+                    {tr("takePhoto")}
+                  </Typography>
+                  <Typography component="span" sx={{ fontSize: "0.85rem", fontWeight: 480, color: "#c2c7d0" }}>
+                    {tr("captureHint")}
+                  </Typography>
+                </Button>
+                <Button
+                  fullWidth
                   variant="outlined"
                   startIcon={<QrCodeScannerOutlined />}
                   onClick={() => setScanning(true)}
+                  sx={{ mt: 1.5 }}
                 >
                   {tr("scanBin")}
                 </Button>
-                {binQr && <Chip color="success" variant="outlined" label={tr("binLinked", { code: binQr })} />}
-              </Stack>
+              </Paper>
             )}
 
-            {!scanning && previewUrl ? (
+            {staged && (
               <Stack spacing={2}>
+                {binQr && (
+                  <Chip size="small" color="success" variant="outlined" label={tr("binLinked", { code: binQr })} sx={{ alignSelf: "flex-start" }} />
+                )}
                 <Box
                   component="img"
-                  src={previewUrl}
+                  src={previewUrl ?? undefined}
                   alt=""
-                  sx={{ width: "100%", borderRadius: "4px", display: "block" }}
+                  sx={{ width: "100%", borderRadius: "12px", display: "block" }}
                 />
                 {qualityText && <Alert severity="warning">{qualityText}</Alert>}
                 <Typography variant="body2" color="text.secondary">
@@ -327,7 +380,7 @@ export default function App() {
                   exclusive
                   value={fillTap}
                   onChange={(_, val: FillBand | null) => val && setFillTap(val)}
-                  sx={{ gap: 1, "& .MuiToggleButtonGroup-grouped": { border: "1px solid", borderColor: "divider", borderRadius: "4px !important", minHeight: 54 } }}
+                  sx={{ gap: 1, "& .MuiToggleButtonGroup-grouped": { border: "1px solid", borderColor: "divider", borderRadius: "10px !important", minHeight: 54 } }}
                 >
                   {FILL_BANDS.map((band) => (
                     <ToggleButton key={band} value={band}>
@@ -355,58 +408,75 @@ export default function App() {
                   </Button>
                 </Stack>
               </Stack>
-            ) : (
-              !scanning && (
-                <Button
-                  variant="contained"
-                  size="large"
-                  startIcon={<PhotoCameraOutlined />}
-                  onClick={() => fileInput.current?.click()}
-                  sx={{ minHeight: 140, fontSize: "1.15rem", borderRadius: "4px" }}
-                >
-                  {tr("takePhoto")}
-                </Button>
-              )
             )}
 
-            {queueCount > 0 && (
-              <Stack
-                direction="row"
-                sx={{ alignItems: "center", justifyContent: "space-between", pt: 2, borderTop: "1px solid", borderColor: "divider" }}
-              >
-                <Typography variant="body2" sx={{ fontWeight: 550 }} color="text.secondary">
-                  {tr("queued", { n: queueCount })}
-                </Typography>
-                <Button variant="outlined" size="small" onClick={() => void runSync()} disabled={!online}>
-                  {tr("syncNow")}
-                </Button>
-              </Stack>
-            )}
+            {!scanning && !staged && (
+              <>
+                <Paper variant="outlined" sx={{ display: "flex", alignItems: "stretch" }}>
+                  <Stat value={queueCount} label={tr("statWaiting")} />
+                  <Divider orientation="vertical" flexItem />
+                  <Stat value={sentToday} label={tr("statSentToday")} />
+                  {queueCount > 0 && (
+                    <>
+                      <Divider orientation="vertical" flexItem />
+                      <Box sx={{ display: "grid", placeItems: "center", px: 1.5 }}>
+                        <Button variant="contained" size="small" disabled={!online} onClick={() => void runSync()}>
+                          {tr("syncNow")}
+                        </Button>
+                      </Box>
+                    </>
+                  )}
+                </Paper>
 
-            {recent.length > 0 && (
-              <Box sx={{ pt: 2, borderTop: "1px solid", borderColor: "divider" }}>
-                <Typography variant="body2" sx={{ fontWeight: 550, mb: 0.5 }} color="text.secondary">
-                  {tr("recentReports")}
-                </Typography>
-                <Stack>
-                  {recent.map((r) => (
-                    <Stack key={r.id} direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
-                      <Typography variant="body2" color="text.secondary">
-                        {new Date(r.at).toLocaleString()}
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Stack
+                    direction="row"
+                    sx={{ alignItems: "baseline", justifyContent: "space-between", mb: recent.length ? 0.5 : 0 }}
+                  >
+                    <Typography sx={{ fontWeight: 660 }}>{tr("recentReports")}</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontVariantNumeric: "tabular-nums" }}>
+                      {recent.length}
+                    </Typography>
+                  </Stack>
+                  {recent.length === 0 ? (
+                    <Stack spacing={0.5} sx={{ alignItems: "center", textAlign: "center", py: 2.5 }}>
+                      <CloudDoneOutlined sx={{ fontSize: 34, color: "text.secondary", opacity: 0.55, mb: 0.5 }} />
+                      <Typography sx={{ fontWeight: 620 }}>{tr("noReports")}</Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 260 }}>
+                        {tr("noReportsHint")}
                       </Typography>
-                      <IconButton
-                        aria-label={tr("deletePhoto")}
-                        title={tr("deletePhoto")}
-                        sx={{ width: 48, height: 48 }}
-                        disabled={!online}
-                        onClick={() => void doErase(r.id)}
-                      >
-                        <DeleteOutlineOutlined fontSize="small" />
-                      </IconButton>
                     </Stack>
-                  ))}
-                </Stack>
-              </Box>
+                  ) : (
+                    <Stack divider={<Divider />}>
+                      {recent.map((r) => (
+                        <Stack
+                          key={r.id}
+                          direction="row"
+                          sx={{ alignItems: "center", justifyContent: "space-between", py: 0.5 }}
+                        >
+                          <Box>
+                            <Typography sx={{ fontWeight: 620, fontSize: "0.95rem", fontVariantNumeric: "tabular-nums" }}>
+                              {timeLabel(r.at)}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
+                              {isToday(r.at) ? tr("today") : dayLabel(r.at)}
+                            </Typography>
+                          </Box>
+                          <IconButton
+                            aria-label={tr("deletePhoto")}
+                            title={tr("deletePhoto")}
+                            sx={{ width: 48, height: 48 }}
+                            disabled={!online}
+                            onClick={() => void doErase(r.id)}
+                          >
+                            <DeleteOutlineOutlined fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      ))}
+                    </Stack>
+                  )}
+                </Paper>
+              </>
             )}
           </>
         )}
@@ -477,4 +547,29 @@ export default function App() {
       />
     </Box>
   );
+}
+
+function Stat({ value, label }: { value: number; label: string }) {
+  return (
+    <Box sx={{ flex: 1, px: 2, py: 1.5, minWidth: 0 }}>
+      <Typography sx={{ fontSize: "1.6rem", fontWeight: 720, lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>
+        {value}
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem", fontWeight: 560 }} noWrap>
+        {label}
+      </Typography>
+    </Box>
+  );
+}
+
+function isToday(iso: string): boolean {
+  return new Date(iso).toDateString() === new Date().toDateString();
+}
+
+function timeLabel(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function dayLabel(iso: string): string {
+  return new Date(iso).toLocaleDateString([], { day: "numeric", month: "short" });
 }

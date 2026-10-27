@@ -34,7 +34,7 @@ Every chart in every surface (dashboard, reports, public pages) uses Apache ECha
 | ORM / migrations  | SQLAlchemy 2.0 + Alembic + GeoAlchemy2                                       |
 | Database          | PostgreSQL 16 + PostGIS 3.4                                                  |
 | Queue / workers   | Redis 7 + RQ                                                                 |
-| Object storage    | MinIO (S3 API); local-filesystem driver for dev/tests                        |
+| Object storage    | Garage (S3 API, single node); local-filesystem driver for dev/tests          |
 | CV engine         | **OpenCV** (opencv-python-headless on server)                          |
 | Inference runtime | ONNX Runtime, CPU                                                            |
 | Routing           | OR-Tools + self-hosted OSRM (OSM Kenya extract)                              |
@@ -53,7 +53,7 @@ Every chart in every surface (dashboard, reports, public pages) uses Apache ECha
 /dash     ops dashboard (React + ECharts)
 /site     public landing page (static)
 /docs     this documentation
-docker-compose.yml at the repo root: dev/pilot services (Postgres+PostGIS, Redis, MinIO)
+docker-compose.yml at the repo root: dev/pilot services (Postgres+PostGIS, Redis, Garage)
 ```
 
 ## Engineering standards
@@ -83,7 +83,7 @@ docker-compose.yml at the repo root: dev/pilot services (Postgres+PostGIS, Redis
 
 ## Development environment
 
-- `docker compose up` at the repo root brings up Postgres+PostGIS, Redis, MinIO.
+- `docker compose up` at the repo root brings up Postgres+PostGIS, Redis, Garage.
 - `/api`: `uv sync && uv run alembic upgrade head && uv run uvicorn owi_api.main:app --reload`.
 - CI (GitHub Actions): ruff + mypy + pytest on `/api` and `/ml`; tsc + eslint + build on `/app` and `/dash`.
 - Licenses: Apache-2.0 (code) — add `LICENSE` at first public release per README's pending confirmation.

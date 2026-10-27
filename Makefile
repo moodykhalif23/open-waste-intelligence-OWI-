@@ -76,7 +76,7 @@ bootstrap: ## Sync the admin login from .env (also runs automatically on every u
 
 backup: ## Run an immediate backup (db dump + image mirror)
 	$(COMPOSE) exec db-backup /backup.sh
-	$(COMPOSE) exec minio-backup mc mirror --overwrite --remove --exclude "quarantine/*" src/owi-images /backups/owi-images
+	$(COMPOSE) exec garage-backup rclone sync src:owi-images /backups/owi-images --exclude "quarantine/**"
 
 restore: ## Restore the latest db dump (DESTRUCTIVE; requires CONFIRM=yes)
 	@if [ "$(CONFIRM)" != "yes" ]; then echo "Run: make restore CONFIRM=yes"; exit 1; fi

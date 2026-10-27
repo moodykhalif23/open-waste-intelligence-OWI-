@@ -23,15 +23,16 @@ def main() -> None:
         storage = ls.create_s3_storage(
             {
                 "project": project["id"],
-                "title": "owi-images (MinIO)",
+                "title": "owi-images (Garage)",
                 "bucket": settings.owi_s3_bucket,
                 "prefix": "images/",
                 "s3_endpoint": settings.owi_s3_internal_endpoint,
+                "region_name": settings.owi_s3_region,
                 "aws_access_key_id": settings.owi_s3_access_key,
                 "aws_secret_access_key": settings.owi_s3_secret_key,
                 "use_blob_urls": True,
                 # Label Studio proxies images itself; the browser never needs
-                # to reach MinIO directly.
+                # to reach the object store directly.
                 "presign": False,
                 "recursive_scan": True,
             }

@@ -1,6 +1,6 @@
 # OWI ML (`/ml`)
 
-Training, evaluation, and dataset tooling. The current phase is dataset collection: field photos land in MinIO, get labeled in Label Studio, and export as COCO snapshots.
+Training, evaluation, and dataset tooling. The current phase is dataset collection: field photos land in Garage, get labeled in Label Studio, and export as COCO snapshots.
 
 Detector baseline: RT-DETR family (Apache-2.0 licensed — AGPL detectors are excluded), TACO → Safi fine-tune, ONNX export, CPU inference.
 
@@ -36,7 +36,7 @@ Base checks (no training stack needed): `uv run ruff check . && uv run mypy && u
 ```sh
 docker compose up -d labelstudio    # from the repo root; UI at http://localhost:8080
 uv sync
-uv run python -m owi_ml.labeling.setup_project   # idempotent: project + taxonomy + MinIO storage + sync
+uv run python -m owi_ml.labeling.setup_project   # idempotent: project + taxonomy + Garage storage + sync
 uv run python -m owi_ml.labeling.export_coco     # COCO snapshot → datasets/snapshots/
 ```
 

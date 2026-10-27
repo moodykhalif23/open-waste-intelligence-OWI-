@@ -1,0 +1,23 @@
+# Single-node Garage for the OWI backend. Secrets come from the environment
+# (GARAGE_RPC_SECRET, GARAGE_ADMIN_TOKEN); everything here is safe to commit.
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "lmdb"
+metadata_auto_snapshot_interval = "6h"
+
+# One node, one copy: the daily mirror in var/backups is the redundancy.
+replication_factor = 1
+# Stored objects are JPEGs, which do not compress further.
+compression_level = "none"
+
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "127.0.0.1:3901"
+bootstrap_peers = []
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.garage.localhost"
+
+[admin]
+api_bind_addr = "[::]:3903"

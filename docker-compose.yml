@@ -5,9 +5,10 @@ x-owi-env: &owi-env
   OWI_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
   OWI_REDIS_URL: redis://redis:6379/0
   OWI_STORAGE_DRIVER: s3
-  OWI_S3_ENDPOINT: minio:9000
-  OWI_S3_ACCESS_KEY: ${MINIO_ROOT_USER}
-  OWI_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+  OWI_S3_ENDPOINT: garage:3900
+  OWI_S3_REGION: garage
+  OWI_S3_ACCESS_KEY: ${OWI_S3_ACCESS_KEY}
+  OWI_S3_SECRET_KEY: ${OWI_S3_SECRET_KEY}
   OWI_JWT_SECRET: ${OWI_JWT_SECRET}
   OWI_ADMIN_PHONE: ${OWI_ADMIN_PHONE:-}
   OWI_ADMIN_PASSWORD: ${OWI_ADMIN_PASSWORD:-}
@@ -55,21 +56,21 @@ services:
       timeout: 3s
       retries: 12
 
-  minio:
-    image: bitnamilegacy/minio:2025.7.23-debian-12-r5@sha256:6dabb4a2088c9a79908de3bc05f4586c23ad2182c8908e7e3acbf61c1467fb20
+  garage:
+    image: dxflrs/garage:v2.5.0@sha256:677e5b758e4425a325b811c425c026bf35a4bf42f7ddbaa773de3f4fd779a5a5
     restart: unless-stopped
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-      # Alias for the readiness probe; the credentials are URL-safe tokens.
-      MC_HOST_local: http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@localhost:9000
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "3900:3900"
+      - "127.0.0.1:3903:3903"
     volumes:
-      - minio-data:/bitnami/minio/data
+      - ./deploy/garage.toml:/etc/garage.toml:ro
+      - garage-meta:/var/lib/garage/meta
+      - garage-data:/var/lib/garage/data
     healthcheck:
-      test: ["CMD-SHELL", "MC_CONFIG_DIR=/tmp/.mc mc ready local"]
+      test: ["CMD", "/garage", "-c", "/etc/garage.toml", "status"]
       interval: 5s
       timeout: 3s
       retries: 12
@@ -88,16 +89,19 @@ services:
     volumes:
       - ls-data:/label-studio/data
 
-  # One-shot: migrations run exactly once per `up`, never raced by app replicas.
-  # The admin sync rides along so .env stays the source of truth for the login.
   migrate:
     build: ./api
     profiles: [prod]
-    environment: *owi-env
-    command: sh -c "uv run alembic upgrade head && uv run python -m owi_api.bootstrap"
+    environment:
+      <<: *owi-env
+      GARAGE_ADMIN_URL: http://garage:3903
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN}
+    command: sh -c "uv run alembic upgrade head && uv run python -m owi_api.bootstrap && uv run python scripts/garage_init.py"
     restart: "no"
     depends_on:
       db:
+        condition: service_healthy
+      garage:
         condition: service_healthy
 
   api:
@@ -119,7 +123,7 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
-      minio:
+      garage:
         condition: service_healthy
 
   worker:
@@ -165,31 +169,30 @@ services:
       db:
         condition: service_healthy
 
-  # Daily image mirror into ./var/backups/minio. Governance: quarantine originals are
-  # excluded and deletions propagate (--remove), so erased images never survive in backups.
-  minio-backup:
-    image: bitnamilegacy/minio-client:2025.7.21-debian-12-r3@sha256:73bd39f7899a0cef12b8dd5df13aa93a3ed1aaa44236542442e9ac76819ac158
+  garage-backup:
+    image: rclone/rclone:1.75.2@sha256:2687085f718d3c628f7fdfb77c52a1d344332aed543110bb88088f2c70d43eb5
     profiles: [prod]
     restart: unless-stopped
-    # Root, as the old minio/mc image was: the bind-mounted backup dir is root-owned.
-    user: root
     entrypoint: /bin/sh
     command:
       - -c
       - >
-        mc alias set src http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD";
         while true; do
-        mc mirror --overwrite --remove --exclude "quarantine/*" src/${OWI_S3_BUCKET:-owi-images} /backups/${OWI_S3_BUCKET:-owi-images};
+        rclone sync src:${OWI_S3_BUCKET:-owi-images} /backups/${OWI_S3_BUCKET:-owi-images} --exclude "quarantine/**";
         sleep 86400;
         done
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      RCLONE_CONFIG_SRC_TYPE: s3
+      RCLONE_CONFIG_SRC_PROVIDER: Other
+      RCLONE_CONFIG_SRC_ENDPOINT: http://garage:3900
+      RCLONE_CONFIG_SRC_REGION: garage
+      RCLONE_CONFIG_SRC_ACCESS_KEY_ID: ${OWI_S3_ACCESS_KEY}
+      RCLONE_CONFIG_SRC_SECRET_ACCESS_KEY: ${OWI_S3_SECRET_KEY}
     volumes:
-      - ./var/backups/minio:/backups
+      - ./var/backups/garage:/backups
     depends_on:
-      minio:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   osrm-download:
     image: curlimages/curl:8.11.1
@@ -236,5 +239,6 @@ services:
 
 volumes:
   db-data:
-  minio-data:
+  garage-meta:
+  garage-data:
   ls-data:

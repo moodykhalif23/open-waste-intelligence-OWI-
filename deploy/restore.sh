@@ -28,4 +28,4 @@ docker compose --profile prod start api worker scheduler
 echo "Restore complete — run the smoke suite to verify."
 
 # Images: mirror back with
-#   docker compose exec minio-backup mc mirror --overwrite /backups/owi-images src/owi-images
+#   docker compose exec garage-backup rclone sync /backups/owi-images src:owi-images

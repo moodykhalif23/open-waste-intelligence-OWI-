@@ -12,7 +12,8 @@ class Settings(BaseSettings):
     owi_s3_secret_key: str = ""
     owi_s3_bucket: str = "owi-images"
     # As seen from the Label Studio container, not from the host.
-    owi_s3_internal_endpoint: str = "http://minio:9000"
+    owi_s3_internal_endpoint: str = "http://garage:3900"
+    owi_s3_region: str = "garage"
 
 
 settings = Settings()

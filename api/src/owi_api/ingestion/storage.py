@@ -48,6 +48,7 @@ class S3Store:
             access_key=settings.s3_access_key,
             secret_key=settings.s3_secret_key,
             secure=settings.s3_secure,
+            region=settings.s3_region,
         )
         self._bucket = settings.s3_bucket
         if not self._client.bucket_exists(self._bucket):

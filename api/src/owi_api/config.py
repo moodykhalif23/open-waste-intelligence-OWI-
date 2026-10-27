@@ -24,10 +24,12 @@ class Settings(BaseSettings):
 
     storage_driver: Literal["local", "s3"] = "local"
     storage_root: Path = Path("var/objects")
-    s3_endpoint: str = "localhost:9000"
+    s3_endpoint: str = "localhost:3900"
     s3_access_key: str = ""
     s3_secret_key: str = ""
     s3_bucket: str = "owi-images"
+    # Garage rejects requests signed for any region but its own.
+    s3_region: str = "garage"
     s3_secure: bool = False
 
     # The dashboard admin login lives in .env so it can be read and rotated in

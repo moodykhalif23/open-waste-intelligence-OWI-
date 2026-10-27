@@ -50,7 +50,7 @@ Rows are actual labels; columns are ONNX predictions. Class order prioritizes `o
 
 ## Representative image checks
 
-ONNX predictions below are run on held-out public waste photos. `other_mixed` is listed first; its examples prioritize errors and include correct examples when available.
+ONNX predictions below are run on held-out public waste photos. `other_mixed` is listed first; examples include missed mixed items and paper/plastic items incorrectly classified as mixed.
 
 | Actual | Predicted | Confidence | Result | Image |
 |---|---|---:|---|---|

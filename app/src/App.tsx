@@ -534,6 +534,8 @@ export default function App() {
           mx: "auto",
           borderTop: "1px solid",
           borderColor: "divider",
+          borderTopLeftRadius: "16px",
+          borderTopRightRadius: "16px",
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >

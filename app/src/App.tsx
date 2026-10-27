@@ -528,8 +528,8 @@ export default function App() {
         sx={{
           position: "fixed",
           bottom: 0,
-          left: 8,
-          right: 8,
+          left: 0,
+          right: 0,
           maxWidth: 480,
           mx: "auto",
           borderTop: "1px solid",

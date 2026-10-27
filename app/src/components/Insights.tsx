@@ -4,6 +4,7 @@ import AccordionDetails from "@mui/material/AccordionDetails";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Stack from "@mui/material/Stack";
@@ -93,6 +94,12 @@ export default function Insights({ lang, token }: { lang: Lang; token: string })
     void reload();
   }, [reload]);
 
+  useEffect(() => {
+    const retryWhenOnline = () => void reload();
+    window.addEventListener("online", retryWhenOnline);
+    return () => window.removeEventListener("online", retryWhenOnline);
+  }, [reload]);
+
   const bins = state.kind === "data" ? state.bins : [];
 
   const riskMix = useMemo(
@@ -157,7 +164,15 @@ export default function Insights({ lang, token }: { lang: Lang; token: string })
 
   if (state.kind === "loading")
     return <Typography variant="body2" color="text.secondary">{tr("loading")}</Typography>;
-  if (state.kind === "error") return <Alert severity="warning">{tr("collectOffline")}</Alert>;
+  if (state.kind === "error")
+    return (
+      <Alert
+        severity="warning"
+        action={<Button color="inherit" size="small" onClick={() => void reload()}>{tr("retry")}</Button>}
+      >
+        {tr("insightsOffline")}
+      </Alert>
+    );
   if (bins.length === 0)
     return <Typography variant="body2" color="text.secondary">{tr("insightsEmpty")}</Typography>;
 

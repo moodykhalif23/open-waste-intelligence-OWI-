@@ -43,6 +43,12 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
     void reload();
   }, [reload]);
 
+  useEffect(() => {
+    const retryWhenOnline = () => void reload();
+    window.addEventListener("online", retryWhenOnline);
+    return () => window.removeEventListener("online", retryWhenOnline);
+  }, [reload]);
+
   async function doStop(stopId: string) {
     await collectStop(token, stopId);
     await reload();
@@ -55,7 +61,15 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
 
   if (state.kind === "loading")
     return <Typography variant="body2" color="text.secondary">{tr("loading")}</Typography>;
-  if (state.kind === "error") return <Alert severity="warning">{tr("collectOffline")}</Alert>;
+  if (state.kind === "error")
+    return (
+      <Alert
+        severity="warning"
+        action={<Button color="inherit" size="small" onClick={() => void reload()}>{tr("retry")}</Button>}
+      >
+        {tr("collectOffline")}
+      </Alert>
+    );
 
   if (state.kind === "list") {
     if (state.bins.length === 0)

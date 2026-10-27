@@ -18,7 +18,6 @@ NOW = datetime.now(UTC)
 
 
 def captured(days_ago: int, hour: int, minute: int = 0) -> str:
-    """Bin health only looks back 21 days, so timestamps must be relative to the run."""
     at = (NOW - timedelta(days=days_ago)).replace(hour=hour, minute=minute, second=0, microsecond=0)
     return at.strftime("%Y-%m-%dT%H:%M:%SZ")
 

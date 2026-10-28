@@ -33,7 +33,17 @@ def compute_health(
 ) -> BinHealth | None:
     """The v1 bin-health formula — a published number, so keep it reproducible and tested."""
     if not fill_series:
-        return None
+        if last_collection is None:
+            return None
+        days_since = max(0.0, (now - last_collection).total_seconds() / 86400)
+        return BinHealth(
+            fill_pct=0.0,
+            velocity_pct_per_day=None,
+            days_to_full=None,
+            days_since_collection=days_since,
+            risk=OverflowRisk.LOW,
+            recommendation="no_action",
+        )
     series = sorted(fill_series)
     fill_pct = series[-1][1]
 

@@ -2,15 +2,20 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ManageAccountsOutlinedIcon from "@mui/icons-material/ManageAccountsOutlined";
+import PersonAddAlt1OutlinedIcon from "@mui/icons-material/PersonAddAlt1Outlined";
 import { api, type Role, type User } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import { EmptyState, ErrorPanel, PageStack, SectionCard, TableSection, TableSkeleton } from "../components/ui";
+import { EmptyState, ErrorPanel, PageStack, TableSection, TableSkeleton } from "../components/ui";
 import { useI18n } from "../i18n";
 
 const ROLES: Role[] = ["collector", "coordinator", "viewer", "admin"];
@@ -23,6 +28,7 @@ export default function Users() {
   const [copied, setCopied] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const reload = useCallback(async () => {
     try {
@@ -85,6 +91,7 @@ export default function Users() {
 
   async function handleUserCreated(user: User) {
     await reload();
+    setCreateOpen(false);
     if (user.role === "collector") await issueToken(user, true);
   }
 
@@ -156,11 +163,18 @@ export default function Users() {
 
   return (
     <PageStack>
-      <SectionCard collapsible title={t("newUser")}>
-        <UserForm onCreated={handleUserCreated} />
-      </SectionCard>
-
-      <TableSection title={t("users")}>
+      <TableSection
+        title={t("users")}
+        action={
+          <Button
+            variant="contained"
+            startIcon={<PersonAddAlt1OutlinedIcon />}
+            onClick={() => setCreateOpen(true)}
+          >
+            {t("newUser")}
+          </Button>
+        }
+      >
         {users.length === 0 ? (
           <EmptyState icon={<ManageAccountsOutlinedIcon />} title={t("noData")} />
         ) : (
@@ -204,6 +218,16 @@ export default function Users() {
           </Alert>
         )}
       </TableSection>
+
+      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>{t("newUser")}</DialogTitle>
+        <DialogContent dividers>
+          <UserForm onCreated={handleUserCreated} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCreateOpen(false)}>{t("close")}</Button>
+        </DialogActions>
+      </Dialog>
     </PageStack>
   );
 }

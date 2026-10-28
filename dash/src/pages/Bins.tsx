@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Grid from "@mui/material/Grid";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import DownloadIcon from "@mui/icons-material/Download";
+import AddLocationAltOutlinedIcon from "@mui/icons-material/AddLocationAltOutlined";
+import AddBoxOutlinedIcon from "@mui/icons-material/AddBoxOutlined";
 import { api, apiBlob, type Bin, type Site } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import MapView from "../components/MapView";
@@ -18,6 +24,8 @@ export default function Bins() {
   const [sites, setSites] = useState<Site[]>([]);
   const [bins, setBins] = useState<Bin[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [siteDialogOpen, setSiteDialogOpen] = useState(false);
+  const [binDialogOpen, setBinDialogOpen] = useState(false);
 
   const reload = useCallback(async () => {
     try {
@@ -107,14 +115,23 @@ export default function Bins() {
 
   return (
     <PageStack>
-      <Grid container spacing={{ xs: 2, md: 2.5 }}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <SiteForm onCreated={reload} />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <BinForm sites={sites} onCreated={reload} />
-        </Grid>
-      </Grid>
+      <Stack direction="row" spacing={1.5} sx={{ justifyContent: "flex-end", flexWrap: "wrap" }}>
+        <Button
+          variant="outlined"
+          startIcon={<AddLocationAltOutlinedIcon />}
+          onClick={() => setSiteDialogOpen(true)}
+        >
+          {t("newSite")}
+        </Button>
+        <Button
+          variant="contained"
+          startIcon={<AddBoxOutlinedIcon />}
+          disabled={sites.length === 0}
+          onClick={() => setBinDialogOpen(true)}
+        >
+          {t("newBin")}
+        </Button>
+      </Stack>
       {bins.length > 0 && (
         <SectionCard title={t("map")}>
           <MapView
@@ -130,30 +147,61 @@ export default function Bins() {
           <DataTable rows={bins} columns={columns} />
         )}
       </TableSection>
+
+      <Dialog open={siteDialogOpen} onClose={() => setSiteDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>{t("newSite")}</DialogTitle>
+        <DialogContent dividers>
+          <SiteForm onCreated={reload} onClose={() => setSiteDialogOpen(false)} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSiteDialogOpen(false)}>{t("close")}</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={binDialogOpen} onClose={() => setBinDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>{t("newBin")}</DialogTitle>
+        <DialogContent dividers>
+          <BinForm sites={sites} onCreated={reload} onClose={() => setBinDialogOpen(false)} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBinDialogOpen(false)}>{t("close")}</Button>
+        </DialogActions>
+      </Dialog>
     </PageStack>
   );
 }
 
-function SiteForm({ onCreated }: { onCreated: () => Promise<void> }) {
+function SiteForm({ onCreated, onClose }: { onCreated: () => Promise<void>; onClose: () => void }) {
   const { t } = useI18n();
   const [name, setName] = useState("");
   const [siteType, setSiteType] = useState("estate");
   const [ward, setWard] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    await api("/api/v1/sites", {
-      method: "POST",
-      body: JSON.stringify({ name, site_type: siteType, ward: ward || null }),
-    });
-    setName("");
-    setWard("");
-    await onCreated();
+    setBusy(true);
+    setError(null);
+    try {
+      await api("/api/v1/sites", {
+        method: "POST",
+        body: JSON.stringify({ name, site_type: siteType, ward: ward || null }),
+      });
+      setName("");
+      setWard("");
+      await onCreated();
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
-    <SectionCard collapsible title={t("newSite")}>
       <Stack component="form" spacing={2.5} onSubmit={(e) => void onSubmit(e)}>
+        {error && <Alert severity="error">{error}</Alert>}
         <TextField
           size="small"
           fullWidth
@@ -183,42 +231,60 @@ function SiteForm({ onCreated }: { onCreated: () => Promise<void> }) {
           value={ward}
           onChange={(e) => setWard(e.target.value)}
         />
-        <Button variant="contained" type="submit">
-          {t("create")}
+        <Button variant="contained" type="submit" disabled={busy}>
+          {busy ? t("creating") : t("create")}
         </Button>
       </Stack>
-    </SectionCard>
   );
 }
 
-function BinForm({ sites, onCreated }: { sites: Site[]; onCreated: () => Promise<void> }) {
+function BinForm({
+  sites,
+  onCreated,
+  onClose,
+}: {
+  sites: Site[];
+  onCreated: () => Promise<void>;
+  onClose: () => void;
+}) {
   const { t } = useI18n();
   const [siteId, setSiteId] = useState("");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
   const [volume, setVolume] = useState("240");
   const [binType, setBinType] = useState("standard");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    await api("/api/v1/bins", {
-      method: "POST",
-      body: JSON.stringify({
-        site_id: siteId,
-        lat: Number(lat),
-        lng: Number(lng),
-        volume_liters: Number(volume),
-        bin_type: binType,
-      }),
-    });
-    setLat("");
-    setLng("");
-    await onCreated();
+    setBusy(true);
+    setError(null);
+    try {
+      await api("/api/v1/bins", {
+        method: "POST",
+        body: JSON.stringify({
+          site_id: siteId,
+          lat: Number(lat),
+          lng: Number(lng),
+          volume_liters: Number(volume),
+          bin_type: binType,
+        }),
+      });
+      setLat("");
+      setLng("");
+      await onCreated();
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
-    <SectionCard collapsible title={t("newBin")}>
       <Stack component="form" spacing={2.5} onSubmit={(e) => void onSubmit(e)}>
+        {error && <Alert severity="error">{error}</Alert>}
         <TextField
           select
           size="small"
@@ -269,10 +335,9 @@ function BinForm({ sites, onCreated }: { sites: Site[]; onCreated: () => Promise
           onChange={(e) => setBinType(e.target.value)}
           required
         />
-        <Button variant="contained" type="submit">
-          {t("create")}
+        <Button variant="contained" type="submit" disabled={busy}>
+          {busy ? t("creating") : t("create")}
         </Button>
       </Stack>
-    </SectionCard>
   );
 }

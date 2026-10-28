@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Alert from "@mui/material/Alert";
+import AddOutlined from "@mui/icons-material/AddOutlined";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
@@ -111,6 +112,7 @@ export default function Routes() {
   const [savingsBusy, setSavingsBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [planOpen, setPlanOpen] = useState(false);
+  const [truckOpen, setTruckOpen] = useState(false);
 
   const announce = (planned: Route[]) => {
     const stops = planned.reduce((s, r) => s + r.stops.length, 0);
@@ -341,20 +343,32 @@ export default function Routes() {
         )}
       </SectionCard>
 
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <TruckForm methods={methods} methodLabel={methodLabel} onCreated={reload} />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <TableSection title={t("trucks")}>
-            {trucks.length === 0 ? (
-              <EmptyState icon={<LocalShippingOutlined />} title={t("noTrucks")} />
-            ) : (
-              <DataTable rows={trucks} columns={truckCols} toolbar={false} pageSize={5} />
-            )}
-          </TableSection>
-        </Grid>
-      </Grid>
+      <TableSection
+        title={t("trucks")}
+        action={
+          <Button
+            variant="contained"
+            startIcon={<AddOutlined />}
+            onClick={() => setTruckOpen(true)}
+          >
+            {t("addTruck")}
+          </Button>
+        }
+      >
+        {trucks.length === 0 ? (
+          <EmptyState icon={<LocalShippingOutlined />} title={t("noTrucks")} />
+        ) : (
+          <DataTable rows={trucks} columns={truckCols} toolbar={false} pageSize={5} />
+        )}
+      </TableSection>
+
+      <TruckForm
+        open={truckOpen}
+        onClose={() => setTruckOpen(false)}
+        methods={methods}
+        methodLabel={methodLabel}
+        onCreated={reload}
+      />
 
       <PlanDialog
         open={planOpen}
@@ -614,10 +628,14 @@ function RouteCard({
 }
 
 function TruckForm({
+  open,
+  onClose,
   methods,
   methodLabel,
   onCreated,
 }: {
+  open: boolean;
+  onClose: () => void;
   methods: MethodSpec[];
   methodLabel: (m: string) => string;
   onCreated: () => Promise<void>;
@@ -670,6 +688,7 @@ function TruckForm({
       setLat("");
       setLng("");
       await onCreated();
+      onClose();
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -678,10 +697,12 @@ function TruckForm({
   }
 
   return (
-    <SectionCard collapsible title={t("addTruck")}>
-      <Box component="form" onSubmit={(e) => void onSubmit(e)}>
-        <Stack spacing={2}>
-          {err && <Alert severity="error">{err}</Alert>}
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>{t("addTruck")}</DialogTitle>
+      <DialogContent dividers>
+        <Box id="truck-form" component="form" onSubmit={(e) => void onSubmit(e)}>
+          <Stack spacing={2}>
+            {err && <Alert severity="error">{err}</Alert>}
           <TextField
             size="small"
             fullWidth
@@ -744,11 +765,15 @@ function TruckForm({
             required
             slotProps={{ htmlInput: { inputMode: "decimal" } }}
           />
-          <Button variant="contained" color="primary" type="submit" disabled={busy}>
-            {t("addTruck")}
-          </Button>
-        </Stack>
-      </Box>
-    </SectionCard>
+          </Stack>
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t("close")}</Button>
+        <Button variant="contained" color="primary" type="submit" disabled={busy} form="truck-form">
+          {busy ? t("creating") : t("addTruck")}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

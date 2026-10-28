@@ -44,6 +44,7 @@ class BinHealthOut(BaseModel):
     days_since_collection: float | None
     overflow_risk: OverflowRisk
     recommendation: str
+    collected: bool
 
 
 @router.post("/collections", response_model=CollectionOut, status_code=201)
@@ -100,6 +101,7 @@ def bin_health(
             days_since_collection=row.days_since_collection,
             overflow_risk=OverflowRisk(row.overflow_risk),
             recommendation=row.recommendation,
+            collected=row.fill_pct == 0 and row.days_since_collection is not None,
         )
         for row in rows
     ]

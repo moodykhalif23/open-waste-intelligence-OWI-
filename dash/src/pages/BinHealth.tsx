@@ -21,6 +21,7 @@ interface HealthRow {
   days_since_collection: number | null;
   overflow_risk: "low" | "medium" | "high";
   recommendation: "collect_today" | "schedule_soon" | "no_action";
+  collected: boolean;
 }
 
 const RISK_COLOR = {
@@ -131,7 +132,18 @@ export default function BinHealth() {
     { field: "fill_pct", headerName: t("fillLevel"), type: "number", width: 120, valueFormatter: (v) => `${Math.round(Number(v))}%` },
     { field: "days_to_full", headerName: t("daysToFull"), type: "number", width: 130, valueFormatter: (v) => (v == null ? "—" : Number(v).toFixed(1)) },
     { field: "days_since_collection", headerName: t("sinceCollection"), type: "number", width: 150, valueFormatter: (v) => (v == null ? "—" : Number(v).toFixed(1)) },
-    { field: "overflow_risk", headerName: t("risk"), width: 120, renderCell: (p) => <Chip size="small" color={RISK_COLOR[p.row.overflow_risk]} label={riskLabel(p.row.overflow_risk)} /> },
+    {
+      field: "overflow_risk",
+      headerName: t("risk"),
+      width: 120,
+      renderCell: (p) => (
+        <Chip
+          size="small"
+          color={RISK_COLOR[p.row.overflow_risk]}
+          label={p.row.collected ? t("collected") : riskLabel(p.row.overflow_risk)}
+        />
+      ),
+    },
     {
       field: "recommendation",
       headerName: t("recommendation"),
@@ -150,10 +162,14 @@ export default function BinHealth() {
         <Button
           variant="contained"
           size="small"
-          disabled={busy || busyBinId !== null}
+          disabled={busy || busyBinId !== null || p.row.collected}
           onClick={() => void markCollected(p.row)}
         >
-          {busyBinId === p.row.bin_id ? t("markingCollected") : t("markCollected")}
+          {busyBinId === p.row.bin_id
+            ? t("markingCollected")
+            : p.row.collected
+              ? t("collected")
+              : t("markCollected")}
         </Button>
       ),
     },

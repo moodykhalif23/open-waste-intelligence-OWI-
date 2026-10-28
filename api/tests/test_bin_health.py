@@ -16,6 +16,15 @@ def test_no_observations_yields_no_score() -> None:
     assert compute_health([], None, NOW) is None
 
 
+def test_collection_resets_health_until_next_fill_observation() -> None:
+    health = compute_health([], days_ago(0.5), NOW)
+    assert health is not None
+    assert health.fill_pct == 0
+    assert health.days_since_collection == pytest.approx(0.5)
+    assert health.risk is OverflowRisk.LOW
+    assert health.recommendation == "no_action"
+
+
 def test_band_midpoints_cover_all_bands() -> None:
     assert set(BAND_PCT) == set(FillBand)
 

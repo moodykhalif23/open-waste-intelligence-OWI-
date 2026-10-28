@@ -1,5 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import Grid from "@mui/material/Grid";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
@@ -83,6 +88,9 @@ export default function Volunteers() {
     void reload();
   }, [reload]);
 
+  const [reportUrl, setReportUrl] = useState<string | null>(null);
+  const reportFrame = useRef<HTMLIFrameElement>(null);
+
   async function openReport() {
     const end = new Date().toISOString().slice(0, 10);
     const url = `/api/v1/volunteers/report?start=2000-01-01&end=${end}`;
@@ -91,14 +99,44 @@ export default function Volunteers() {
       headers: { Authorization: `Bearer ${getToken() ?? ""}` },
     });
     const blob = await response.blob();
-    window.open(URL.createObjectURL(blob), "_blank", "noopener");
+    setReportUrl((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return URL.createObjectURL(blob);
+    });
+  }
+
+  function closeReport() {
+    setReportUrl((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return null;
+    });
   }
 
   if (error !== null) {
     return (
       <PageStack>
         <ErrorPanel message={t("errorLoad")} retryLabel={t("retry")} onRetry={() => void reload()} />
-      </PageStack>
+        <Dialog open={reportUrl !== null} onClose={closeReport} maxWidth="lg" fullWidth>
+        <DialogTitle>{t("grantReport")}</DialogTitle>
+        <DialogContent sx={{ p: 0, height: "75vh" }}>
+          {reportUrl && (
+            <Box
+              component="iframe"
+              ref={reportFrame}
+              src={reportUrl}
+              title={t("grantReport")}
+              sx={{ display: "block", width: "100%", height: "100%", border: 0 }}
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeReport}>{t("close")}</Button>
+          <Button variant="contained" onClick={() => reportFrame.current?.contentWindow?.print()}>
+            {t("printReport")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </PageStack>
     );
   }
   if (summary === null) return <PageSkeleton />;

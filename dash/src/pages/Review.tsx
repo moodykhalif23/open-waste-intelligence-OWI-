@@ -12,7 +12,7 @@ import { EmptyState, ErrorPanel, GAP, PageHeader, PageSkeleton, PageStack, Pager
 import { useI18n, type StringKey } from "../i18n";
 import { owi } from "../theme";
 
-const PER_PAGE = 9;
+const PER_PAGE = 50;
 
 const FILL_BANDS = ["empty", "low", "half", "high", "overflowing"] as const;
 
@@ -49,11 +49,11 @@ export default function Review() {
   const reload = useCallback(async () => {
     setError(null);
     try {
-      setQueue(await api<Queue>("/api/v1/predictions"));
+      setQueue(await api<Queue>(`/api/v1/predictions?limit=${PER_PAGE}&offset=${page * PER_PAGE}`));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     void reload();
@@ -84,9 +84,9 @@ export default function Review() {
   }
   if (queue === null) return <PageSkeleton />;
 
-  const pages = Math.max(1, Math.ceil(queue.items.length / PER_PAGE));
+  const pages = Math.max(1, Math.ceil(queue.unreviewed / PER_PAGE));
   const current = Math.min(page, pages - 1);
-  const items = queue.items.slice(current * PER_PAGE, (current + 1) * PER_PAGE);
+  const items = queue.items;
 
   return (
     <PageStack>
@@ -107,7 +107,7 @@ export default function Review() {
         <Box>
           <Grid container spacing={GAP}>
             {items.map((p) => (
-              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={p.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 2.4 }} key={p.id}>
                 <ReviewItem
                   prediction={p}
                   onConfirm={() => void confirm(p)}
@@ -116,8 +116,8 @@ export default function Review() {
               </Grid>
             ))}
           </Grid>
-          {queue.items.length > PER_PAGE && (
-            <Pager page={current} pageSize={PER_PAGE} total={queue.items.length} onPage={setPage} ofLabel={t("of")} />
+          {queue.unreviewed > PER_PAGE && (
+            <Pager page={current} pageSize={PER_PAGE} total={queue.unreviewed} onPage={setPage} ofLabel={t("of")} />
           )}
         </Box>
       )}
@@ -155,6 +155,7 @@ function ReviewItem({
   const confidence = typeof prediction.payload.confidence === "number" ? prediction.payload.confidence : null;
   const options = labelOptions(prediction);
   const name = (v: string) => (t(v as StringKey) as string | undefined) ?? v;
+  const label = (v: string) => (prediction.task === "fill" ? t(v as (typeof FILL_BANDS)[number]) : name(v));
 
   return (
     <Card sx={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -162,11 +163,11 @@ function ReviewItem({
         component="img"
         image={imageUrl ?? undefined}
         alt=""
-        sx={{ height: 150, objectFit: "cover", bgcolor: "#f0ede5" }}
+        sx={{ height: 128, objectFit: "cover", bgcolor: "#f0ede5" }}
       />
       <CardContent sx={{ flexGrow: 1, display: "flex", flexDirection: "column", gap: 1.25, pt: 1.75 }}>
-        <Box sx={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 1 }}>
-          <Typography variant="body2" sx={{ color: owi.inkSoft }}>
+        <Box sx={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 1, minWidth: 0 }}>
+          <Typography variant="body2" noWrap sx={{ color: owi.inkSoft, minWidth: 0 }}>
             {t("model")}:{" "}
             <Box component="strong" sx={{ color: "text.primary" }}>
               {predicted ? name(predicted) : "—"}
@@ -175,25 +176,29 @@ function ReviewItem({
               <Box component="span" sx={{ color: "text.secondary" }}>{` · ${Math.round(confidence * 100)}%`}</Box>
             )}
           </Typography>
-          <Tag>{prediction.task}</Tag>
+          {prediction.task !== "classify" && <Tag>{prediction.task}</Tag>}
         </Box>
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: "auto" }}>
           {options.length > 0 ? (
-            options.map((value) => {
-              const guess = value === predicted;
-              return (
-                <Button
-                  key={value}
-                  size="small"
-                  variant={guess ? "contained" : "outlined"}
-                  color={guess ? "secondary" : "primary"}
-                  onClick={() => (guess ? onConfirm() : onCorrect(value))}
-                  sx={{ borderRadius: 999, px: 1.5, minWidth: 0, height: 30 }}
-                >
-                  {prediction.task === "fill" ? t(value as (typeof FILL_BANDS)[number]) : name(value)}
-                </Button>
-              );
-            })
+            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 0.75, width: "100%" }}>
+              {options.map((value) => {
+                const guess = value === predicted;
+                return (
+                  <Button
+                    key={value}
+                    size="small"
+                    variant={guess ? "contained" : "outlined"}
+                    color={guess ? "secondary" : "primary"}
+                    onClick={() => (guess ? onConfirm() : onCorrect(value))}
+                    sx={{ borderRadius: 999, px: 1, minWidth: 0, height: 30, fontSize: "0.8rem", whiteSpace: "nowrap" }}
+                  >
+                    <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {label(value)}
+                    </Box>
+                  </Button>
+                );
+              })}
+            </Box>
           ) : (
             <Button variant="contained" size="small" onClick={onConfirm}>
               {t("confirm")}

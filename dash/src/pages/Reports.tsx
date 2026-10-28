@@ -1,6 +1,13 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import IconButton from "@mui/material/IconButton";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import PhotoOutlinedIcon from "@mui/icons-material/PhotoOutlined";
@@ -53,11 +60,21 @@ export default function Reports() {
     [observations, band],
   );
 
-  async function viewPhoto(id: string) {
-    const blob = await apiBlob(`/api/v1/observations/${id}/image`);
-    const url = URL.createObjectURL(blob);
-    window.open(url, "_blank", "noopener");
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  const [photo, setPhoto] = useState<{ url: string; obs: Observation } | null>(null);
+
+  async function viewPhoto(obs: Observation) {
+    const blob = await apiBlob(`/api/v1/observations/${obs.id}/image`);
+    setPhoto((old) => {
+      if (old) URL.revokeObjectURL(old.url);
+      return { url: URL.createObjectURL(blob), obs };
+    });
+  }
+
+  function closePhoto() {
+    setPhoto((old) => {
+      if (old) URL.revokeObjectURL(old.url);
+      return null;
+    });
   }
 
   if (obsError || binsError) {
@@ -130,7 +147,7 @@ export default function Reports() {
       align: "right",
       headerAlign: "right",
       renderCell: (p) => (
-        <Button variant="text" size="small" startIcon={<PhotoOutlinedIcon />} onClick={() => void viewPhoto(p.row.id)}>
+        <Button variant="text" size="small" startIcon={<PhotoOutlinedIcon />} onClick={() => void viewPhoto(p.row)}>
           {t("view")}
         </Button>
       ),
@@ -182,6 +199,37 @@ export default function Reports() {
           }
         />
       )}
+      <Dialog open={photo !== null} onClose={closePhoto} maxWidth="md" fullWidth>
+        {photo && (
+          <>
+            <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1.5, pr: 1.5 }}>
+              <CodeLabel>{binCode(photo.obs.bin_id)}</CodeLabel>
+              <Typography component="span" sx={{ color: "text.secondary", fontWeight: 500 }} noWrap>
+                {siteOf(photo.obs.bin_id)}
+              </Typography>
+              <IconButton onClick={closePhoto} aria-label={t("close")} sx={{ ml: "auto" }}>
+                <CloseIcon />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent>
+              <Box
+                component="img"
+                src={photo.url}
+                alt=""
+                sx={{ display: "block", width: "100%", maxHeight: "70vh", objectFit: "contain", borderRadius: 1, bgcolor: "#111" }}
+              />
+              <Stack direction="row" spacing={1.5} sx={{ mt: 1.5, alignItems: "center", flexWrap: "wrap" }}>
+                {photo.obs.fill_tap && (
+                  <Tag tone={BAND_TONE[photo.obs.fill_tap]}>{t(photo.obs.fill_tap as StringKey)}</Tag>
+                )}
+                <Typography variant="body2" color="text.secondary">
+                  {new Date(photo.obs.captured_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+                </Typography>
+              </Stack>
+            </DialogContent>
+          </>
+        )}
+      </Dialog>
     </PageStack>
   );
 }

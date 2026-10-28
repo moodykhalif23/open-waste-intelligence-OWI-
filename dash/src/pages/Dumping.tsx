@@ -165,7 +165,7 @@ export default function Dumping() {
         </Box>
       ),
     },
-    { field: "event_count", headerName: t("events"), type: "number", width: 100 },
+    { field: "event_count", headerName: t("events"), type: "number", align: "center", headerAlign: "center", width: 100 },
     { field: "last_seen", headerName: t("lastSeen"), width: 130, valueFormatter: (v) => new Date(v as string).toLocaleDateString() },
     { field: "hotspot_score", headerName: t("risk"), type: "number", width: 90, valueFormatter: (v) => Number(v).toFixed(1) },
     {

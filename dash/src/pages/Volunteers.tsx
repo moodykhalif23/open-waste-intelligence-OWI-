@@ -162,7 +162,7 @@ export default function Volunteers() {
     },
     { field: "area", headerName: t("area"), flex: 1, minWidth: 120 },
     { field: "organizer", headerName: t("organizer"), flex: 1, minWidth: 120 },
-    { field: "participant_count", headerName: t("participants"), type: "number", width: 130, valueFormatter: (v) => Number(v).toLocaleString() },
+    { field: "participant_count", headerName: t("participants"), type: "number", align: "center", headerAlign: "center", width: 130, valueFormatter: (v) => Number(v).toLocaleString() },
     { field: "hours_total", headerName: t("hours"), type: "number", width: 110, valueFormatter: (v) => Number(v).toLocaleString() },
   ];
 

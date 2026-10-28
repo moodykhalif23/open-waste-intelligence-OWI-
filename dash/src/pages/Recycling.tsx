@@ -103,7 +103,7 @@ export default function Recycling() {
     { field: "kg", headerName: t("kgEst"), type: "number", width: 110, valueFormatter: (v) => Math.round(Number(v)).toLocaleString() },
     { field: "kes_per_kg", headerName: t("pricePerKg"), type: "number", width: 110, valueFormatter: (v) => (v == null ? "—" : `KES ${v}`) },
     { field: "value_kes", headerName: t("valueKes"), type: "number", flex: 1, minWidth: 130, valueFormatter: (v) => (v ? `KES ${Math.round(Number(v)).toLocaleString()}` : "—") },
-    { field: "partners", headerName: t("matchingPartners"), type: "number", width: 100 },
+    { field: "partners", headerName: t("matchingPartners"), type: "number", align: "center", headerAlign: "center", width: 100 },
   ];
   const priceCols: GridColDef<Price>[] = [
     { field: "material", headerName: t("material"), flex: 1, minWidth: 110, valueGetter: (_v, row) => label(row.material) },

@@ -9,12 +9,12 @@ def make_request(headers: list[tuple[bytes, bytes]], client: tuple[str, int] | N
     )
 
 
-def test_forwarded_for_first_hop_wins() -> None:
+def test_raw_forwarded_for_is_not_trusted() -> None:
     request = make_request([(b"x-forwarded-for", b"41.90.1.2, 10.0.0.1")], ("172.18.0.9", 1234))
-    assert client_ip(request) == "41.90.1.2"
+    assert client_ip(request) == "172.18.0.9"
 
 
-def test_falls_back_to_socket_peer() -> None:
+def test_uses_socket_peer() -> None:
     assert client_ip(make_request([], ("192.168.1.7", 1234))) == "192.168.1.7"
 
 

@@ -90,23 +90,41 @@ def login(
     request: Request,
     session: Annotated[Session, Depends(get_session)],
 ) -> TokenResponse:
-    client_ip = request.client.host if request.client else "unknown"
-    if not phone_limiter.allow(body.phone) or not ip_limiter.allow(client_ip):
+    peer = client_ip(request) or "unknown"
+    if not phone_limiter.allow(body.phone) or not ip_limiter.allow(peer):
         raise HTTPException(status_code=429, detail="too many attempts, try later")
 
     user = session.scalar(select(User).where(User.phone == body.phone, User.deleted_at.is_(None)))
-    if (
-        user is None
-        or user.password_hash is None
-        or not verify_password(body.password, user.password_hash)
-    ):
+    if user is None or user.password_hash is None:
+        raise HTTPException(status_code=401, detail="invalid credentials")
+    if not verify_password(body.password, user.password_hash):
+        _audit_login(session, request, user, "auth.login_failed")
         raise HTTPException(status_code=401, detail="invalid credentials")
     if user.mfa_enabled:
-        _require_second_factor(session, user, body.otp)
+        try:
+            _require_second_factor(session, user, body.otp)
+        except HTTPException:
+            if body.otp:
+                _audit_login(session, request, user, "auth.login_failed")
+            raise
 
     claims = TokenClaims(user.id, user.org_id, user.role, user.token_version)
     token = create_token(claims, timedelta(hours=settings.access_token_ttl_hours))
+    _audit_login(session, request, user, "auth.login")
     return TokenResponse(access_token=token, role=user.role)
+
+
+def _audit_login(session: Session, request: Request, user: User, action: str) -> None:
+    record_audit(
+        session,
+        org_id=user.org_id,
+        actor_user_id=user.id,
+        action=action,
+        entity="user",
+        entity_id=user.id,
+        ip=client_ip(request),
+    )
+    session.commit()
 
 
 def _use_recovery_code(user: User, code: str) -> bool:
@@ -137,6 +155,8 @@ def issue_device_token(
     user = session.get(User, body.user_id)
     if user is None or user.deleted_at is not None or user.org_id != requester.org_id:
         raise HTTPException(status_code=404, detail="user not found")
+    if user.role is not UserRole.COLLECTOR:
+        raise HTTPException(status_code=403, detail="device tokens are for collectors only")
 
     claims = TokenClaims(user.id, user.org_id, user.role, user.token_version)
     token = create_token(claims, timedelta(days=settings.device_token_ttl_days))

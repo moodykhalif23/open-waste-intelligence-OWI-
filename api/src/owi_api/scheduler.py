@@ -2,6 +2,7 @@
 
 import logging
 import time
+from collections.abc import Callable
 
 from owi_api.analytics.cleanliness_refresh import refresh_cleanliness
 from owi_api.analytics.refresh import refresh_bin_health
@@ -16,19 +17,33 @@ logger = logging.getLogger(__name__)
 INTERVAL_SECONDS = 3600
 
 
+QUARANTINE_CUTOFF_HOURS = settings.quarantine_retention_hours - INTERVAL_SECONDS // 3600
+
+
 def run_once() -> None:
     with SessionLocal() as session:
         store = get_store(settings)
-        purged = purge_expired_quarantine(session, store, settings.quarantine_retention_hours)
-        retired = purge_expired_images(session, store)
-        refreshed = refresh_bin_health(session)
-        scored = refresh_cleanliness(session)
-        notified = maybe_send_daily_digest(session)
-    logger.info("quarantine purge: %d originals deleted", purged)
-    logger.info("image retention: %d expired images deleted", retired)
-    logger.info("bin health refresh: %d bins scored", refreshed)
-    logger.info("cleanliness refresh: %d areas scored", scored)
-    logger.info("overflow digest: %d messages", notified)
+        jobs: list[tuple[str, str, Callable[[], int]]] = [
+            (
+                "quarantine purge",
+                "originals deleted",
+                lambda: purge_expired_quarantine(session, store, QUARANTINE_CUTOFF_HOURS),
+            ),
+            (
+                "image retention",
+                "expired images deleted",
+                lambda: purge_expired_images(session, store),
+            ),
+            ("bin health refresh", "bins scored", lambda: refresh_bin_health(session)),
+            ("cleanliness refresh", "areas scored", lambda: refresh_cleanliness(session)),
+            ("overflow digest", "messages", lambda: maybe_send_daily_digest(session)),
+        ]
+        for name, unit, job in jobs:
+            try:
+                logger.info("%s: %d %s", name, job(), unit)
+            except Exception:
+                session.rollback()
+                logger.exception("%s failed", name)
 
 
 def main() -> None:

@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -62,6 +62,8 @@ class StopOut(BaseModel):
     lat: float
     lng: float
     collected: bool
+    skipped: bool
+    skip_reason: str | None
 
 
 class RouteOut(BaseModel):
@@ -85,10 +87,18 @@ class RouteOut(BaseModel):
     actual_weight_kg: float | None
 
 
-class RouteCompleteIn(BaseModel):
+class RouteActionIn(BaseModel):
+    occurred_at: datetime | None = None
+
+
+class RouteCompleteIn(RouteActionIn):
     actual_distance_km: float | None = Field(default=None, ge=0)
     actual_fuel_l: float = Field(ge=0)
     actual_weight_kg: float = Field(ge=0)
+
+
+class StopSkipIn(RouteActionIn):
+    reason: str | None = Field(default=None, max_length=120)
 
 
 class OptimizeIn(BaseModel):
@@ -161,15 +171,18 @@ def _depot(session: Session, truck: Truck) -> GeoPoint:
 
 
 def _collect_today_bins(session: Session, org_id: uuid.UUID) -> list[uuid.UUID]:
+    latest = (
+        select(BinHealthDaily.bin_id, BinHealthDaily.overflow_risk)
+        .where(BinHealthDaily.org_id == org_id)
+        .order_by(BinHealthDaily.bin_id, BinHealthDaily.date.desc())
+        .distinct(BinHealthDaily.bin_id)
+        .subquery()
+    )
     return list(
         session.scalars(
-            select(BinHealthDaily.bin_id)
-            .where(
-                BinHealthDaily.org_id == org_id,
-                BinHealthDaily.overflow_risk != OverflowRisk.LOW,
-            )
-            .order_by(BinHealthDaily.bin_id, BinHealthDaily.date.desc())
-            .distinct(BinHealthDaily.bin_id)
+            select(latest.c.bin_id)
+            .join(Bin, Bin.id == latest.c.bin_id)
+            .where(latest.c.overflow_risk != OverflowRisk.LOW, Bin.deleted_at.is_(None))
         )
     )
 
@@ -247,6 +260,8 @@ def _route_out(
                 lat=lat,
                 lng=lng,
                 collected=stop.collected,
+                skipped=stop.skipped_at is not None,
+                skip_reason=stop.skip_reason,
             )
         )
     return RouteOut(
@@ -273,6 +288,19 @@ def _route_out(
         actual_fuel_l=route.actual_fuel_l,
         actual_weight_kg=route.actual_weight_kg,
     )
+
+
+def _action_time(body: RouteActionIn | None, route: Route) -> datetime:
+    now = datetime.now(UTC)
+    if body is None or body.occurred_at is None:
+        return now
+    occurred = body.occurred_at
+    if occurred.tzinfo is None:
+        occurred = occurred.replace(tzinfo=UTC)
+    earliest = datetime.combine(route.date, time.min, tzinfo=UTC)
+    if route.started_at is not None:
+        earliest = max(earliest, route.started_at)
+    return min(max(occurred, earliest), now)
 
 
 @router.get("/routes", response_model=list[RouteOut])
@@ -302,6 +330,7 @@ def start_route(
         require_roles(UserRole.ADMIN, UserRole.COORDINATOR, UserRole.COLLECTOR),
     ],
     session: Annotated[Session, Depends(get_session)],
+    body: RouteActionIn | None = None,
 ) -> RouteOut:
     route = session.scalar(
         select(Route)
@@ -318,10 +347,11 @@ def start_route(
         if route.started_by_user_id != requester.user_id:
             raise HTTPException(status_code=409, detail="route is active on another device")
     elif route.status is not RouteStatus.PLANNED:
-        raise HTTPException(status_code=409, detail="route is not planned")
+        if route.started_by_user_id != requester.user_id:
+            raise HTTPException(status_code=409, detail="route is not planned")
     else:
         route.status = RouteStatus.ACTIVE
-        route.started_at = datetime.now(UTC)
+        route.started_at = _action_time(body, route)
         route.started_by_user_id = requester.user_id
         session.commit()
     truck = session.get(Truck, route.truck_id)
@@ -351,25 +381,33 @@ def complete_route(
     )
     if route is None:
         raise HTTPException(status_code=404, detail="route not found")
-    if route.status is not RouteStatus.ACTIVE or route.started_by_user_id != requester.user_id:
+    if route.status is RouteStatus.PLANNED or route.started_by_user_id != requester.user_id:
         raise HTTPException(status_code=409, detail="route is not active on this device")
-    pending = session.scalar(
-        select(func.count())
-        .select_from(RouteStop)
-        .where(RouteStop.route_id == route.id, RouteStop.collected.is_(False))
-    )
-    if pending:
-        raise HTTPException(status_code=409, detail="collect every route stop before completing")
     truck = session.get(Truck, route.truck_id)
     if truck is None:
         raise HTTPException(status_code=404, detail="route vehicle not found")
+    if route.status is RouteStatus.DONE:
+        return _route_out(session, route, truck, requester.user_id)
+    pending = session.scalar(
+        select(func.count())
+        .select_from(RouteStop)
+        .where(
+            RouteStop.route_id == route.id,
+            RouteStop.collected.is_(False),
+            RouteStop.skipped_at.is_(None),
+        )
+    )
+    if pending:
+        raise HTTPException(
+            status_code=409, detail="collect or skip every route stop before completing"
+        )
     if not METHOD_SPECS[truck.method].motorized and body.actual_fuel_l > 0:
         raise HTTPException(
             status_code=422, detail="manual collection methods must report zero fuel"
         )
 
     route.status = RouteStatus.DONE
-    route.completed_at = datetime.now(UTC)
+    route.completed_at = _action_time(body, route)
     route.actual_distance_km = body.actual_distance_km
     route.actual_fuel_l = body.actual_fuel_l
     route.actual_weight_kg = body.actual_weight_kg
@@ -440,11 +478,31 @@ def routes_savings(
     )
 
 
+def _active_stop_route(
+    session: Session, stop: RouteStop, claims: TokenClaims, action: str
+) -> Route:
+    route = session.scalar(
+        select(Route)
+        .where(
+            Route.id == stop.route_id,
+            Route.org_id == claims.org_id,
+            Route.deleted_at.is_(None),
+        )
+        .with_for_update()
+    )
+    if route is None or route.status is not RouteStatus.ACTIVE:
+        raise HTTPException(status_code=409, detail=f"start the route before {action} stops")
+    if claims.role is UserRole.COLLECTOR and route.started_by_user_id != claims.user_id:
+        raise HTTPException(status_code=403, detail="route is active on another device")
+    return route
+
+
 @router.post("/routes/stops/{stop_id}/collect", status_code=204)
 def collect_stop(
     stop_id: uuid.UUID,
     claims: Annotated[TokenClaims, require_roles(*STAFF)],
     session: Annotated[Session, Depends(get_session)],
+    body: RouteActionIn | None = None,
 ) -> None:
     """Driver marks a stop done: records the collection, resets bin health, ticks the stop."""
     stop = session.scalar(
@@ -456,32 +514,50 @@ def collect_stop(
         raise HTTPException(status_code=404, detail="stop not found")
     if stop.collected:
         return
-    route = session.scalar(
-        select(Route)
-        .where(
-            Route.id == stop.route_id,
-            Route.org_id == claims.org_id,
-            Route.deleted_at.is_(None),
-        )
-        .with_for_update()
-    )
-    if route is None or route.status is not RouteStatus.ACTIVE:
-        raise HTTPException(status_code=409, detail="start the route before collecting stops")
-    if claims.role is UserRole.COLLECTOR and route.started_by_user_id != claims.user_id:
-        raise HTTPException(status_code=403, detail="route is active on another device")
+    route = _active_stop_route(session, stop, claims, "collecting")
     session.add(
         CollectionEvent(
             org_id=claims.org_id,
             bin_id=stop.bin_id,
             route_stop_id=stop.id,
-            occurred_at=datetime.now(UTC),
+            occurred_at=_action_time(body, route),
             collector_id=claims.user_id if claims.role is UserRole.COLLECTOR else None,
             estimated_weight_kg=estimate_collection_weight(session, stop.bin_id),
         )
     )
     stop.collected = True
+    stop.skipped_at = None
+    stop.skip_reason = None
     session.commit()
     refresh_bin(session, stop.bin_id)
+
+
+@router.post("/routes/stops/{stop_id}/skip", status_code=204)
+def skip_stop(
+    stop_id: uuid.UUID,
+    claims: Annotated[
+        TokenClaims,
+        require_roles(UserRole.ADMIN, UserRole.COORDINATOR, UserRole.COLLECTOR),
+    ],
+    session: Annotated[Session, Depends(get_session)],
+    body: StopSkipIn | None = None,
+) -> None:
+    stop = session.scalar(
+        select(RouteStop)
+        .where(RouteStop.id == stop_id, RouteStop.org_id == claims.org_id)
+        .with_for_update()
+    )
+    if stop is None:
+        raise HTTPException(status_code=404, detail="stop not found")
+    if stop.skipped_at is not None:
+        return
+    if stop.collected:
+        raise HTTPException(status_code=409, detail="stop is already collected")
+    route = _active_stop_route(session, stop, claims, "skipping")
+    reason = body.reason.strip() if body is not None and body.reason else ""
+    stop.skipped_at = _action_time(body, route)
+    stop.skip_reason = reason or None
+    session.commit()
 
 
 def _plan_and_persist(
@@ -566,7 +642,11 @@ def replan_routes(
         if route.status is not RouteStatus.PLANNED:
             continue
         for stop in session.scalars(
-            select(RouteStop).where(RouteStop.route_id == route.id, RouteStop.collected.is_(False))
+            select(RouteStop).where(
+                RouteStop.route_id == route.id,
+                RouteStop.collected.is_(False),
+                RouteStop.skipped_at.is_(None),
+            )
         ):
             pending.add(stop.bin_id)
     active_bins = {

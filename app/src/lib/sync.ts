@@ -4,8 +4,13 @@ import { listQueued, remove, type QueuedReport } from "./queue";
 interface SyncOutcome {
   sent: number;
   rejected: number;
+  rejectedReasons: string[];
+  unlocatable: number;
   remaining: number;
 }
+
+const CHUNK = 10;
+const RETRYABLE = new Set([401, 403, 408, 425, 429]);
 
 export class SyncError extends Error {
   constructor(readonly status: number) {
@@ -14,7 +19,7 @@ export class SyncError extends Error {
 }
 
 interface BatchResult {
-  results: { status: "created" | "duplicate" | "rejected"; observation_id: string }[];
+  results: { status: "created" | "duplicate" | "rejected"; observation_id: string; detail?: string | null }[];
 }
 
 export interface RecentReport {
@@ -54,40 +59,74 @@ export async function eraseObservation(token: string, id: string): Promise<void>
   forgetSynced(id);
 }
 
-export async function syncQueue(token: string): Promise<SyncOutcome> {
-  const all = await listQueued();
-  // The server can locate a report from GPS or from a scanned bin QR; without
-  // either it would be rejected, so it stays queued for a retried GPS fix.
-  const sendable = all.filter((r) => (r.lat !== null && r.lng !== null) || r.binQr !== null);
-  if (sendable.length === 0) return { sent: 0, rejected: 0, remaining: all.length };
+export const isLocatable = (r: QueuedReport) => (r.lat !== null && r.lng !== null) || r.binQr !== null;
 
+export async function discardUnlocatable(): Promise<void> {
+  for (const report of await listQueued()) if (!isLocatable(report)) await remove(report.id);
+}
+
+async function postBatch(token: string, reports: QueuedReport[]): Promise<Response> {
   const form = new FormData();
-  form.append("meta", JSON.stringify(sendable.map(toMeta)));
-  for (const report of sendable) form.append("files", report.image, `${report.id}.jpg`);
-
-  const response = await fetch(apiUrl("/api/v1/observations/batch"), {
+  form.append("meta", JSON.stringify(reports.map(toMeta)));
+  for (const report of reports) form.append("files", report.image, `${report.id}.jpg`);
+  return fetch(apiUrl("/api/v1/observations/batch"), {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: form,
   });
-  if (!response.ok) throw new SyncError(response.status);
+}
 
-  const { results } = (await response.json()) as BatchResult;
-  let sent = 0;
-  let rejected = 0;
+const permanent = (status: number) => status >= 400 && status < 500 && !RETRYABLE.has(status);
+
+export async function syncQueue(token: string): Promise<SyncOutcome> {
+  const all = await listQueued();
+  const sendable = all.filter(isLocatable);
+  const outcome: SyncOutcome = {
+    sent: 0,
+    rejected: 0,
+    rejectedReasons: [],
+    unlocatable: all.length - sendable.length,
+    remaining: all.length - sendable.length,
+  };
   const synced: string[] = [];
-  for (const [i, result] of results.entries()) {
-    const report = sendable[i];
-    if (!report) continue;
+
+  const settle = async (report: QueuedReport, result: BatchResult["results"][number]) => {
     await remove(report.id);
-    if (result.status === "rejected") rejected += 1;
-    else {
-      sent += 1;
+    if (result.status === "rejected") {
+      outcome.rejected += 1;
+      if (result.detail) outcome.rejectedReasons.push(result.detail);
+    } else {
+      outcome.sent += 1;
       synced.push(result.observation_id);
     }
+  };
+
+  try {
+    for (let i = 0; i < sendable.length; i += CHUNK) {
+      const chunk = sendable.slice(i, i + CHUNK);
+      const response = await postBatch(token, chunk);
+      if (response.ok) {
+        const { results } = (await response.json()) as BatchResult;
+        for (const [k, result] of results.entries()) if (chunk[k]) await settle(chunk[k], result);
+        continue;
+      }
+      if (!permanent(response.status)) throw new SyncError(response.status);
+      for (const report of chunk) {
+        const single = await postBatch(token, [report]);
+        if (single.ok) {
+          const { results } = (await single.json()) as BatchResult;
+          if (results[0]) await settle(report, results[0]);
+        } else if (permanent(single.status)) {
+          await settle(report, { status: "rejected", observation_id: "", detail: `HTTP ${single.status}` });
+        } else {
+          throw new SyncError(single.status);
+        }
+      }
+    }
+  } finally {
+    rememberSynced(synced);
   }
-  rememberSynced(synced);
-  return { sent, rejected, remaining: all.length - sendable.length };
+  return outcome;
 }
 
 function toMeta(report: QueuedReport) {

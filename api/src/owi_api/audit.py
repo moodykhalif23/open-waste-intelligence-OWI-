@@ -9,13 +9,10 @@ from owi_api.models.audit import AuditLog
 
 
 def client_ip(request: Request | None) -> str | None:
-    """Prefer the reverse proxy's X-Forwarded-For (first hop) over the socket peer."""
+    """Socket peer; uvicorn substitutes X-Forwarded-For only for trusted proxies."""
     if request is None:
         return None
-    forwarded = request.headers.get("x-forwarded-for", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()[:45]
-    return request.client.host if request.client else None
+    return request.client.host[:45] if request.client else None
 
 
 def record_audit(

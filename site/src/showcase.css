@@ -183,25 +183,6 @@
   font-size: 0.8em;
 }
 
-.illustrative {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 640;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.illustrative::before {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--gold);
-  content: "";
-}
-
 .is-static .play-toggle,
 .is-static .cursor {
   display: none;

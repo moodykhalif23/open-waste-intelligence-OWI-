@@ -41,7 +41,9 @@ import { FILL_BANDS, enqueue, listQueued, type FillBand } from "./lib/queue";
 import { loadSettings, saveSettings, type AppSettings } from "./lib/settings";
 import {
   SyncError,
+  discardUnlocatable,
   eraseObservation,
+  isLocatable,
   recentSynced,
   syncQueue,
   type RecentReport,
@@ -53,6 +55,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const INSTALL_DISMISSED_KEY = "owi-install-dismissed";
+const BIN_QR_MAX = 64;
 
 type GpsState = { kind: "waiting" } | { kind: "fix"; fix: GpsFix } | { kind: "failed" };
 
@@ -66,6 +69,7 @@ export default function App() {
   const [scanning, setScanning] = useState(false);
   const [fillTap, setFillTap] = useState<FillBand | null>(null);
   const [queueCount, setQueueCount] = useState(0);
+  const [unlocatable, setUnlocatable] = useState(0);
   const [recent, setRecent] = useState<RecentReport[]>(recentSynced);
   const [online, setOnline] = useState(navigator.onLine);
   const [toast, setToast] = useState<string | null>(null);
@@ -82,7 +86,9 @@ export default function App() {
   );
 
   const refreshCount = useCallback(async () => {
-    setQueueCount((await listQueued()).length);
+    const queued = await listQueued();
+    setQueueCount(queued.length);
+    setUnlocatable(queued.filter((r) => !isLocatable(r)).length);
   }, []);
 
   const runSync = useCallback(async () => {
@@ -90,7 +96,13 @@ export default function App() {
     setToast(tr("syncing"));
     try {
       const outcome = await syncQueue(settings.token);
-      setToast(outcome.remaining === 0 && outcome.rejected === 0 ? tr("syncDone") : null);
+      if (outcome.rejected > 0) {
+        setToast(tr("syncRejected", { n: outcome.rejected, reason: outcome.rejectedReasons[0] ?? "" }));
+      } else if (outcome.unlocatable > 0) {
+        setToast(tr("syncUnlocatable", { n: outcome.unlocatable }));
+      } else {
+        setToast(outcome.remaining === 0 ? tr("syncDone") : null);
+      }
     } catch (error) {
       const unauthorized = error instanceof SyncError && error.status === 401;
       setToast(unauthorized ? tr("tokenInvalid") : tr("syncFailed"));
@@ -154,8 +166,13 @@ export default function App() {
     setGps(fix ? { kind: "fix", fix } : { kind: "failed" });
   }
 
+  async function onDiscardUnlocatable() {
+    await discardUnlocatable();
+    await refreshCount();
+  }
+
   async function onSave() {
-    if (!photo) return;
+    if (!photo || !locatable) return;
     const fix = gps.kind === "fix" ? gps.fix : null;
     await enqueue({
       id: crypto.randomUUID(),
@@ -188,6 +205,7 @@ export default function App() {
 
   const sentToday = recent.filter((r) => isToday(r.at)).length;
   const staged = !scanning && previewUrl !== null;
+  const locatable = gps.kind === "fix" || binQr !== null;
 
   const qualityText =
     warning === "dark"
@@ -321,8 +339,12 @@ export default function App() {
             {scanning && (
               <QrScan
                 onResult={(code) => {
-                  setBinQr(code);
                   setScanning(false);
+                  if (code.length > BIN_QR_MAX) {
+                    setToast(tr("qrNotBin"));
+                    return;
+                  }
+                  setBinQr(code);
                 }}
                 onCancel={() => setScanning(false)}
                 labels={{
@@ -397,8 +419,13 @@ export default function App() {
                 <Typography variant="body2" color="text.secondary">
                   {gps.kind === "waiting" && tr("gpsWaiting")}
                   {gps.kind === "fix" && tr("gpsAccuracy", { m: Math.round(gps.fix.accuracyM) })}
-                  {gps.kind === "failed" && tr("gpsFailed")}
+                  {gps.kind === "failed" && !binQr && tr("gpsFailed")}
                 </Typography>
+                {gps.kind === "failed" && !binQr && (
+                  <Button variant="outlined" startIcon={<QrCodeScannerOutlined />} onClick={() => setScanning(true)}>
+                    {tr("scanBin")}
+                  </Button>
+                )}
                 <Typography sx={{ fontWeight: 620 }}>{tr("fillLevel")}</Typography>
                 <ToggleButtonGroup
                   fullWidth
@@ -428,7 +455,7 @@ export default function App() {
                   <Button variant="outlined" sx={{ flex: 1 }} onClick={() => fileInput.current?.click()}>
                     {tr("retake")}
                   </Button>
-                  <Button variant="contained" sx={{ flex: 2 }} onClick={() => void onSave()}>
+                  <Button variant="contained" sx={{ flex: 2 }} disabled={!locatable} onClick={() => void onSave()}>
                     {tr("save")}
                   </Button>
                 </Stack>
@@ -444,16 +471,37 @@ export default function App() {
                     label={tr("statWaiting")}
                     action={
                       queueCount > 0 ? (
-                        <Button
-                          fullWidth
-                          size="small"
-                          variant="contained"
-                          disabled={!online}
-                          onClick={() => void runSync()}
-                          sx={{ mt: 1.5, minHeight: 40 }}
-                        >
-                          {tr("syncNow")}
-                        </Button>
+                        <>
+                          {queueCount > unlocatable && (
+                            <Button
+                              fullWidth
+                              size="small"
+                              variant="contained"
+                              disabled={!online}
+                              onClick={() => void runSync()}
+                              sx={{ mt: 1.5, minHeight: 40 }}
+                            >
+                              {tr("syncNow")}
+                            </Button>
+                          )}
+                          {unlocatable > 0 && (
+                            <>
+                              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1.5 }}>
+                                {tr("unlocatableHint", { n: unlocatable })}
+                              </Typography>
+                              <Button
+                                fullWidth
+                                size="small"
+                                variant="outlined"
+                                color="error"
+                                onClick={() => void onDiscardUnlocatable()}
+                                sx={{ mt: 1, minHeight: 40 }}
+                              >
+                                {tr("discard")}
+                              </Button>
+                            </>
+                          )}
+                        </>
                       ) : null
                     }
                   />

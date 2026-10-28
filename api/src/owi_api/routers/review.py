@@ -8,7 +8,7 @@ from sqlalchemy import Float, func, select
 from sqlalchemy.orm import Session
 
 from owi_api.analytics.composition import effective_material
-from owi_api.analytics.review import apply_review
+from owi_api.analytics.review import apply_review, check_correction
 from owi_api.audit import client_ip, record_audit
 from owi_api.db import get_session
 from owi_api.models.enums import PredictionTask, ReviewStatus, UserRole
@@ -177,6 +177,11 @@ def review_prediction(
     if prediction is None or prediction.org_id != claims.org_id:
         raise HTTPException(status_code=404, detail="prediction not found")
 
+    if body.action == "correct":
+        try:
+            check_correction(prediction.task, prediction.payload, body.corrected_payload)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
     try:
         outcome = apply_review(prediction.review_status, body.action, body.corrected_payload)
     except ValueError as exc:

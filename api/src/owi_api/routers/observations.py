@@ -34,7 +34,8 @@ STAFF = (UserRole.ADMIN, UserRole.COORDINATOR, UserRole.COLLECTOR, UserRole.VIEW
 
 router = APIRouter(prefix="/api/v1/observations", tags=["observations"])
 
-_meta_list = TypeAdapter(list[ObservationIn])
+_meta_list = TypeAdapter(list[dict[str, object]])
+_meta_item = TypeAdapter(ObservationIn)
 
 
 # Session loading costs ~100ms and the model is immutable — share one instance.
@@ -67,7 +68,18 @@ async def ingest_batch(
         raise HTTPException(status_code=422, detail="meta/files count mismatch")
 
     results: list[ObservationResult] = []
-    for item, file in zip(metas, files, strict=True):
+    for raw, file in zip(metas, files, strict=True):
+        try:
+            item = _meta_item.validate_python(raw)
+        except ValidationError as exc:
+            results.append(
+                ObservationResult(
+                    observation_id=uuid.UUID(int=0),
+                    status="rejected",
+                    detail=_first_error(exc),
+                )
+            )
+            continue
         if item.collector_id is None and claims.role is UserRole.COLLECTOR:
             item.collector_id = claims.user_id
         image_bytes = await file.read()
@@ -97,6 +109,12 @@ async def ingest_batch(
             )
         )
     return BatchResponse(results=results)
+
+
+def _first_error(exc: ValidationError) -> str:
+    error = exc.errors()[0]
+    where = ".".join(str(part) for part in error["loc"])
+    return f"{where}: {error['msg']}" if where else str(error["msg"])
 
 
 def _observation_ids_for_material(

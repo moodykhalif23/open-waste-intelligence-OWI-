@@ -82,7 +82,6 @@ Contributors: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-The intended licenses are Apache-2.0 for code and CC-BY-4.0 for open data, but
-they have not been confirmed and no license files are present yet. Do not treat
-the repository as formally licensed open-source software or published open
-data until those terms are approved and added.
+Code is licensed under the [Apache License 2.0](LICENSE). The open-data API
+labels its responses CC-BY-4.0; confirm that data license before publishing
+data.

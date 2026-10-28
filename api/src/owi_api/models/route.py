@@ -2,7 +2,16 @@ import uuid
 from datetime import date, datetime
 
 from geoalchemy2 import Geometry
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -50,8 +59,15 @@ class Route(OwiRow, Base):
 
 class RouteStop(OwiRow, Base):
     __tablename__ = "route_stops"
+    __table_args__ = (
+        CheckConstraint(
+            "NOT (collected AND skipped_at IS NOT NULL)", name="ck_route_stop_single_outcome"
+        ),
+    )
 
     route_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("routes.id"))
     bin_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("bins.id"))
     seq: Mapped[int] = mapped_column(Integer)
     collected: Mapped[bool] = mapped_column(Boolean, default=False)
+    skipped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    skip_reason: Mapped[str | None] = mapped_column(String(120))

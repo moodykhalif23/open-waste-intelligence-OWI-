@@ -16,6 +16,17 @@ import { useI18n } from "../i18n";
 
 const FILL_BANDS = ["empty", "low", "half", "high", "overflowing"] as const;
 
+const labelKey = (p: Prediction) => (p.task === "fill" ? "fill_band" : "material");
+
+function labelOptions(p: Prediction): string[] {
+  if (p.task === "fill") return [...FILL_BANDS];
+  const scores = p.payload.scores;
+  if (p.task !== "classify" || !scores || typeof scores !== "object") return [];
+  return Object.entries(scores as Record<string, number>)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label]) => label);
+}
+
 interface Prediction {
   id: string;
   observation_id: string;
@@ -55,10 +66,10 @@ export default function Review() {
     await reload();
   }
 
-  async function correctFill(p: Prediction, band: string) {
+  async function correct(p: Prediction, value: string) {
     await api(`/api/v1/predictions/${p.id}/review`, {
       method: "POST",
-      body: JSON.stringify({ action: "correct", corrected_payload: { fill_band: band } }),
+      body: JSON.stringify({ action: "correct", corrected_payload: { [labelKey(p)]: value } }),
     });
     await reload();
   }
@@ -87,7 +98,7 @@ export default function Review() {
                 <ReviewItem
                   prediction={p}
                   onConfirm={() => void confirm(p)}
-                  onCorrect={(band) => void correctFill(p, band)}
+                  onCorrect={(value) => void correct(p, value)}
                 />
               </Grid>
             ))}
@@ -105,7 +116,7 @@ function ReviewItem({
 }: {
   prediction: Prediction;
   onConfirm: () => void;
-  onCorrect: (band: string) => void;
+  onCorrect: (value: string) => void;
 }) {
   const { t } = useI18n();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -124,7 +135,9 @@ function ReviewItem({
     };
   }, [prediction.observation_id]);
 
-  const predicted = String(prediction.payload.fill_band ?? "");
+  const predicted = String(prediction.payload[labelKey(prediction)] ?? "");
+  const confidence = typeof prediction.payload.confidence === "number" ? prediction.payload.confidence : null;
+  const options = labelOptions(prediction);
 
   return (
     <Card variant="outlined" sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -142,19 +155,26 @@ function ReviewItem({
             <Box component="strong" sx={{ color: "text.primary" }}>
               {predicted || "—"}
             </Box>
+            {confidence !== null && ` · ${Math.round(confidence * 100)}%`}
           </Typography>
         </Stack>
+        {options.length > 0 && (
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+            {t("reviewPickHint")}
+          </Typography>
+        )}
       </CardContent>
       <CardActions sx={{ px: 2, pb: 2, pt: 0, flexWrap: "wrap", gap: 1 }}>
-        {prediction.task === "fill" ? (
-          FILL_BANDS.map((band) => (
+        {options.length > 0 ? (
+          options.map((value) => (
             <Button
-              key={band}
+              key={value}
               size="small"
-              variant={band === predicted ? "contained" : "outlined"}
-              onClick={() => (band === predicted ? onConfirm() : onCorrect(band))}
+              variant={value === predicted ? "contained" : "outlined"}
+              onClick={() => (value === predicted ? onConfirm() : onCorrect(value))}
+              sx={{ textTransform: "capitalize" }}
             >
-              {t(band)}
+              {prediction.task === "fill" ? t(value as (typeof FILL_BANDS)[number]) : value}
             </Button>
           ))
         ) : (

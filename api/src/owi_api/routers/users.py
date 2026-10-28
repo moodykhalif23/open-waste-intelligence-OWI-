@@ -18,6 +18,15 @@ from owi_api.security import TokenClaims, hash_password
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
+COORDINATOR_MANAGED = (UserRole.COLLECTOR, UserRole.VIEWER)
+
+
+def ensure_can_manage(requester: TokenClaims, role: UserRole) -> None:
+    if requester.role is UserRole.COORDINATOR and role not in COORDINATOR_MANAGED:
+        raise HTTPException(
+            status_code=403, detail="coordinators manage collectors and viewers only"
+        )
+
 
 class UserCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
@@ -41,6 +50,7 @@ def create_user(
     session: Annotated[Session, Depends(get_session)],
     requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN, UserRole.COORDINATOR)],
 ) -> UserOut:
+    ensure_can_manage(requester, body.role)
     if session.scalar(select(User).where(User.phone == body.phone)):
         raise HTTPException(status_code=409, detail="phone already registered")
 
@@ -78,6 +88,7 @@ def revoke_tokens(
     user = session.get(User, user_id)
     if user is None or user.org_id != requester.org_id:
         raise HTTPException(status_code=404, detail="user not found")
+    ensure_can_manage(requester, user.role)
     user.token_version += 1
     record_audit(
         session,

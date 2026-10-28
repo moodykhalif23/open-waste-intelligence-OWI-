@@ -17,8 +17,10 @@ import { api, type Role, type User } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import { EmptyState, ErrorPanel, PageStack, TableSection, TableSkeleton } from "../components/ui";
 import { useI18n } from "../i18n";
+import { useApi } from "../useApi";
 
 const ROLES: Role[] = ["collector", "coordinator", "viewer", "admin"];
+const COORDINATOR_ROLES: Role[] = ["collector", "viewer"];
 
 export default function Users() {
   const { t } = useI18n();
@@ -234,6 +236,8 @@ export default function Users() {
 
 function UserForm({ onCreated }: { onCreated: (user: User) => Promise<void> }) {
   const { t } = useI18n();
+  const { data: me } = useApi<{ role: Role }>("/api/v1/auth/me");
+  const roles = me?.role === "coordinator" ? COORDINATOR_ROLES : ROLES;
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<Role>("collector");
@@ -286,7 +290,7 @@ function UserForm({ onCreated }: { onCreated: (user: User) => Promise<void> }) {
           size="small"
           fullWidth
         >
-          {ROLES.map((value) => (
+          {roles.map((value) => (
             <MenuItem key={value} value={value}>
               {value}
             </MenuItem>

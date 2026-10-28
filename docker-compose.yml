@@ -3,7 +3,7 @@ name: owi
 x-owi-env: &owi-env
   OWI_ENVIRONMENT: production
   OWI_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-  OWI_REDIS_URL: redis://redis:6379/0
+  OWI_REDIS_URL: &redis-url redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD in .env (see example.env)}@redis:6379/0
   OWI_STORAGE_DRIVER: s3
   OWI_S3_ENDPOINT: garage:3900
   OWI_S3_REGION: garage
@@ -36,7 +36,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
@@ -48,10 +48,13 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD in .env (see example.env)}"]
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env (see example.env)}
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 12
@@ -63,7 +66,7 @@ services:
       GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET}
       GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN}
     ports:
-      - "3900:3900"
+      - "127.0.0.1:3900:3900"
       - "127.0.0.1:3903:3903"
     volumes:
       - ./deploy/garage.toml:/etc/garage.toml:ro
@@ -85,7 +88,7 @@ services:
       # Scripted access uses the preset token above; JWT PATs stay available in the UI.
       LABEL_STUDIO_LEGACY_API_TOKENS_ENABLED: "true"
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - ls-data:/label-studio/data
 
@@ -109,9 +112,12 @@ services:
     profiles: [prod]
     restart: unless-stopped
     environment: *owi-env
-    command: uv run uvicorn owi_api.main:app --host 0.0.0.0 --port 8000
+    command: uv run uvicorn owi_api.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips 172.16.240.10
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
+    networks:
+      - default
+      - edge
     healthcheck:
       test: ["CMD", "uv", "run", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/readyz', timeout=4)"]
       interval: 30s
@@ -130,8 +136,10 @@ services:
     build: ./api
     profiles: [prod]
     restart: unless-stopped
-    environment: *owi-env
-    command: uv run rq worker inference --url redis://redis:6379/0
+    environment:
+      <<: *owi-env
+      RQ_REDIS_URL: *redis-url
+    command: uv run rq worker inference
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -230,16 +238,65 @@ services:
     profiles: [prod]
     restart: unless-stopped
     command: osrm-routed --algorithm mld /data/region.osrm
-    ports:
-      - "5000:5000"
     volumes:
       - ./var/osrm:/data
     depends_on:
       osrm-prepare:
         condition: service_completed_successfully
 
+  caddy:
+    image: caddy:2.11.7-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
+    profiles: [edge]
+    restart: unless-stopped
+    environment:
+      OWI_APP_DOMAIN: ${OWI_APP_DOMAIN:-app.localhost}
+      OWI_DASH_DOMAIN: ${OWI_DASH_DOMAIN:-dash.localhost}
+      OWI_SITE_DOMAIN: ${OWI_SITE_DOMAIN:-site.localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - type: bind
+        source: ./app/dist
+        target: /srv/app
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./dash/dist
+        target: /srv/dash
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./site/dist
+        target: /srv/site
+        read_only: true
+        bind:
+          create_host_path: false
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      edge:
+        ipv4_address: 172.16.240.10
+    depends_on:
+      api:
+        condition: service_started
+        required: false
+
+networks:
+  edge:
+    ipam:
+      config:
+        - subnet: 172.16.240.0/28
+          ip_range: 172.16.240.0/29
+
 volumes:
   db-data:
   garage-meta:
   garage-data:
   ls-data:
+  caddy-data:
+  caddy-config:

@@ -42,7 +42,7 @@ Python everywhere on the server because OpenCV, ONNX Runtime, and OR-Tools are P
 
 ### Governance in code
 
-- Privacy gate runs at ingestion, before primary storage; originals containing people are quarantined and deleted ≤ 72 h after blur verification.
+- Privacy gate runs at ingestion, before primary storage; originals containing people are quarantined and deleted ≤ 72 h after upload by the hourly scheduler.
 - Open API responses must expose aggregates only — never images, bin-level identifiers, raw observations, or precise coordinates. Server-side aggregation may read operational records, but public routes must not return those source records.
 - No feature, field, or log that identifies people or scores workers. PRs violating this are declined regardless of merit.
 

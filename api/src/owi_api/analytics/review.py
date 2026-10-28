@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from owi_api.models.enums import ReviewStatus
+from owi_api.models.enums import FillBand, PredictionTask, ReviewStatus
 
 
 @dataclass(frozen=True)
@@ -24,3 +24,20 @@ def apply_review(
             raise ValueError("correction requires a corrected payload")
         return ReviewOutcome(ReviewStatus.CORRECTED, correction)
     raise ValueError(f"unknown review action: {action}")
+
+
+def check_correction(
+    task: PredictionTask, payload: dict[str, object], correction: dict[str, object] | None
+) -> None:
+    if not correction:
+        return
+    if task is PredictionTask.CLASSIFY:
+        material = correction.get("material")
+        scores = payload.get("scores")
+        known = set(scores) if isinstance(scores, dict) else None
+        if not isinstance(material, str) or not material or (known and material not in known):
+            raise ValueError("correction must name one of the model's materials")
+    elif task is PredictionTask.FILL:
+        band = correction.get("fill_band")
+        if not isinstance(band, str) or band not in {b.value for b in FillBand}:
+            raise ValueError("correction must name a fill band")

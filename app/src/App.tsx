@@ -296,11 +296,6 @@ export default function App() {
         sx={{ flex: 1, p: 2, pb: 12, display: "flex", flexDirection: "column", gap: 1.5 }}
       >
         <Box sx={{ pt: 0.5, pb: 0.5 }}>
-          {tab !== "report" && (
-            <Typography sx={{ fontSize: "1.9rem", fontWeight: 780, letterSpacing: "-0.025em", lineHeight: 1.1 }}>
-              {tr(tab === "collect" ? "tabCollect" : "tabInsights")}
-            </Typography>
-          )}
           <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 540, mt: 0.25 }}>
             {todayLabel(lang)}
           </Typography>

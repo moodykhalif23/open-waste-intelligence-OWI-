@@ -13,6 +13,7 @@ from owi_api.models.enums import UserRole
 from owi_api.models.observation import Observation
 from owi_api.models.operations import CollectionEvent
 from owi_api.models.registry import User
+from owi_api.models.route import Truck
 from owi_api.routers.auth import require_roles
 from owi_api.security import TokenClaims, hash_password
 
@@ -41,6 +42,12 @@ class UserOut(BaseModel):
     name: str
     phone: str | None
     role: UserRole
+    vehicle_id: uuid.UUID | None = None
+    vehicle_name: str | None = None
+
+
+class PinIn(BaseModel):
+    pin: str = Field(pattern=r"^[0-9]{6,12}$")
 
 
 @router.post("", response_model=UserOut, status_code=201)
@@ -95,6 +102,34 @@ def revoke_tokens(
         org_id=requester.org_id,
         actor_user_id=requester.user_id,
         action="user.revoke_tokens",
+        entity="user",
+        entity_id=user.id,
+        ip=client_ip(request),
+    )
+    session.commit()
+
+
+@router.put("/{user_id}/pin", status_code=204)
+def set_pin(
+    user_id: uuid.UUID,
+    body: PinIn,
+    request: Request,
+    session: Annotated[Session, Depends(get_session)],
+    requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN, UserRole.COORDINATOR)],
+) -> None:
+    user = session.get(User, user_id)
+    if user is None or user.org_id != requester.org_id or user.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="user not found")
+    ensure_can_manage(requester, user.role)
+    if user.role is not UserRole.COLLECTOR:
+        raise HTTPException(status_code=403, detail="PINs are for collectors only")
+    user.password_hash = hash_password(body.pin)
+    user.token_version += 1
+    record_audit(
+        session,
+        org_id=requester.org_id,
+        actor_user_id=requester.user_id,
+        action="user.pin_set",
         entity="user",
         entity_id=user.id,
         ip=client_ip(request),
@@ -189,6 +224,7 @@ def erase_user(
     user.name = "erased user"
     user.phone = None
     user.password_hash = None
+    user.vehicle_id = None
     user.token_version += 1
     user.deleted_at = datetime.now(UTC)
     record_audit(
@@ -208,7 +244,19 @@ def list_users(
     session: Annotated[Session, Depends(get_session)],
     requester: Annotated[TokenClaims, require_roles(UserRole.ADMIN, UserRole.COORDINATOR)],
 ) -> list[UserOut]:
-    users = session.scalars(
-        select(User).where(User.org_id == requester.org_id, User.deleted_at.is_(None))
+    rows = session.execute(
+        select(User, Truck.name)
+        .outerjoin(Truck, Truck.id == User.vehicle_id)
+        .where(User.org_id == requester.org_id, User.deleted_at.is_(None))
     )
-    return [UserOut(id=u.id, name=u.name, phone=u.phone, role=u.role) for u in users]
+    return [
+        UserOut(
+            id=u.id,
+            name=u.name,
+            phone=u.phone,
+            role=u.role,
+            vehicle_id=u.vehicle_id,
+            vehicle_name=vehicle_name,
+        )
+        for u, vehicle_name in rows
+    ]

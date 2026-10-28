@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 from sqlalchemy import Float, func, select
 from sqlalchemy.orm import Session
@@ -41,8 +41,22 @@ class ReviewQueueOut(BaseModel):
     items: list[PredictionOut]
 
 
+def _status_count(session: Session, org_id: uuid.UUID, status: ReviewStatus) -> int:
+    count = session.scalar(
+        select(func.count())
+        .select_from(Prediction)
+        .where(
+            Prediction.org_id == org_id,
+            Prediction.deleted_at.is_(None),
+            Prediction.review_status == status,
+        )
+    )
+    return count or 0
+
+
 @router.get("", response_model=ReviewQueueOut)
 def review_queue(
+    response: Response,
     claims: Annotated[TokenClaims, require_roles(*REVIEWERS)],
     session: Annotated[Session, Depends(get_session)],
     status: ReviewStatus = ReviewStatus.UNREVIEWED,
@@ -52,15 +66,13 @@ def review_queue(
     base = select(Prediction).where(
         Prediction.org_id == claims.org_id, Prediction.deleted_at.is_(None)
     )
-    unreviewed = session.scalar(
-        select(func.count())
-        .select_from(Prediction)
-        .where(
-            Prediction.org_id == claims.org_id,
-            Prediction.deleted_at.is_(None),
-            Prediction.review_status == ReviewStatus.UNREVIEWED,
-        )
+    unreviewed = _status_count(session, claims.org_id, ReviewStatus.UNREVIEWED)
+    total = (
+        unreviewed
+        if status is ReviewStatus.UNREVIEWED
+        else _status_count(session, claims.org_id, status)
     )
+    response.headers["X-Total-Count"] = str(total)
     # Uncertainty sampling: surface the model's least-confident predictions first,
     # so reviewer effort lands where a correction teaches the most.
     confidence = Prediction.payload["confidence"].astext.cast(Float)
@@ -71,7 +83,7 @@ def review_queue(
         .offset(offset)
     ).all()
     return ReviewQueueOut(
-        unreviewed=unreviewed or 0,
+        unreviewed=unreviewed,
         items=[
             PredictionOut(
                 id=p.id,

@@ -9,6 +9,7 @@ from fastapi import HTTPException
 
 from owi_api.models.enums import CollectionMethod, RouteStatus, UserRole
 from owi_api.models.operations import CollectionEvent
+from owi_api.models.registry import User
 from owi_api.models.route import Route, RouteStop
 from owi_api.routers import routes
 from owi_api.routers.routes import (
@@ -40,9 +41,15 @@ class _ScalarResults:
 
 
 class RouteSession:
-    def __init__(self, route: SimpleNamespace, stops: list[SimpleNamespace]) -> None:
+    def __init__(
+        self,
+        route: SimpleNamespace,
+        stops: list[SimpleNamespace],
+        vehicle_id: uuid.UUID | None = None,
+    ) -> None:
         self.route = route
         self.stops = stops
+        self.vehicle_id = vehicle_id or route.truck_id
         self.added: list[object] = []
         self.commits = 0
 
@@ -63,7 +70,9 @@ class RouteSession:
     def execute(self, _statement: object) -> SimpleNamespace:
         return SimpleNamespace(one=lambda: ("OWI-0001", -1.29, 36.82))
 
-    def get(self, _model: object, _id: object) -> SimpleNamespace:
+    def get(self, model: object, _id: object) -> SimpleNamespace:
+        if model is User:
+            return SimpleNamespace(vehicle_id=self.vehicle_id)
         return SimpleNamespace(name="Truck 1", method=CollectionMethod.TRUCK)
 
     def add(self, row: object) -> None:
@@ -349,6 +358,96 @@ def test_naive_client_time_is_read_as_utc() -> None:
     )
 
     assert stop.skipped_at == at
+
+
+def _off_vehicle(route: SimpleNamespace, stops: list[SimpleNamespace]) -> RouteSession:
+    return RouteSession(route, stops, vehicle_id=uuid.uuid4())
+
+
+def _assert_other_vehicle(exc: pytest.ExceptionInfo[HTTPException]) -> None:
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "route belongs to another vehicle"
+
+
+@pytest.mark.parametrize("status", list(RouteStatus))
+def test_collector_cannot_start_another_vehicles_route(status: RouteStatus) -> None:
+    route = _route(status)
+    session = _off_vehicle(route, [])
+
+    with pytest.raises(HTTPException) as exc:
+        start_route(route.id, _claims(), session, None)
+
+    _assert_other_vehicle(exc)
+    assert route.status is status
+    assert session.commits == 0
+
+
+def test_unassigned_collector_cannot_start_a_route() -> None:
+    route = _route(RouteStatus.PLANNED)
+    session = RouteSession(route, [])
+    session.vehicle_id = None
+
+    with pytest.raises(HTTPException) as exc:
+        start_route(route.id, _claims(), session, None)
+
+    _assert_other_vehicle(exc)
+
+
+def test_collector_cannot_complete_another_vehicles_route() -> None:
+    route = _route()
+    session = _off_vehicle(route, [_stop(route, 0, collected=True)])
+
+    with pytest.raises(HTTPException) as exc:
+        complete_route(
+            route.id, RouteCompleteIn(actual_fuel_l=1, actual_weight_kg=1), _claims(), session
+        )
+
+    _assert_other_vehicle(exc)
+    assert route.status is RouteStatus.ACTIVE
+
+
+@pytest.mark.parametrize("collected", [False, True])
+def test_collector_cannot_collect_on_another_vehicles_route(collected: bool) -> None:
+    route = _route()
+    stop = _stop(route, 0, collected=collected)
+    session = _off_vehicle(route, [stop])
+
+    with pytest.raises(HTTPException) as exc:
+        collect_stop(stop.id, _claims(), session, None)
+
+    _assert_other_vehicle(exc)
+    assert session.added == []
+
+
+def test_vehicle_check_runs_before_the_started_by_rule() -> None:
+    route = _route(started_by=uuid.uuid4())
+    stop = _stop(route, 0)
+
+    with pytest.raises(HTTPException) as exc:
+        skip_stop(stop.id, _claims(), _off_vehicle(route, [stop]), None)
+
+    _assert_other_vehicle(exc)
+    assert stop.skipped_at is None
+
+
+def test_crewmate_who_did_not_start_the_route_keeps_the_device_rule() -> None:
+    route = _route(started_by=uuid.uuid4())
+    stop = _stop(route, 0)
+
+    with pytest.raises(HTTPException) as exc:
+        collect_stop(stop.id, _claims(), RouteSession(route, [stop]), None)
+
+    assert exc.value.detail == "route is active on another device"
+
+
+def test_coordinator_acts_on_any_vehicles_route() -> None:
+    route = _route(RouteStatus.PLANNED)
+    coordinator = _claims(uuid.uuid4(), UserRole.COORDINATOR)
+
+    out = start_route(route.id, coordinator, _off_vehicle(route, []), None)
+
+    assert out.status is RouteStatus.ACTIVE
+    assert route.started_by_user_id == coordinator.user_id
 
 
 def test_replan_treats_skipped_stops_as_resolved() -> None:

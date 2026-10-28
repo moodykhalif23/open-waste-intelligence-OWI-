@@ -147,25 +147,28 @@ def _observation_ids_for_material(
 
 @router.get("", response_model=list[ObservationOut])
 def list_observations(
+    response: Response,
     claims: Annotated[TokenClaims, require_roles(*STAFF)],
     session: Annotated[Session, Depends(get_session)],
     limit: Annotated[int, Query(gt=0, le=1000)] = 500,
     offset: Annotated[int, Query(ge=0)] = 0,
     material: str | None = None,
 ) -> list[ObservationOut]:
-    query = (
+    filters = [Observation.org_id == claims.org_id, Observation.deleted_at.is_(None)]
+    if material is not None:
+        # Composition drill-down: observations whose latest classify prediction reads `material`.
+        filters.append(
+            Observation.id.in_(_observation_ids_for_material(session, claims.org_id, material))
+        )
+    total = session.scalar(select(func.count()).select_from(Observation).where(*filters))
+    response.headers["X-Total-Count"] = str(total or 0)
+    rows = session.execute(
         select(Observation, func.ST_Y(Observation.location), func.ST_X(Observation.location))
-        .where(Observation.org_id == claims.org_id, Observation.deleted_at.is_(None))
+        .where(*filters)
         .order_by(Observation.captured_at.desc(), Observation.id)
         .limit(limit)
         .offset(offset)
     )
-    if material is not None:
-        # Composition drill-down: observations whose latest classify prediction reads `material`.
-        query = query.where(
-            Observation.id.in_(_observation_ids_for_material(session, claims.org_id, material))
-        )
-    rows = session.execute(query)
     return [
         ObservationOut(
             id=obs.id,

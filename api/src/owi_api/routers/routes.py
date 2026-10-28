@@ -1,8 +1,9 @@
 import uuid
+from collections import defaultdict
 from datetime import UTC, date, datetime, time
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -11,12 +12,13 @@ from owi_api.analytics.osrm import get_distance_matrix
 from owi_api.analytics.refresh import refresh_bin
 from owi_api.analytics.routing import DistanceMatrix, GeoPoint, Stop, TruckSpec, solve_routes
 from owi_api.analytics.savings import Scenario, compute_savings
+from owi_api.audit import client_ip, record_audit
 from owi_api.config import settings
 from owi_api.db import get_session
 from owi_api.fleet import METHOD_SPECS, fleet_fuel_rate, resolve_capacity, resolve_fuel
 from owi_api.models.enums import CollectionMethod, OverflowRisk, RouteStatus, UserRole
 from owi_api.models.operations import BinHealthDaily, CollectionEvent
-from owi_api.models.registry import Bin
+from owi_api.models.registry import Bin, User
 from owi_api.models.route import Route, RouteStop, Truck
 from owi_api.org_config import effective_fuel_price, effective_waste_density
 from owi_api.routers.auth import get_current_user, require_roles
@@ -39,12 +41,23 @@ class TruckIn(BaseModel):
     depot_lng: float = Field(ge=-180, le=180)
 
 
+class CrewMemberOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    phone: str | None
+
+
 class TruckOut(BaseModel):
     id: uuid.UUID
     name: str
     method: CollectionMethod
     capacity_kg: float
     fuel_l_per_100km: float
+    crew: list[CrewMemberOut]
+
+
+class CrewIn(BaseModel):
+    user_ids: list[uuid.UUID]
 
 
 class MethodOut(BaseModel):
@@ -143,14 +156,30 @@ def list_collection_methods(
     ]
 
 
-def _truck_out(truck: Truck) -> TruckOut:
+def _truck_out(truck: Truck, crew: list[CrewMemberOut]) -> TruckOut:
     return TruckOut(
         id=truck.id,
         name=truck.name,
         method=truck.method,
         capacity_kg=truck.capacity_kg,
         fuel_l_per_100km=truck.fuel_l_per_100km,
+        crew=crew,
     )
+
+
+def _crews(
+    session: Session, org_id: uuid.UUID, with_phone: bool
+) -> dict[uuid.UUID | None, list[CrewMemberOut]]:
+    crews: dict[uuid.UUID | None, list[CrewMemberOut]] = defaultdict(list)
+    for user in session.scalars(
+        select(User)
+        .where(User.org_id == org_id, User.deleted_at.is_(None), User.vehicle_id.is_not(None))
+        .order_by(User.name)
+    ):
+        crews[user.vehicle_id].append(
+            CrewMemberOut(id=user.id, name=user.name, phone=user.phone if with_phone else None)
+        )
+    return crews
 
 
 def _active_trucks(session: Session, org_id: uuid.UUID) -> list[Truck]:
@@ -203,7 +232,7 @@ def create_truck(
     )
     session.add(truck)
     session.commit()
-    return _truck_out(truck)
+    return _truck_out(truck, [])
 
 
 @router.get("/trucks", response_model=list[TruckOut])
@@ -211,7 +240,59 @@ def list_trucks(
     requester: Annotated[TokenClaims, Depends(get_current_user)],
     session: Annotated[Session, Depends(get_session)],
 ) -> list[TruckOut]:
-    return [_truck_out(t) for t in _active_trucks(session, requester.org_id)]
+    trucks = _active_trucks(session, requester.org_id)
+    crews = (
+        _crews(session, requester.org_id, with_phone=requester.role in PLANNERS)
+        if requester.role in STAFF
+        else {}
+    )
+    return [_truck_out(t, crews.get(t.id, [])) for t in trucks]
+
+
+@router.put("/trucks/{truck_id}/crew", response_model=list[CrewMemberOut])
+def set_truck_crew(
+    truck_id: uuid.UUID,
+    body: CrewIn,
+    request: Request,
+    requester: Annotated[TokenClaims, require_roles(*PLANNERS)],
+    session: Annotated[Session, Depends(get_session)],
+) -> list[CrewMemberOut]:
+    truck = session.get(Truck, truck_id)
+    if truck is None or truck.org_id != requester.org_id or truck.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="vehicle not found")
+    wanted = list(dict.fromkeys(body.user_ids))
+    members = list(session.scalars(select(User).where(User.id.in_(wanted)))) if wanted else []
+    if len(members) != len(wanted) or any(
+        u.org_id != requester.org_id or u.deleted_at is not None or u.role is not UserRole.COLLECTOR
+        for u in members
+    ):
+        raise HTTPException(
+            status_code=422, detail="crew members must be active collectors in this organization"
+        )
+    removed = [
+        u
+        for u in session.scalars(select(User).where(User.vehicle_id == truck.id))
+        if u.id not in wanted
+    ]
+    for user in removed:
+        user.vehicle_id = None
+    for user in members:
+        user.vehicle_id = truck.id
+    record_audit(
+        session,
+        org_id=requester.org_id,
+        actor_user_id=requester.user_id,
+        action="truck.crew_update",
+        entity="truck",
+        entity_id=truck.id,
+        ip=client_ip(request),
+        detail={"user_ids": [str(u) for u in wanted], "removed": [str(u.id) for u in removed]},
+    )
+    session.commit()
+    return [
+        CrewMemberOut(id=u.id, name=u.name, phone=u.phone)
+        for u in sorted(members, key=lambda u: u.name)
+    ]
 
 
 def _bin_demand(session: Session, org_id: uuid.UUID, bin_ids: list[uuid.UUID]) -> list[Stop]:
@@ -303,6 +384,16 @@ def _action_time(body: RouteActionIn | None, route: Route) -> datetime:
     return min(max(occurred, earliest), now)
 
 
+def _crew_vehicle(session: Session, claims: TokenClaims) -> uuid.UUID | None:
+    user = session.get(User, claims.user_id)
+    return user.vehicle_id if user is not None else None
+
+
+def _ensure_on_vehicle(session: Session, claims: TokenClaims, route: Route) -> None:
+    if claims.role is UserRole.COLLECTOR and _crew_vehicle(session, claims) != route.truck_id:
+        raise HTTPException(status_code=403, detail="route belongs to another vehicle")
+
+
 @router.get("/routes", response_model=list[RouteOut])
 def list_routes(
     requester: Annotated[TokenClaims, require_roles(*STAFF)],
@@ -310,7 +401,7 @@ def list_routes(
     on: date | None = None,
 ) -> list[RouteOut]:
     day = on or datetime.now(UTC).date()
-    rows = session.execute(
+    query = (
         select(Route, Truck)
         .join(Truck, Truck.id == Route.truck_id)
         .where(
@@ -318,7 +409,13 @@ def list_routes(
             Route.deleted_at.is_(None),
             Route.date == day,
         )
-    ).all()
+    )
+    if requester.role is UserRole.COLLECTOR:
+        vehicle_id = _crew_vehicle(session, requester)
+        if vehicle_id is None:
+            return []
+        query = query.where(Route.truck_id == vehicle_id)
+    rows = session.execute(query).all()
     return [_route_out(session, route, truck, requester.user_id) for route, truck in rows]
 
 
@@ -343,6 +440,7 @@ def start_route(
     )
     if route is None:
         raise HTTPException(status_code=404, detail="route not found")
+    _ensure_on_vehicle(session, requester, route)
     if route.status is RouteStatus.ACTIVE:
         if route.started_by_user_id != requester.user_id:
             raise HTTPException(status_code=409, detail="route is active on another device")
@@ -381,6 +479,7 @@ def complete_route(
     )
     if route is None:
         raise HTTPException(status_code=404, detail="route not found")
+    _ensure_on_vehicle(session, requester, route)
     if route.status is RouteStatus.PLANNED or route.started_by_user_id != requester.user_id:
         raise HTTPException(status_code=409, detail="route is not active on this device")
     truck = session.get(Truck, route.truck_id)
@@ -485,9 +584,7 @@ def routes_savings(
     )
 
 
-def _active_stop_route(
-    session: Session, stop: RouteStop, claims: TokenClaims, action: str
-) -> Route:
+def _stop_route(session: Session, stop: RouteStop, claims: TokenClaims) -> Route | None:
     route = session.scalar(
         select(Route)
         .where(
@@ -497,6 +594,12 @@ def _active_stop_route(
         )
         .with_for_update()
     )
+    if route is not None:
+        _ensure_on_vehicle(session, claims, route)
+    return route
+
+
+def _active_stop_route(route: Route | None, claims: TokenClaims, action: str) -> Route:
     if route is None or route.status is not RouteStatus.ACTIVE:
         raise HTTPException(status_code=409, detail=f"start the route before {action} stops")
     if claims.role is UserRole.COLLECTOR and route.started_by_user_id != claims.user_id:
@@ -519,9 +622,10 @@ def collect_stop(
     )
     if stop is None or stop.org_id != claims.org_id:
         raise HTTPException(status_code=404, detail="stop not found")
+    route = _stop_route(session, stop, claims)
     if stop.collected:
         return
-    route = _active_stop_route(session, stop, claims, "collecting")
+    route = _active_stop_route(route, claims, "collecting")
     session.add(
         CollectionEvent(
             org_id=claims.org_id,
@@ -556,11 +660,12 @@ def skip_stop(
     )
     if stop is None:
         raise HTTPException(status_code=404, detail="stop not found")
+    route = _stop_route(session, stop, claims)
     if stop.skipped_at is not None:
         return
     if stop.collected:
         raise HTTPException(status_code=409, detail="stop is already collected")
-    route = _active_stop_route(session, stop, claims, "skipping")
+    route = _active_stop_route(route, claims, "skipping")
     reason = body.reason.strip() if body is not None and body.reason else ""
     stop.skipped_at = _action_time(body, route)
     stop.skip_reason = reason or None

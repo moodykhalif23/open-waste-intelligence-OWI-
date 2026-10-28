@@ -35,6 +35,9 @@ class User(OwiRow, Base):
     mfa_secret: Mapped[str | None] = mapped_column(String(64))
     mfa_enabled: Mapped[bool] = mapped_column(server_default="false", default=False)
     mfa_recovery: Mapped[list[str] | None] = mapped_column(JSONB)
+    vehicle_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("trucks.id", ondelete="SET NULL"), index=True
+    )
 
 
 class Site(OwiRow, Base):

@@ -316,6 +316,27 @@ def main() -> None:
     replan = client.post("/api/v1/routes/replan", headers=admin, json={})
     check("mid-day replan runs", replan.status_code == 200, replan.text[:150])
 
+    unassigned = client.get("/api/v1/routes", headers=device_auth)
+    check("driver without a vehicle sees no routes", unassigned.json() == [], unassigned.text[:120])
+    todays = client.get("/api/v1/routes", headers=admin).json()
+    target = next((r for r in todays if r["status"] == "planned" and r["stops"]), None)
+    if target:
+        vehicles = client.get("/api/v1/trucks", headers=admin).json()
+        crew = next((t["crew"] for t in vehicles if t["id"] == target["truck_id"]), [])
+        joined = client.put(
+            f"/api/v1/trucks/{target['truck_id']}/crew",
+            headers=admin,
+            json={"user_ids": [m["id"] for m in crew] + [collector.json()["id"]]},
+        )
+        check("driver joins the route's vehicle crew", joined.status_code == 200, joined.text[:120])
+        other = next((r for r in todays if r["truck_id"] != target["truck_id"]), None)
+        if other:
+            check(
+                "driver cannot start another vehicle's route",
+                client.post(f"/api/v1/routes/{other['id']}/start", headers=device_auth).status_code
+                == 403,
+            )
+
     listed = client.get("/api/v1/routes", headers=device_auth)
     check("driver can read today's routes", listed.status_code == 200)
     route = next((r for r in listed.json() if r["status"] == "planned" and r["stops"]), None)
@@ -831,6 +852,29 @@ def main() -> None:
     check(
         "revoked device token is dead",
         client.get("/api/v1/auth/me", headers=device_auth).status_code == 401,
+    )
+
+    pin = client.put(
+        f"/api/v1/users/{collector.json()['id']}/pin", headers=admin, json={"pin": "246810"}
+    )
+    check("set a crew PIN", pin.status_code == 204, pin.text[:120])
+    field = client.post(
+        "/api/v1/auth/field-login", json={"phone": collector.json()["phone"], "pin": "246810"}
+    )
+    check("crew signs in with phone + PIN", field.status_code == 200, field.text[:120])
+    if field.status_code == 200:
+        crew_me = client.get(
+            "/api/v1/auth/me", headers={"Authorization": f"Bearer {field.json()['access_token']}"}
+        )
+        check(
+            "field sign-in reports the crew's vehicle",
+            crew_me.status_code == 200 and crew_me.json()["vehicle"] == field.json()["vehicle"],
+            crew_me.text[:120],
+        )
+    check(
+        "dashboard roles are sent to the dashboard sign-in",
+        client.post("/api/v1/auth/field-login", json={"phone": phone, "pin": password}).status_code
+        == 403,
     )
 
     statuses = {

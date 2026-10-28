@@ -56,6 +56,7 @@ from owi_api.models.enums import (
     RouteStatus,
     UserRole,
 )
+from owi_api.security import hash_password
 
 NAMESPACE = uuid.UUID("5b0e7f1c-9a43-4c6e-8f2d-3e1a6c0b7d42")
 MARKER = "owi-seed-heavy"
@@ -69,6 +70,7 @@ MATERIALS = sorted(
     ["plastic", "organic", "paper", "glass", "metal", "textile", "e_waste", "other_mixed"]
 )
 MODEL_VERSION = "seed-heavy-cls-1"
+DEV_PIN = "246810"
 
 WARDS: list[tuple[str, tuple[float, float], list[tuple[str, str]]]] = [
     (
@@ -354,7 +356,7 @@ class VehicleSpec:
     depot: tuple[float, float]
     wards: tuple[str, ...]
     lanes_of: str | None
-    crew: str
+    crew: tuple[str, ...]
     max_stops: int
     start_hour: float
     speed_kmh: float
@@ -373,7 +375,7 @@ VEHICLES = [
         depot=DEPOT,
         wards=("Dandora Area I", "Dandora Area II", "Dandora Area III", "Dandora Area IV"),
         lanes_of=None,
-        crew="Joseph Mwangi",
+        crew=("Joseph Mwangi", "John Kamau", "Mary Njeri"),
         max_stops=95,
         start_hour=6.0,
         speed_kmh=14.0,
@@ -389,7 +391,7 @@ VEHICLES = [
         depot=DEPOT,
         wards=("Kariobangi North", "Kariobangi South", "Mowlem", "Komarock"),
         lanes_of=None,
-        crew="Collins Wekesa",
+        crew=("Collins Wekesa", "Mercy Chebet", "Agnes Nduta"),
         max_stops=95,
         start_hour=6.25,
         speed_kmh=15.0,
@@ -405,7 +407,7 @@ VEHICLES = [
         depot=DEPOT,
         wards=("Baba Dogo", "Lucky Summer", "Umoja", "Korogocho"),
         lanes_of=None,
-        crew="Samuel Mutua",
+        crew=("Samuel Mutua", "Purity Kerubo", "Lucy Wairimu"),
         max_stops=95,
         start_hour=6.5,
         speed_kmh=15.0,
@@ -421,7 +423,7 @@ VEHICLES = [
         depot=(-1.2590, 36.8700),
         wards=("Huruma", "Mathare"),
         lanes_of=None,
-        crew="Dennis Omondi",
+        crew=("Dennis Omondi", "Janet Akinyi"),
         max_stops=40,
         start_hour=7.0,
         speed_kmh=16.0,
@@ -437,7 +439,7 @@ VEHICLES = [
         depot=(-1.2615, 36.8560),
         wards=(),
         lanes_of="Mathare",
-        crew="Kevin Ouma",
+        crew=("Kevin Ouma",),
         max_stops=24,
         start_hour=6.5,
         speed_kmh=4.0,
@@ -453,7 +455,7 @@ VEHICLES = [
         depot=(-1.2475, 36.8835),
         wards=(),
         lanes_of="Korogocho",
-        crew="Brian Kiprotich",
+        crew=("Brian Kiprotich", "Esther Mwende"),
         max_stops=24,
         start_hour=6.5,
         speed_kmh=4.0,
@@ -1320,7 +1322,7 @@ class Simulation:
                     self.collectors_by_ward[ward].append(user)
                 else:
                     self.coordinator_by_ward[ward] = user
-        self.crew = [next(u for u in world.users if u.name == v.crew) for v in VEHICLES]
+        self.crew = [next(u for u in world.users if u.name == v.crew[0]) for v in VEHICLES]
         market_days = [(i % 3, i % 3 + 3) for i in range(len(world.sites))]
         weekdays = [d.weekday() for d in world.dates]
         holidays = [(d.month, d.day) in HOLIDAYS for d in world.dates]
@@ -2520,7 +2522,8 @@ PURGE_STATEMENTS = [
     ),
     (
         "users retired",
-        "UPDATE users SET deleted_at = now(), token_version = token_version + 1"
+        "UPDATE users SET deleted_at = now(), token_version = token_version + 1,"
+        " vehicle_id = NULL, password_hash = NULL"
         " WHERE id IN (SELECT id FROM seed_users) AND deleted_at IS NULL",
     ),
 ]
@@ -2593,6 +2596,33 @@ def upsert_users(cur: psycopg.Cursor[Any], world: World) -> None:
     )
 
 
+def assign_crews(cur: psycopg.Cursor[Any], org_id: uuid.UUID) -> int:
+    truck_ids = [seed_id(org_id, "truck", v.key) for v in VEHICLES]
+    cur.execute("SELECT count(*) FROM trucks WHERE id = ANY(%s)", (truck_ids,))
+    row = cur.fetchone()
+    if row is None or row[0] != len(truck_ids):
+        raise SystemExit("the seeded vehicles are missing; run make seed-heavy first")
+    vehicle_of = {
+        name: truck_id for v, truck_id in zip(VEHICLES, truck_ids, strict=True) for name in v.crew
+    }
+    cur.executemany(
+        "UPDATE users SET vehicle_id = %s, password_hash = %s, updated_at = now()"
+        " WHERE id = %s AND org_id = %s AND deleted_at IS NULL",
+        [
+            (vehicle_of.get(name), hash_password(DEV_PIN), seed_id(org_id, "user", name), org_id)
+            for name, _wards in COLLECTORS
+        ],
+    )
+    return cur.rowcount
+
+
+def print_crews(org_id: uuid.UUID) -> None:
+    phones = {u.name: u.phone for u in build_users(org_id)}
+    print(f"  dev only: every seeded collector signs in to the field app with PIN {DEV_PIN}")
+    for v in VEHICLES:
+        print(f"    {v.name:28} {', '.join(f'{name} {phones[name]}' for name in v.crew)}")
+
+
 def resolve_org(cur: psycopg.Cursor[Any], explicit: str | None) -> tuple[uuid.UUID, str]:
     if explicit:
         cur.execute("SELECT id, name FROM organizations WHERE id = %s", (explicit,))
@@ -2632,6 +2662,8 @@ SEEDED_OBS = (
 )
 COUNT_QUERIES = {
     "users": "SELECT count(*) FROM users WHERE id = ANY(%(users)s) AND deleted_at IS NULL",
+    "crew members": "SELECT count(*) FROM users WHERE id = ANY(%(users)s)"
+    " AND deleted_at IS NULL AND vehicle_id IS NOT NULL",
     "sites": "SELECT count(*) FROM sites WHERE id = ANY(%(sites)s)",
     "sites without bins": "SELECT count(*) FROM sites s WHERE s.id = ANY(%(sites)s)"
     " AND NOT EXISTS (SELECT 1 FROM bins b WHERE b.site_id = s.id)",
@@ -2689,8 +2721,14 @@ def report_counts(cur: psycopg.Cursor[Any], org_id: uuid.UUID) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Heavy demo dataset for the admin's organization")
-    parser.add_argument(
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
         "--purge", action="store_true", help="remove exactly the seeded rows and images"
+    )
+    mode.add_argument(
+        "--crews-only",
+        action="store_true",
+        help="only assign the seeded collectors to their vehicles and set the dev PIN",
     )
     parser.add_argument(
         "--dry-run", action="store_true", help="build the dataset and print counts only"
@@ -2708,6 +2746,13 @@ def main() -> None:
     with psycopg.connect(dsn, autocommit=True) as conn, conn.cursor() as cur:
         org_id, org_name = resolve_org(cur, args.org)
         print(f"organization: {org_name} ({org_id})")
+        if args.crews_only:
+            with conn.transaction():
+                assigned = assign_crews(cur, org_id)
+            print(f"  crew members updated     {assigned}")
+            print_crews(org_id)
+            print(f"done in {time.monotonic() - started:.1f}s")
+            return
         if args.purge:
             with conn.transaction():
                 counts, image_keys = purge(cur, org_id)
@@ -2747,6 +2792,7 @@ def main() -> None:
             upsert_users(cur, world)
             for table in COLUMNS:
                 copy_rows(cur, table, world.rows.get(table, []))
+            assign_crews(cur, world.org_id)
             print(
                 f"  inserted {sum(len(r) for r in world.rows.values())} rows"
                 f" ({time.monotonic() - started:.1f}s)"
@@ -2763,6 +2809,7 @@ def main() -> None:
     )
     with psycopg.connect(dsn, autocommit=True) as conn, conn.cursor() as cur:
         report_counts(cur, org_id)
+    print_crews(org_id)
     print(f"done in {time.monotonic() - started:.1f}s")
 
 

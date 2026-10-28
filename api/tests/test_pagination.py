@@ -82,6 +82,72 @@ def test_observations_reject_out_of_range_paging(query: dict[str, int]) -> None:
     assert response.status_code == 422
 
 
+class CountingSession(RecordingSession):
+    def __init__(self, total: int, rows: list[Any] | None = None) -> None:
+        super().__init__(rows)
+        self.total = total
+        self.counts: list[Any] = []
+
+    def execute(self, statement: Any) -> _Result:
+        result = super().execute(statement)
+        self.rows = []
+        return result
+
+    def scalar(self, statement: Any) -> int:
+        self.counts.append(statement)
+        return self.total
+
+
+def _where(statement: Any) -> tuple[str, dict[str, Any]]:
+    sql = statement.compile(dialect=postgresql.dialect())
+    return str(sql).split("WHERE", 1)[1].split("ORDER BY", 1)[0].strip(), dict(sql.params)
+
+
+def test_observations_report_the_total_ignoring_paging() -> None:
+    session = CountingSession(1234)
+    response = client_for(observations.router, session).get(
+        "/api/v1/observations", params={"limit": 5, "offset": 10}
+    )
+    assert response.status_code == 200
+    assert response.headers["X-Total-Count"] == "1234"
+    [count] = session.counts
+    count_sql, count_params = compiled(count)
+    assert "LIMIT" not in count_sql and "OFFSET" not in count_sql
+    assert ORG in count_params and not {5, 10} & count_params
+
+
+def test_observation_total_uses_the_material_filter() -> None:
+    plastic = uuid.uuid4()
+    session = CountingSession(
+        1, [(plastic, {"material": "plastic"}, None, ReviewStatus.UNREVIEWED)]
+    )
+    response = client_for(observations.router, session).get(
+        "/api/v1/observations", params={"material": "plastic", "limit": 50}
+    )
+    assert response.headers["X-Total-Count"] == "1"
+    count_where, count_params = _where(session.counts[0])
+    page_where, page_params = _where(session.statements[-1])
+    assert count_where == page_where
+    assert {k: page_params[k] for k in count_params} == count_params
+    assert [plastic] in count_params.values()
+
+
+@pytest.mark.parametrize(
+    ("status", "queries"), [(ReviewStatus.UNREVIEWED, 1), (ReviewStatus.CONFIRMED, 2)]
+)
+def test_review_queue_reports_the_total_for_its_status(status: ReviewStatus, queries: int) -> None:
+    session = CountingSession(42)
+    response = client_for(review.router, session).get(
+        "/api/v1/predictions", params={"status": status.value, "limit": 10}
+    )
+    assert response.status_code == 200
+    assert response.headers["X-Total-Count"] == "42"
+    assert response.json()["unreviewed"] == 42
+    assert len(session.counts) == queries
+    _sql, params = compiled(session.counts[-1])
+    assert status in params
+
+
 def test_review_queue_is_bounded_and_pages() -> None:
     session = RecordingSession()
     client = client_for(review.router, session)

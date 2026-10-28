@@ -14,8 +14,9 @@ from sqlalchemy.orm import Session
 from owi_api.audit import client_ip, record_audit
 from owi_api.config import settings
 from owi_api.db import get_session
-from owi_api.models.enums import UserRole
+from owi_api.models.enums import CollectionMethod, UserRole
 from owi_api.models.registry import User
+from owi_api.models.route import Truck
 from owi_api.ratelimit import SlidingWindowLimiter
 from owi_api.security import (
     InvalidTokenError,
@@ -77,11 +78,62 @@ class DeviceTokenRequest(BaseModel):
     user_id: uuid.UUID
 
 
+class FieldLoginRequest(BaseModel):
+    phone: str
+    pin: str
+    otp: str | None = None
+
+
+class VehicleOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    method: CollectionMethod
+
+
+class FieldLoginResponse(TokenResponse):
+    name: str
+    vehicle: VehicleOut | None
+
+
 class MeResponse(BaseModel):
     user_id: uuid.UUID
     org_id: uuid.UUID
     role: UserRole
+    name: str
     mfa_enabled: bool
+    vehicle: VehicleOut | None
+
+
+def _check_credentials(session: Session, request: Request, phone: str, secret: str) -> User:
+    peer = client_ip(request) or "unknown"
+    if not phone_limiter.allow(phone) or not ip_limiter.allow(peer):
+        raise HTTPException(status_code=429, detail="too many attempts, try later")
+
+    user = session.scalar(select(User).where(User.phone == phone, User.deleted_at.is_(None)))
+    if user is None or user.password_hash is None:
+        raise HTTPException(status_code=401, detail="invalid credentials")
+    if not verify_password(secret, user.password_hash):
+        _audit_login(session, request, user, "auth.login_failed")
+        raise HTTPException(status_code=401, detail="invalid credentials")
+    return user
+
+
+def _check_second_factor(session: Session, request: Request, user: User, otp: str | None) -> None:
+    if not user.mfa_enabled:
+        return
+    try:
+        _require_second_factor(session, user, otp)
+    except HTTPException:
+        if otp:
+            _audit_login(session, request, user, "auth.login_failed")
+        raise
+
+
+def _vehicle(session: Session, user: User) -> VehicleOut | None:
+    truck = session.get(Truck, user.vehicle_id) if user.vehicle_id is not None else None
+    if truck is None:
+        return None
+    return VehicleOut(id=truck.id, name=truck.name, method=truck.method)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -90,28 +142,32 @@ def login(
     request: Request,
     session: Annotated[Session, Depends(get_session)],
 ) -> TokenResponse:
-    peer = client_ip(request) or "unknown"
-    if not phone_limiter.allow(body.phone) or not ip_limiter.allow(peer):
-        raise HTTPException(status_code=429, detail="too many attempts, try later")
-
-    user = session.scalar(select(User).where(User.phone == body.phone, User.deleted_at.is_(None)))
-    if user is None or user.password_hash is None:
-        raise HTTPException(status_code=401, detail="invalid credentials")
-    if not verify_password(body.password, user.password_hash):
-        _audit_login(session, request, user, "auth.login_failed")
-        raise HTTPException(status_code=401, detail="invalid credentials")
-    if user.mfa_enabled:
-        try:
-            _require_second_factor(session, user, body.otp)
-        except HTTPException:
-            if body.otp:
-                _audit_login(session, request, user, "auth.login_failed")
-            raise
+    user = _check_credentials(session, request, body.phone, body.password)
+    _check_second_factor(session, request, user, body.otp)
 
     claims = TokenClaims(user.id, user.org_id, user.role, user.token_version)
     token = create_token(claims, timedelta(hours=settings.access_token_ttl_hours))
     _audit_login(session, request, user, "auth.login")
     return TokenResponse(access_token=token, role=user.role)
+
+
+@router.post("/field-login", response_model=FieldLoginResponse)
+def field_login(
+    body: FieldLoginRequest,
+    request: Request,
+    session: Annotated[Session, Depends(get_session)],
+) -> FieldLoginResponse:
+    user = _check_credentials(session, request, body.phone, body.pin)
+    if user.role is not UserRole.COLLECTOR:
+        raise HTTPException(status_code=403, detail="use the dashboard sign-in")
+    _check_second_factor(session, request, user, body.otp)
+
+    claims = TokenClaims(user.id, user.org_id, user.role, user.token_version)
+    token = create_token(claims, timedelta(days=settings.device_token_ttl_days))
+    _audit_login(session, request, user, "auth.field_login")
+    return FieldLoginResponse(
+        access_token=token, role=user.role, name=user.name, vehicle=_vehicle(session, user)
+    )
 
 
 def _audit_login(session: Session, request: Request, user: User, action: str) -> None:
@@ -179,12 +235,14 @@ def me(
     claims: Annotated[TokenClaims, Depends(get_current_user)],
     session: Annotated[Session, Depends(get_session)],
 ) -> MeResponse:
-    user = session.get(User, claims.user_id)
+    user = _current_user_row(session, claims)
     return MeResponse(
         user_id=claims.user_id,
         org_id=claims.org_id,
         role=claims.role,
-        mfa_enabled=bool(user and user.mfa_enabled),
+        name=user.name,
+        mfa_enabled=user.mfa_enabled,
+        vehicle=_vehicle(session, user),
     )
 
 

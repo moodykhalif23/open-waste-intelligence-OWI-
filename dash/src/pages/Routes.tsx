@@ -70,7 +70,11 @@ interface Stop {
   lat: number;
   lng: number;
   collected: boolean;
+  skipped: boolean;
+  skip_reason: string | null;
 }
+
+const SKIP_REASONS = ["blocked", "missing", "damaged", "other"];
 
 interface Route {
   id: string;
@@ -195,7 +199,9 @@ export default function Routes() {
 
   const totalKm = routes.reduce((s, r) => s + r.planned_km, 0);
   const totalFuel = routes.reduce((s, r) => s + r.planned_fuel_l, 0);
-  const hasPendingStops = routes.some((route) => route.stops.some((stop) => !stop.collected));
+  const hasPendingStops = routes.some((route) =>
+    route.stops.some((stop) => !stop.collected && !stop.skipped),
+  );
 
   const routeColor = (i: number) => CATEGORICAL[i % CATEGORICAL.length] ?? "#101828";
   const mapPoints: MapPoint[] = routes.flatMap((r, i) =>
@@ -583,7 +589,10 @@ function RouteCard({
     );
   }
 
-  const hasPendingStops = route.stops.some((stop) => !stop.collected);
+  const hasPendingStops = route.stops.some((stop) => !stop.collected && !stop.skipped);
+  const skipped = route.stops.filter((stop) => stop.skipped).length;
+  const reasonLabel = (reason: string) =>
+    SKIP_REASONS.includes(reason) ? t(`skipReason_${reason}` as StringKey) : reason;
 
   return (
     <Card variant="outlined" sx={{ height: "100%" }}>
@@ -600,6 +609,9 @@ function RouteCard({
               <Chip size="small" variant="outlined" label={`${route.planned_fuel_l} L`} />
             )}
             <Chip size="small" variant="outlined" label={`${Math.round(route.demand_kg)} kg`} />
+            {skipped > 0 && (
+              <Chip size="small" color="error" variant="outlined" label={`${skipped} ${t("stopsSkipped")}`} />
+            )}
           </Stack>
           {!hasPendingStops && <Muted>{completeLabel}</Muted>}
           {route.status === "done" && (
@@ -642,8 +654,8 @@ function RouteCard({
                 height: 22,
                 flexShrink: 0,
                 borderRadius: "4px",
-                bgcolor: "#fbeecf",
-                color: "#835a09",
+                bgcolor: s.skipped ? "#f6e1de" : "#fbeecf",
+                color: s.skipped ? "error.main" : "#835a09",
                 fontSize: "0.72rem",
                 fontWeight: 700,
                 display: "grid",
@@ -653,9 +665,27 @@ function RouteCard({
             >
               {s.seq}
             </Box>
-            <Typography sx={{ fontFamily: "ui-monospace, monospace", fontSize: "0.85rem" }} noWrap>
+            <Typography
+              sx={{
+                fontFamily: "ui-monospace, monospace",
+                fontSize: "0.85rem",
+                color: s.skipped ? "text.secondary" : "text.primary",
+              }}
+              noWrap
+            >
               {s.qr_code}
             </Typography>
+            {s.skipped && (
+              <Typography
+                variant="caption"
+                title={s.skip_reason ?? undefined}
+                sx={{ color: "error.main", fontWeight: 650, minWidth: 0 }}
+                noWrap
+              >
+                {t("stopSkipped")}
+                {s.skip_reason ? ` · ${reasonLabel(s.skip_reason)}` : ""}
+              </Typography>
+            )}
           </Stack>
         ))}
       </Box>

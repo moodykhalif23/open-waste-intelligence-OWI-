@@ -46,6 +46,7 @@ import {
   isLocatable,
   recentSynced,
   syncQueue,
+  syncRouteActions,
   type RecentReport,
 } from "./lib/sync";
 
@@ -76,6 +77,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null);
   const [tab, setTab] = useState<"report" | "collect" | "insights">("report");
+  const [routeRevision, setRouteRevision] = useState(0);
   const startedAt = useRef<number>(0);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -111,6 +113,18 @@ export default function App() {
     setRecent(recentSynced());
   }, [settings, tr, refreshCount]);
 
+  const runRouteSync = useCallback(async () => {
+    if (!navigator.onLine) return;
+    try {
+      const outcome = await syncRouteActions(settings.token);
+      if (outcome.rejected > 0) setToast(tr("routeActionsRejected", { n: outcome.rejected }));
+      else if (outcome.unauthorized) setToast(tr("tokenInvalid"));
+      if (outcome.sent > 0 || outcome.rejected > 0) setRouteRevision((n) => n + 1);
+    } catch {
+      setToast(tr("syncFailed"));
+    }
+  }, [settings, tr]);
+
   async function doErase(id: string) {
     try {
       await eraseObservation(settings.token, id);
@@ -139,9 +153,11 @@ export default function App() {
 
   useEffect(() => {
     void refreshCount();
+    void runRouteSync();
     const goOnline = () => {
       setOnline(true);
       void runSync();
+      void runRouteSync();
     };
     const goOffline = () => setOnline(false);
     window.addEventListener("online", goOnline);
@@ -150,7 +166,7 @@ export default function App() {
       window.removeEventListener("online", goOnline);
       window.removeEventListener("offline", goOffline);
     };
-  }, [runSync, refreshCount]);
+  }, [runSync, runRouteSync, refreshCount]);
 
   async function onPhotoPicked(file: File) {
     startedAt.current = performance.now();
@@ -318,7 +334,14 @@ export default function App() {
             {todayLabel(lang)}
           </Typography>
         </Box>
-        {tab === "collect" && <CollectList lang={lang} token={settings.token} />}
+        {tab === "collect" && (
+          <CollectList
+            lang={lang}
+            token={settings.token}
+            revision={routeRevision}
+            onRouteAction={() => void runRouteSync()}
+          />
+        )}
         {tab === "insights" && <Insights lang={lang} token={settings.token} />}
 
         {tab === "report" && (

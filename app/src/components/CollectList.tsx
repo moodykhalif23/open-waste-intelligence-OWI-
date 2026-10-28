@@ -9,22 +9,29 @@ import DialogTitle from "@mui/material/DialogTitle";
 import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import CheckCircle from "@mui/icons-material/CheckCircle";
 import EChart, { RISK_HUE, ringOption } from "./EChart";
 import { t, type Lang, type StringKey } from "../i18n";
 import {
-  collectStop,
-  completeRoute,
+  SKIP_REASONS,
+  applyRouteActions,
+  cacheRoutes,
+  cachedRoutes,
   fetchCollectList,
   fetchRoutes,
   markCollected,
-  startRoute,
   type BinHealth,
   type Route,
+  type RouteAction,
+  type SkipReason,
 } from "../lib/collect";
 import { ApiError } from "../lib/api";
 import { distanceKm } from "../lib/gps";
+import { enqueueRouteAction, listRouteActions } from "../lib/queue";
+import { clearRejectedRouteActions, rejectedRouteActions } from "../lib/sync";
 
 const TRACKING_ROUTE_KEY = "owi-tracking-route";
 
@@ -41,10 +48,20 @@ function storedDistance(routeId: string | null): number {
 type Load =
   | { kind: "loading" }
   | { kind: "error"; message: StringKey }
-  | { kind: "routes"; routes: Route[] }
+  | { kind: "routes"; routes: Route[]; notice: StringKey | null }
   | { kind: "list"; bins: BinHealth[] };
 
-export default function CollectList({ lang, token }: { lang: Lang; token: string }) {
+export default function CollectList({
+  lang,
+  token,
+  revision,
+  onRouteAction,
+}: {
+  lang: Lang;
+  token: string;
+  revision: number;
+  onRouteAction: () => void;
+}) {
   const tr = (key: StringKey, vars?: Record<string, string | number>) => t(lang, key, vars);
   const [state, setState] = useState<Load>({ kind: "loading" });
   const [trackingRouteId, setTrackingRouteId] = useState<string | null>(() => {
@@ -61,19 +78,46 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
   const [fuel, setFuel] = useState("");
   const [weight, setWeight] = useState("");
   const [actionError, setActionError] = useState(false);
+  const [queued, setQueued] = useState(0);
+  const [rejected, setRejected] = useState(rejectedRouteActions);
+  const [skipTarget, setSkipTarget] = useState<{ id: string; code: string } | null>(null);
+  const [skipReason, setSkipReason] = useState<SkipReason | null>(null);
   const lastFix = useRef<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const snapshot = useRef<Route[]>(cachedRoutes());
+  const loadSeq = useRef(0);
+
+  const show = useCallback((actions: RouteAction[], notice?: StringKey | null) => {
+    const routes = applyRouteActions(snapshot.current, actions).filter((r) => r.stops.length > 0);
+    setQueued(actions.length);
+    setRejected(rejectedRouteActions());
+    if (routes.length === 0) return false;
+    setState((prev) => ({
+      kind: "routes",
+      routes,
+      notice: notice === undefined ? (prev.kind === "routes" ? prev.notice : null) : notice,
+    }));
+    return true;
+  }, []);
 
   const reload = useCallback(async () => {
     if (!token) {
       setState({ kind: "error", message: "tokenMissing" });
       return;
     }
+    const seq = ++loadSeq.current;
+    const actions = await listRouteActions().catch(() => []);
+    if (seq === loadSeq.current) show(actions);
     try {
-      const routes = (await fetchRoutes(token)).filter((r) => r.stops.length > 0);
-      if (routes.length > 0) return setState({ kind: "routes", routes });
+      const routes = await fetchRoutes(token);
+      if (seq !== loadSeq.current) return;
+      snapshot.current = routes;
+      cacheRoutes(routes);
+      if (show(actions, null)) return;
       // No route planned yet — fall back to the raw collect-today list.
-      setState({ kind: "list", bins: await fetchCollectList(token) });
+      const bins = await fetchCollectList(token);
+      if (seq === loadSeq.current) setState({ kind: "list", bins });
     } catch (error) {
+      if (seq !== loadSeq.current) return;
       const message =
         error instanceof ApiError
           ? error.status === 401
@@ -82,13 +126,15 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
               ? "accessDenied"
               : "loadFailed"
           : "collectOffline";
-      setState({ kind: "error", message });
+      if (!show(actions, message === "collectOffline" ? "routeSavedOffline" : message)) {
+        setState({ kind: "error", message });
+      }
     }
-  }, [token]);
+  }, [token, show]);
 
   useEffect(() => {
     void reload();
-  }, [reload]);
+  }, [reload, revision]);
 
   useEffect(() => {
     const retryWhenOnline = () => void reload();
@@ -147,14 +193,33 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
     return () => navigator.geolocation.clearWatch(watchId);
   }, [trackedRoute?.id, trackedRoute?.started_by_me]);
 
-  async function doStop(stopId: string) {
+  async function act(action: RouteAction): Promise<boolean> {
     try {
       setActionError(false);
-      await collectStop(token, stopId);
-      await reload();
+      await enqueueRouteAction(action);
+      loadSeq.current += 1;
+      show(await listRouteActions());
+      onRouteAction();
+      return true;
     } catch {
       setActionError(true);
+      return false;
     }
+  }
+
+  async function doStop(stopId: string) {
+    await act({ kind: "collect", stopId, occurredAt: new Date().toISOString() });
+  }
+
+  async function doSkip() {
+    if (!skipTarget || !skipReason) return;
+    const skipped = await act({
+      kind: "skip",
+      stopId: skipTarget.id,
+      reason: skipReason,
+      occurredAt: new Date().toISOString(),
+    });
+    if (skipped) setSkipTarget(null);
   }
 
   async function doBin(binId: string) {
@@ -168,21 +233,15 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
   }
 
   async function doStart(routeId: string) {
+    if (!(await act({ kind: "start", routeId, occurredAt: new Date().toISOString() }))) return;
+    setTrackingRouteId(routeId);
+    setDistance(storedDistance(routeId));
     try {
-      setActionError(false);
-      const route = await startRoute(token, routeId);
-      setTrackingRouteId(route.id);
-      setDistance(storedDistance(route.id));
-      try {
-        window.localStorage.setItem(TRACKING_ROUTE_KEY, route.id);
-      } catch {
-        setDistanceStorageUnavailable(true);
-      }
-      lastFix.current = null;
-      await reload();
+      window.localStorage.setItem(TRACKING_ROUTE_KEY, routeId);
     } catch {
-      setActionError(true);
+      setDistanceStorageUnavailable(true);
     }
+    lastFix.current = null;
   }
 
   async function doComplete() {
@@ -198,30 +257,35 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
       setActionError(true);
       return;
     }
-    try {
-      setActionError(false);
-      await completeRoute(token, completeDialogRouteId, {
+    const completed = await act({
+      kind: "complete",
+      routeId: completeDialogRouteId,
+      completion: {
         actual_distance_km: distance > 0 ? Math.round(distance * 100) / 100 : null,
         actual_fuel_l: actualFuel,
         actual_weight_kg: actualWeight,
-      });
-      try {
-        window.localStorage.removeItem(TRACKING_ROUTE_KEY);
-        window.localStorage.removeItem(`owi-route-km:${completeDialogRouteId}`);
-      } catch {
-        setDistanceStorageUnavailable(true);
-      }
-      setTrackingRouteId(null);
-      setDistance(0);
-      setCompleteDialogRouteId(null);
-      setFuel("");
-      setWeight("");
-      lastFix.current = null;
-      await reload();
+      },
+      occurredAt: new Date().toISOString(),
+    });
+    if (!completed) return;
+    try {
+      window.localStorage.removeItem(TRACKING_ROUTE_KEY);
+      window.localStorage.removeItem(`owi-route-km:${completeDialogRouteId}`);
     } catch {
-      setActionError(true);
+      setDistanceStorageUnavailable(true);
     }
+    setTrackingRouteId(null);
+    setDistance(0);
+    setCompleteDialogRouteId(null);
+    setFuel("");
+    setWeight("");
+    lastFix.current = null;
   }
+
+  const reasonLabel = (reason: string) =>
+    (SKIP_REASONS as readonly string[]).includes(reason)
+      ? tr(`skipReason_${reason}` as StringKey)
+      : reason;
 
   if (state.kind === "loading")
     return <Typography variant="body2" color="text.secondary">{tr("loading")}</Typography>;
@@ -274,9 +338,28 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
 
   return (
     <Stack spacing={2.5}>
+      {state.notice && (
+        <Alert severity={state.notice === "routeSavedOffline" ? "info" : "warning"}>
+          {tr(state.notice)}
+        </Alert>
+      )}
+      {rejected > 0 && (
+        <Alert
+          severity="warning"
+          onClose={() => {
+            clearRejectedRouteActions();
+            setRejected(0);
+          }}
+        >
+          {tr("routeActionsRejected", { n: rejected })}
+        </Alert>
+      )}
+      {queued > 0 && <Alert severity="info">{tr("routeQueued", { n: queued })}</Alert>}
       {actionError && <Alert severity="error">{tr("routeActionFailed")}</Alert>}
       {state.routes.map((route) => {
-        const done = route.stops.filter((s) => s.collected).length;
+        const skipped = route.stops.filter((s) => s.skipped).length;
+        const done = route.stops.filter((s) => s.collected).length + skipped;
+        const actionable = route.status === "active" && route.started_by_me;
         return (
           <Box key={route.id}>
             <Stack
@@ -291,6 +374,7 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
                 <Typography variant="body2" color="text.secondary">
                   {tr(`method_${route.method}` as StringKey)} · {route.planned_km} km ·{" "}
                   {route.stops.length} {tr("stopsShort")}
+                  {skipped > 0 && ` · ${skipped} ${tr("skippedShort")}`}
                 </Typography>
               </Box>
               {route.status === "planned" && (
@@ -298,7 +382,7 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
                   {tr("routeStart")}
                 </Button>
               )}
-              {route.status === "active" && route.started_by_me && (
+              {actionable && (
                 <Stack sx={{ alignItems: "flex-end" }} spacing={0.5}>
                   <Typography variant="caption" color="text.secondary">
                     {tr("routeTracking")} · {distance.toFixed(2)} km
@@ -355,27 +439,53 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
                       justifyContent: "center",
                       fontSize: "0.82rem",
                       fontWeight: 650,
-                      bgcolor: stop.collected ? "primary.main" : "#eceef1",
-                      color: stop.collected ? "#fff" : "primary.dark",
+                      bgcolor: stop.collected
+                        ? "primary.main"
+                        : stop.skipped
+                          ? "secondary.light"
+                          : "#eceef1",
+                      color: stop.collected ? "#fff" : stop.skipped ? "secondary.dark" : "primary.dark",
                     }}
                   >
                     {stop.seq + 1}
                   </Box>
-                  <Typography
-                    sx={{
-                      flex: 1,
-                      fontFamily: "ui-monospace, Consolas, monospace",
-                      fontSize: "0.9rem",
-                      color: stop.collected ? "text.secondary" : "text.primary",
-                      textDecoration: stop.collected ? "line-through" : "none",
-                    }}
-                  >
-                    {stop.qr_code}
-                  </Typography>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography
+                      sx={{
+                        fontFamily: "ui-monospace, Consolas, monospace",
+                        fontSize: "0.9rem",
+                        color: stop.collected || stop.skipped ? "text.secondary" : "text.primary",
+                        textDecoration: stop.collected ? "line-through" : "none",
+                      }}
+                    >
+                      {stop.qr_code}
+                    </Typography>
+                    {stop.skipped && (
+                      <Typography
+                        variant="caption"
+                        sx={{ display: "block", color: "secondary.dark", fontWeight: 600 }}
+                      >
+                        {tr("routeSkipped")}
+                        {stop.skip_reason ? ` · ${reasonLabel(stop.skip_reason)}` : ""}
+                      </Typography>
+                    )}
+                  </Box>
                   {stop.collected && (
                     <CheckCircle color="primary" aria-label={tr("done")} />
                   )}
-                  {!stop.collected && route.status === "active" && route.started_by_me && (
+                  {!stop.collected && !stop.skipped && actionable && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => {
+                        setSkipTarget({ id: stop.id, code: stop.qr_code });
+                        setSkipReason(null);
+                      }}
+                    >
+                      {tr("routeSkip")}
+                    </Button>
+                  )}
+                  {!stop.collected && actionable && (
                     <Button variant="contained" size="small" onClick={() => void doStop(stop.id)}>
                       {tr("done")}
                     </Button>
@@ -434,6 +544,34 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
             onClick={() => void doComplete()}
           >
             {tr("routeCompleteAction")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={skipTarget !== null} onClose={() => setSkipTarget(null)} fullWidth maxWidth="xs">
+        <DialogTitle>{tr("routeSkipTitle", { code: skipTarget?.code ?? "" })}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {tr("routeSkipHint")}
+          </Typography>
+          <ToggleButtonGroup
+            orientation="vertical"
+            fullWidth
+            exclusive
+            value={skipReason}
+            onChange={(_, value: SkipReason | null) => value && setSkipReason(value)}
+            sx={{ "& .MuiToggleButton-root": { minHeight: 48, justifyContent: "flex-start" } }}
+          >
+            {SKIP_REASONS.map((reason) => (
+              <ToggleButton key={reason} value={reason}>
+                {tr(`skipReason_${reason}`)}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSkipTarget(null)}>{tr("cancel")}</Button>
+          <Button variant="contained" disabled={skipReason === null} onClick={() => void doSkip()}>
+            {tr("routeSkip")}
           </Button>
         </DialogActions>
       </Dialog>

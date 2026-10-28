@@ -1,5 +1,12 @@
-import { apiUrl } from "./api";
-import { listQueued, remove, type QueuedReport } from "./queue";
+import { ApiError, apiUrl } from "./api";
+import { sendRouteAction } from "./collect";
+import {
+  listQueued,
+  listRouteActions,
+  remove,
+  removeRouteAction,
+  type QueuedReport,
+} from "./queue";
 
 interface SyncOutcome {
   sent: number;
@@ -137,4 +144,61 @@ function toMeta(report: QueuedReport) {
     bin_qr: report.binQr,
     fill_tap: report.fillTap,
   };
+}
+
+export interface RouteSyncOutcome {
+  sent: number;
+  rejected: number;
+  unauthorized: boolean;
+}
+
+const ROUTE_REJECTED_KEY = "owi-route-rejected";
+
+let routeReplay: Promise<RouteSyncOutcome> | null = null;
+
+export function rejectedRouteActions(): number {
+  try {
+    return Number(localStorage.getItem(ROUTE_REJECTED_KEY) ?? 0) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function clearRejectedRouteActions(): void {
+  localStorage.removeItem(ROUTE_REJECTED_KEY);
+}
+
+const routeRejection = (status: number) => status === 403 || permanent(status);
+
+async function replayRouteActions(token: string): Promise<RouteSyncOutcome> {
+  const outcome: RouteSyncOutcome = { sent: 0, rejected: 0, unauthorized: false };
+  let [next] = await listRouteActions();
+  while (next?.seq !== undefined) {
+    let rejected = false;
+    try {
+      await sendRouteAction(token, next);
+    } catch (error) {
+      if (!(error instanceof ApiError) || !routeRejection(error.status)) {
+        outcome.unauthorized = error instanceof ApiError && error.status === 401;
+        return outcome;
+      }
+      rejected = true;
+    }
+    await removeRouteAction(next.seq);
+    if (rejected) {
+      outcome.rejected += 1;
+      localStorage.setItem(ROUTE_REJECTED_KEY, String(rejectedRouteActions() + 1));
+    } else {
+      outcome.sent += 1;
+    }
+    [next] = await listRouteActions();
+  }
+  return outcome;
+}
+
+export function syncRouteActions(token: string): Promise<RouteSyncOutcome> {
+  routeReplay ??= replayRouteActions(token).finally(() => {
+    routeReplay = null;
+  });
+  return routeReplay;
 }

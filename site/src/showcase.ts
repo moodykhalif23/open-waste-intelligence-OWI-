@@ -1,3 +1,5 @@
+import { DEPOT, MAP_VIEW, ROUTE_PLANS } from "./map-data";
+
 type Step = { at: number; tap?: string; view?: string; on?: string; off?: string; emit?: string };
 type Scene = { view: string; beat: number; dur: number; flags?: string; steps?: Step[] };
 type Point = [number, number];
@@ -53,33 +55,57 @@ const FIELD: Scene[] = [
 ];
 
 const OPS: Scene[] = [
-  { view: "overview", beat: 0, dur: 3400, steps: [{ at: 1500, on: "ping" }] },
-  { view: "overview", beat: 1, flags: "ping", dur: 3400, steps: [{ at: 100, tap: "nav-collect", view: "collect" }] },
+  { view: "overview", beat: 0, dur: 3600, steps: [{ at: 1600, on: "ping" }] },
+  {
+    view: "overview",
+    beat: 1,
+    flags: "ping",
+    dur: 4200,
+    steps: [{ at: 100, tap: "nav-collect", view: "collect", off: "ping" }, { at: 2200, tap: "chip-high", on: "high" }],
+  },
   {
     view: "collect",
     beat: 2,
-    dur: 4800,
+    dur: 5000,
     steps: [
-      { at: 200, tap: "nav-routes", view: "routes" },
+      { at: 200, tap: "nav-routes", view: "routes", off: "high" },
       { at: 1300, tap: "plan", on: "dlg" },
-      { at: 3400, tap: "plan-go", off: "dlg", on: "planned toast" },
+      { at: 3500, tap: "plan-go", off: "dlg", on: "planned toast" },
     ],
   },
   {
     view: "routes",
     beat: 3,
     flags: "planned toast",
-    dur: 4200,
-    steps: [{ at: 900, off: "toast" }, { at: 1300, tap: "route-ink", on: "focus" }, { at: 3600, off: "focus" }],
+    dur: 4400,
+    steps: [{ at: 1000, off: "toast" }, { at: 1400, tap: "route-ink", on: "focus" }, { at: 3800, off: "focus" }],
   },
   {
     view: "routes",
     beat: 4,
     flags: "planned",
-    dur: 4400,
-    steps: [{ at: 400, tap: "breakdown", on: "replan toast" }, { at: 3000, off: "toast" }],
+    dur: 4800,
+    steps: [{ at: 400, tap: "breakdown", on: "replan toast" }, { at: 3200, off: "toast" }],
   },
   { view: "routes", beat: 5, flags: "planned replan", dur: 5000, steps: [{ at: 300, tap: "calc", on: "scrolled" }] },
+  {
+    view: "routes",
+    beat: 6,
+    flags: "planned replan scrolled",
+    dur: 6600,
+    steps: [{ at: 100, tap: "nav-intel", view: "intel", off: "scrolled" }, { at: 3300, tap: "tab-dumping", on: "dumping" }],
+  },
+  {
+    view: "intel",
+    beat: 7,
+    flags: "dumping",
+    dur: 7000,
+    steps: [
+      { at: 100, tap: "nav-records", view: "records", off: "dumping" },
+      { at: 1700, tap: "pick-paper", on: "corrected" },
+      { at: 4200, tap: "tab-bins", on: "bins" },
+    ],
+  },
 ];
 
 function binScene(cls: string, crop = false): string {
@@ -245,7 +271,7 @@ function phoneScreen(): string {
         <span class="ph-btn ph-btn-ink" data-hit="start" data-when="!tracking"><i class="fa-solid fa-play"></i> Start route</span>
         <p class="ph-track" data-when="tracking !completed"><i class="ph-live"></i> Route in progress &middot; 3.42 km</p>
         <span class="ph-btn ph-btn-line" data-hit="complete" data-when="tracking !completed">Complete route</span>
-        <p class="ph-track ph-track-done" data-when="completed"><i class="fa-solid fa-flag-checkered"></i> GPS 11.8 km &middot; 4.6 L &middot; 1,240 kg</p>
+        <p class="ph-track ph-track-done" data-when="completed"><i class="fa-solid fa-flag-checkered"></i> GPS 9.6 km &middot; 2.5 L &middot; 1,240 kg</p>
         <ol class="ph-stops">${stopRows}</ol>
       </div>
     </section>
@@ -277,98 +303,105 @@ function phoneFloat(): string {
   <div class="ft ph-dlg" data-when="dlg">
     <b>Complete route</b>
     <p>Enter the fuel used and weighed waste collected.</p>
-    <label><span>GPS distance (km)</span><em>11.8</em></label>
-    <label><span>Fuel used (L)</span><em>4.6</em></label>
+    <label><span>GPS distance (km)</span><em>9.6</em></label>
+    <label><span>Fuel used (L)</span><em>2.5</em></label>
     <label><span>Weighed waste (kg)</span><em>1,240</em></label>
     <div class="ph-dlg-a"><span>Cancel</span><span class="ph-dlg-ok" data-hit="dlg-ok">Complete route</span></div>
   </div>
   <span class="cursor cursor-tap"></span>`;
 }
 
-const HEAT = (() => {
-  let seed = 7;
-  const rand = () => {
-    seed = (seed * 16807) % 2147483647;
-    return seed / 2147483647;
-  };
-  const rows: number[][] = [];
-  for (let d = 0; d < 7; d++) {
-    const row: number[] = [];
-    for (let h = 0; h < 24; h++) {
-      const morning = Math.exp(-((h - 8) ** 2) / 5);
-      const afternoon = Math.exp(-((h - 15) ** 2) / 6) * 0.7;
-      const weekend = d >= 5 ? 0.45 : 1;
-      row.push(Math.min(4, Math.floor(((morning + afternoon) * weekend + rand() * 0.18) * 4.2)));
-    }
-    rows.push(row);
-  }
-  return rows;
-})();
-
-const DEPOT: Point = [180, 140];
-const STOPS: Record<string, Point> = {
-  i1: [140, 140], i2: [100, 180], i3: [60, 180], i4: [20, 140], i5: [60, 100], i6: [100, 60],
-  g1: [220, 180], g2: [260, 220], g3: [300, 180], g4: [340, 220], g5: [260, 140],
-  n1: [180, 100], n2: [220, 60], n3: [260, 20], n4: [300, 60], n5: [340, 20], n6: [380, 100],
-};
-const PLAN_A: [string, string[]][] = [
-  ["ink", ["i1", "i2", "i3", "i4", "i5", "i6"]],
-  ["gold", ["g1", "g2", "g3", "g4", "g5"]],
-  ["green", ["n1", "n2", "n3", "n4", "n5", "n6"]],
-];
-const PLAN_B: [string, string[]][] = [
-  ["ink", ["g1", "g2", "i2", "i3", "i4", "i5", "i6", "i1"]],
-  ["green", ["g5", "g3", "g4", "n6", "n5", "n4", "n3", "n2", "n1"]],
-];
-
-function streetPath(ids: string[]): string {
-  let d = `M${DEPOT[0]} ${DEPOT[1]}`;
-  for (const id of ids) {
-    const [x, y] = STOPS[id];
-    d += ` H${x} V${y}`;
-  }
-  return d;
+function realMap(cls: string, overlay: string): string {
+  return `<div class="d-map ${cls}">
+    <img class="d-map-base" src="/maps/dandora.svg" alt="" />
+    <svg class="d-map-over" viewBox="0 0 ${MAP_VIEW.w} ${MAP_VIEW.h}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${overlay}</svg>
+    <span class="d-map-credit">&copy; OpenStreetMap contributors</span>
+  </div>`;
 }
 
-function mapSvg(): string {
-  const tints = ["#efebe2", "#e9e4d8", "#efebe2", "#e4dfd2"];
-  let blocks = "";
-  for (let i = 0; i < 9; i++) {
-    for (let j = 0; j < 5; j++) {
-      let fill = tints[(i * 3 + j * 5) % tints.length];
-      if ((i === 1 && j === 0) || (i === 6 && j === 3)) fill = "#d6e7da";
-      if (i === 4 && j === 2) fill = "#fbeecf";
-      blocks += `<rect x="${24 + 40 * i}" y="${24 + 40 * j}" width="32" height="32" rx="3" fill="${fill}"/>`;
+function routeOverlay(): string {
+  const lines = (plan: "a" | "b") =>
+    Object.entries(ROUTE_PLANS[plan])
+      .map(([c, r], k) => `<path class="rt rt-${plan} c-${c}" style="--k:${k}" pathLength="1" d="${r.d}"/>`)
+      .join("");
+  const owner = new Map<string, [string, string]>();
+  const key = (p: readonly number[]) => `${p[0]},${p[1]}`;
+  for (const [c, r] of Object.entries(ROUTE_PLANS.a)) for (const s of r.stops) owner.set(key(s), [c, c]);
+  for (const [c, r] of Object.entries(ROUTE_PLANS.b)) {
+    for (const s of r.stops) {
+      const prev = owner.get(key(s));
+      owner.set(key(s), [prev ? prev[0] : c, c]);
     }
   }
-  const owner: Record<string, [string, string]> = {};
-  for (const [c, ids] of PLAN_A) for (const id of ids) owner[id] = [c, c];
-  for (const [c, ids] of PLAN_B) for (const id of ids) owner[id] = [owner[id][0], c];
-  const lines = (plan: [string, string[]][], cls: string) =>
-    plan.map(([c, ids], k) => `<path class="rt ${cls} c-${c}" style="--k:${k}" pathLength="1" d="${streetPath(ids)}"/>`).join("");
-  const stops = Object.entries(STOPS)
-    .map(([id, [x, y]]) => {
-      const [a, b] = owner[id];
-      return `<circle class="st st-${a} st-to-${b}" cx="${x}" cy="${y}" r="5"/>`;
+  const stops = [...owner.entries()]
+    .map(([k, [a, b]]) => {
+      const [x, y] = k.split(",");
+      return `<circle class="st st-${a} st-to-${b}" cx="${x}" cy="${y}" r="15"/>`;
     })
     .join("");
-  return `<svg class="d-map-svg" viewBox="0 0 400 240" aria-hidden="true">
-    <rect width="400" height="240" fill="#ffffff"/>${blocks}
-    ${lines(PLAN_A, "rt-a")}${lines(PLAN_B, "rt-b")}
-    ${stops}
-    <rect x="${DEPOT[0] - 8}" y="${DEPOT[1] - 8}" width="16" height="16" rx="4" fill="#101828"/>
-    <circle cx="${DEPOT[0]}" cy="${DEPOT[1]}" r="3.5" fill="#f2b949"/>
+  return `${lines("a")}${lines("b")}${stops}<rect class="depot" x="${DEPOT[0] - 18}" y="${DEPOT[1] - 18}" width="36" height="36" rx="8"/>`;
+}
+
+const HOTSPOTS: [number, number, number][] = [
+  [470, 300, 14],
+  [905, 455, 9],
+  [1215, 330, 6],
+  [690, 760, 4],
+];
+
+function hotspotOverlay(): string {
+  return HOTSPOTS.map(
+    ([x, y, n]) => `<g class="hot"><circle cx="${x}" cy="${y}" r="${40 + n * 5}"/><circle class="hot-core" cx="${x}" cy="${y}" r="20"/><text x="${x}" y="${y}">${n}</text></g>`,
+  ).join("");
+}
+
+function sparkline(values: number[]): string {
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const pts = values.map((v, i) => `${(i / (values.length - 1)) * 100},${28 - ((v - min) / (max - min || 1)) * 24}`).join(" ");
+  return `<svg class="d-spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}"/></svg>`;
+}
+
+function areaChart(values: number[]): string {
+  const max = Math.max(...values) * 1.15;
+  const xy = values.map((v, i) => [(i / (values.length - 1)) * 600, 180 - (v / max) * 170] as const);
+  const line = xy.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  return `<svg class="d-area" viewBox="0 0 600 180" preserveAspectRatio="none" aria-hidden="true">
+    <defs><linearGradient id="d-area-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2b949" stop-opacity=".35"/><stop offset="1" stop-color="#f2b949" stop-opacity="0"/></linearGradient></defs>
+    <path class="d-grid" d="M0 45H600M0 90H600M0 135H600"/>
+    <polygon points="0,180 ${line} 600,180" fill="url(#d-area-fill)"/>
+    <polyline class="d-area-line" points="${line}" pathLength="1"/>
   </svg>`;
 }
 
-const DUE: [string, string, number, string, string, boolean][] = [
-  ["BIN-0142", "Market gate", 100, "High", "0", true],
-  ["BIN-0087", "School east", 78, "High", "0.5", true],
-  ["BIN-0213", "Estate block C", 74, "High", "1", true],
-  ["BIN-0031", "Bus stage", 66, "Medium", "1.5", true],
-  ["BIN-0064", "Clinic road", 52, "Medium", "2", false],
-  ["BIN-0118", "Stage 2 kiosk", 47, "Medium", "2.5", false],
-  ["BIN-0009", "Chief's camp", 25, "Low", "4", false],
+const REPORTS_PER_DAY = [1480, 1620, 1710, 1590, 1840, 1210, 980, 1520, 1690, 1760, 1810, 1930, 1340, 1060];
+
+const DUE: [string, string, number, string, string][] = [
+  ["BIN-0142", "Market gate", 100, "High", "0"],
+  ["BIN-0087", "School east", 92, "High", "0.5"],
+  ["BIN-0213", "Estate block C", 88, "High", "0.5"],
+  ["BIN-0031", "Bus stage", 74, "Medium", "1.5"],
+  ["BIN-0064", "Clinic road", 68, "Medium", "2"],
+  ["BIN-0118", "Stage 2 kiosk", 63, "Medium", "2.5"],
+  ["BIN-0009", "Chief's camp", 61, "Medium", "3"],
+];
+
+const BINS: [string, string, string, string][] = [
+  ["BIN-0001", "Dandora Phase 1 gate", "Ward 1", "2 h ago"],
+  ["BIN-0002", "Dandora Phase 1 market", "Ward 1", "5 h ago"],
+  ["BIN-0003", "Kamunde Rd clinic", "Ward 2", "1 d ago"],
+  ["BIN-0004", "Baba Dogo bus stage", "Ward 3", "3 h ago"],
+  ["BIN-0005", "Komarock shops", "Ward 4", "6 h ago"],
+  ["BIN-0006", "Outer Ring junction", "Ward 2", "2 d ago"],
+];
+
+const MATERIALS: [string, number][] = [
+  ["Plastic", 34],
+  ["Organic", 27],
+  ["Paper", 14],
+  ["Glass", 9],
+  ["Metal", 6],
+  ["Other", 10],
 ];
 
 function dashScreen(): string {
@@ -376,24 +409,46 @@ function dashScreen(): string {
     ["overview", "fa-table-cells-large", "Overview"],
     ["collect", "fa-list-check", "Collect today"],
     ["routes", "fa-route", "Routes"],
-    ["", "fa-chart-line", "Intelligence"],
-    ["", "fa-box-archive", "Records"],
+    ["intel", "fa-chart-line", "Intelligence"],
+    ["records", "fa-box-archive", "Records"],
     ["", "fa-user-gear", "Admin"],
   ];
   const navItems = nav
     .map(([key, icon, label]) => `<span class="d-nav ${key ? `d-nav-${key}` : ""}" ${key ? `data-hit="nav-${key}"` : ""}><i class="fa-solid ${icon}"></i>${label}</span>`)
     .join("");
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const heat = HEAT.map((row, d) => `<span class="d-heat-l">${days[d]}</span>${row.map((v) => `<i class="h${v}"></i>`).join("")}`).join("");
-  const fills: [string, number][] = [["Empty", 18], ["Low", 34], ["Half", 41], ["High", 27], ["Overflowing", 12]];
-  const fillBars = fills.map(([label, v], i) => `<span class="d-bar" style="--v:${v};--i:${i}"><i></i><em>${label}</em></span>`).join("");
+  const riskTag = (risk: string) => `<span class="d-tag d-risk-${risk.toLowerCase()}">${risk}</span>`;
   const dueRows = DUE.map(
-    ([code, site, pct, risk, days, today], i) => `<div class="d-tr" style="--i:${i}">
+    ([code, site, pct, risk, days], i) => `<div class="d-tr ${risk === "High" ? "is-high" : ""}" style="--i:${i}">
       <b>${code}</b><span>${site}</span><span class="d-fill"><span class="d-meter"><i style="width:${pct}%"></i></span>${pct}%</span>
-      <span class="d-tag d-risk-${risk.toLowerCase()}">${risk}</span><span class="d-num">${days}</span>
-      <span class="d-tag ${today ? "d-tag-ink" : "d-tag-line"}">${today ? "Collect today" : "Schedule soon"}</span>
+      <span class="d-num">${days} d</span>${riskTag(risk)}
     </div>`,
   ).join("");
+  const binRows = BINS.map(
+    ([code, site, ward, seen], i) => `<div class="d-tr d-tr-bins" style="--i:${i}"><b>${code}</b><span>${site}</span><span>${ward}</span><span class="d-num">${seen}</span></div>`,
+  ).join("");
+  const materials = MATERIALS.map(
+    ([name, pct], i) => `<div class="d-hbar" style="--v:${pct};--i:${i}"><span>${name}</span><i><b></b></i><em>${pct}%</em></div>`,
+  ).join("");
+  const reviewCards = (
+    [
+      ["Plastic", 41, ["Plastic", "Paper", "Glass"]],
+      ["Organic", 58, ["Organic", "Paper", "Other"]],
+      ["Metal", 47, ["Metal", "Plastic", "Glass"]],
+    ] as [string, number, string[]][]
+  )
+    .map(
+      ([guess, conf, options], i) => `<div class="d-rev ${i === 0 ? "d-rev-first" : ""}">
+        <div class="d-rev-img">${binScene(`d-rev-art${i}`, true)}</div>
+        <div class="d-rev-body">
+          <span class="d-rev-model">Model: <b>${guess}</b> &middot; ${conf}%</span>
+          <div class="d-rev-opts">${options
+            .map((o, k) => `<span class="d-opt ${k === 0 ? "d-opt-guess" : ""} ${i === 0 && o === "Paper" ? "d-opt-fix" : ""}" ${i === 0 && o === "Paper" ? 'data-hit="pick-paper"' : ""}>${o}</span>`)
+            .join("")}</div>
+          ${i === 0 ? '<span class="d-rev-done" data-when="corrected"><i class="fa-solid fa-check"></i> Corrected to Paper</span>' : ""}
+        </div>
+      </div>`,
+    )
+    .join("");
   const routeRow = (c: string, name: string, method: string, a: string, b: string, hit: string, breakdownHit = "") => `
     <div class="d-route d-route-${c}" data-hit="${hit}">
       <span class="d-sw"></span>
@@ -401,6 +456,7 @@ function dashScreen(): string {
       <span class="d-route-m"><span data-when="!replan">${a}</span><span data-when="replan">${b}</span></span>
       <span class="d-mini" ${breakdownHit ? `data-hit="${breakdownHit}"` : ""}>Breakdown</span>
     </div>`;
+  const plan = ROUTE_PLANS;
 
   return `
   <aside class="d-side">
@@ -409,79 +465,138 @@ function dashScreen(): string {
     <div class="d-today">
       <span class="d-kick">Today</span>
       <span class="d-today-r"><b>17</b>To collect</span>
-      <span class="d-today-r"><b>4</b>To review</span>
+      <span class="d-today-r"><b>38</b>To review</span>
     </div>
   </aside>
   <div class="d-main">
     <header class="d-top">
-      <b class="d-title"><span class="d-t-overview">Overview</span><span class="d-t-collect">Collect today</span><span class="d-t-routes">Routes</span></b>
+      <b class="d-title"><span class="d-t-overview">Overview</span><span class="d-t-collect">Collect today</span><span class="d-t-routes">Routes</span><span class="d-t-intel">Intelligence</span><span class="d-t-records">Records</span></b>
       <span class="d-search"><i class="fa-solid fa-magnifying-glass"></i>Search&hellip;<kbd>Ctrl K</kbd></span>
-      <span class="d-icons"><i class="fa-solid fa-bell"></i><i class="fa-solid fa-circle-user"></i></span>
+      <span class="d-range"><i class="fa-solid fa-calendar-days"></i>Last 7 days</span>
+      <span class="d-avatar">SC</span>
     </header>
     <div class="d-body">
       <section class="v v-overview">
-        <p class="d-lede">Turn field photos into collection decisions, recovered value, and reports.</p>
         <div class="d-kpis">
-          <div class="d-card d-kpi"><span class="d-kick">Bins registered</span><b>148</b><i class="fa-solid fa-trash-can"></i></div>
-          <div class="d-card d-kpi d-kpi-ping"><span class="d-kick">Reports, last 7 days</span><b><em data-when="!ping">1,204</em><em data-when="ping">1,205</em></b><i class="fa-solid fa-camera"></i></div>
-          <div class="d-card d-kpi"><span class="d-kick">Overflowing, last 7 days</span><b class="d-red">23</b><i class="fa-solid fa-triangle-exclamation"></i></div>
+          <div class="d-card d-kpi"><span class="d-kick">Bins registered</span><b>1,482</b>${sparkline([1390, 1402, 1418, 1430, 1446, 1461, 1482])}</div>
+          <div class="d-card d-kpi d-kpi-ping"><span class="d-kick">Reports, last 7 days</span><b><em data-when="!ping">12,406</em><em data-when="ping">12,407</em></b>${sparkline(REPORTS_PER_DAY.slice(7))}</div>
+          <div class="d-card d-kpi"><span class="d-kick">Overflowing, last 7 days</span><b class="d-red">214</b>${sparkline([41, 38, 33, 36, 29, 21, 16])}</div>
         </div>
         <div class="d-charts">
-          <div class="d-card"><p class="d-card-h">Reporting activity &mdash; by day &amp; hour</p><div class="d-heat">${heat}</div></div>
-          <div class="d-card"><p class="d-card-h">Fill levels &mdash; last 7 days</p><div class="d-bars">${fillBars}</div></div>
+          <div class="d-card">
+            <p class="d-card-h">Reports per day <span>last 14 days</span></p>
+            ${areaChart(REPORTS_PER_DAY)}
+            <div class="d-axis"><span>15 Oct</span><span>21 Oct</span><span>Today</span></div>
+          </div>
+          <div class="d-card">
+            <p class="d-card-h">Fill level mix <span>latest per bin</span></p>
+            <div class="d-stack"><i style="--v:12" class="b0"></i><i style="--v:23" class="b1"></i><i style="--v:31" class="b2"></i><i style="--v:22" class="b3"></i><i style="--v:12" class="b4"></i></div>
+            <ul class="d-legend">
+              <li><i class="b0"></i>Empty<b>178</b></li><li><i class="b1"></i>Low<b>341</b></li><li><i class="b2"></i>Half<b>459</b></li><li><i class="b3"></i>High<b>326</b></li><li><i class="b4"></i>Overflowing<b>178</b></li>
+            </ul>
+          </div>
         </div>
       </section>
 
       <section class="v v-collect">
+        <div class="d-toolbar">
+          <span class="d-chip d-chip-all">All <b>17</b></span>
+          <span class="d-chip d-chip-high" data-hit="chip-high">High <b>3</b></span>
+          <span class="d-chip">Medium <b>14</b></span>
+          <span class="d-field"><i class="fa-solid fa-magnifying-glass"></i>Search bins or sites</span>
+        </div>
         <div class="d-card d-table">
-          <div class="d-th"><span>Bin</span><span>Site</span><span>Fill</span><span>Risk</span><span>Days to full</span><span>Recommendation</span></div>
+          <div class="d-th"><span>Bin</span><span>Site</span><span>Fill</span><span>Full in</span><span>Risk</span></div>
           ${dueRows}
+          <div class="d-pager"><span data-when="!high">1&ndash;7 of 17</span><span data-when="high">1&ndash;3 of 3</span><span class="d-pager-btns"><i class="fa-solid fa-chevron-left"></i><i class="fa-solid fa-chevron-right"></i></span></div>
         </div>
       </section>
 
       <section class="v v-routes">
         <div class="d-scroll">
           <div class="d-head">
-            <p class="d-lede">Plan from bins due today, then compare with a fixed sweep.</p>
-            <span class="d-btn d-btn-line" data-hit="calc">Calculate</span>
+            <span class="d-stat"><span class="d-kick">Bins to collect</span><b>17</b></span>
+            <span class="d-stat"><span class="d-kick">Planned km</span><b><em data-when="!planned">&mdash;</em><em data-when="planned !replan">${(plan.a.ink.km + plan.a.gold.km + plan.a.green.km).toFixed(1)}</em><em data-when="replan">${(plan.b.ink.km + plan.b.green.km).toFixed(1)}</em></b></span>
+            <span class="d-stat"><span class="d-kick">Planned fuel (L)</span><b><em data-when="!planned">&mdash;</em><em data-when="planned !replan">5.0</em><em data-when="replan">6.7</em></b></span>
+            <span class="d-btn d-btn-line" data-hit="calc">Calculate savings</span>
             <span class="d-btn d-btn-ink" data-hit="plan">Plan today</span>
           </div>
-          <div class="d-kpis">
-            <div class="d-card d-kpi"><span class="d-kick">Bins to collect</span><b>17</b><i class="fa-solid fa-trash-can"></i></div>
-            <div class="d-card d-kpi"><span class="d-kick">Planned km</span><b><em data-when="!planned">&mdash;</em><em data-when="planned !replan">38.4</em><em data-when="replan">41.5</em></b><i class="fa-solid fa-route"></i></div>
-            <div class="d-card d-kpi"><span class="d-kick">Planned fuel (L)</span><b><em data-when="!planned">&mdash;</em><em data-when="planned !replan">8.6</em><em data-when="replan">9.3</em></b><i class="fa-solid fa-gas-pump"></i></div>
-          </div>
           <div class="d-split">
-            <div class="d-card d-map">${mapSvg()}</div>
+            ${realMap("d-map-routes", routeOverlay())}
             <div class="d-card d-routes">
               <p class="d-card-h">Today&rsquo;s routes</p>
-              <p class="d-empty" data-when="!planned">No routes yet &mdash; Plan today</p>
+              <p class="d-empty" data-when="!planned">No routes yet. Plan today to assign the due bins.</p>
               <div class="d-route-list" data-when="planned">
-                ${routeRow("ink", "Truck 1", "Truck", "6 stops &middot; 13.2 km", "8 stops &middot; 18.9 km", "route-ink")}
-                ${routeRow("gold", "Tuk-tuk 1", "Tuk-tuk", "5 stops &middot; 9.8 km", "Out of service", "route-gold", "breakdown")}
-                ${routeRow("green", "Truck 2", "Truck", "6 stops &middot; 15.4 km", "9 stops &middot; 22.6 km", "route-green")}
+                ${routeRow("ink", "Truck 1", "Truck", `6 stops &middot; ${plan.a.ink.km} km`, `8 stops &middot; ${plan.b.ink.km} km`, "route-ink")}
+                ${routeRow("gold", "Tuk-tuk 1", "Tuk-tuk", `5 stops &middot; ${plan.a.gold.km} km`, "Out of service", "route-gold", "breakdown")}
+                ${routeRow("green", "Truck 2", "Truck", `6 stops &middot; ${plan.a.green.km} km`, `9 stops &middot; ${plan.b.green.km} km`, "route-green")}
               </div>
             </div>
           </div>
           <div class="d-split d-split-even">
             <div class="d-card">
               <p class="d-card-h">Savings vs fixed schedule</p>
-              <p class="d-big"><b>31%</b> less distance per tonne collected</p>
+              <p class="d-big"><b>41%</b> less distance per tonne</p>
               <div class="d-cmp">
                 <span></span><span class="d-kick">Fixed sweep</span><span class="d-kick">Need-driven</span>
                 <span>Bins visited</span><b>42</b><b>17</b>
-                <span>Distance (km)</span><b>52.0</b><b>38.4</b>
-                <span>km / tonne</span><b>24.8</b><b>17.1</b>
+                <span>Distance (km)</span><b>38.5</b><b>24.2</b>
+                <span>km per tonne</span><b>18.8</b><b>11.0</b>
               </div>
             </div>
             <div class="d-card">
-              <p class="d-card-h">Measured route outcomes &middot; Truck 1</p>
+              <p class="d-card-h">Measured outcome <span>Truck 1</span></p>
               <div class="d-meas">
-                <span>Distance (km)</span><b>11.8</b><em>/ 13.2 planned</em>
-                <span>Actual fuel (L)</span><b>4.6</b><em>/ 4.9 planned</em>
-                <span>Weighed waste (kg)</span><b>1,240</b><em>weighed in</em>
+                <span>Distance (km)</span><b>9.6</b><em>planned ${plan.a.ink.km}</em>
+                <span>Fuel (L)</span><b>2.5</b><em>planned 2.3</em>
+                <span>Weighed waste (kg)</span><b>1,240</b><em>at the depot</em>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="v v-intel">
+        <div class="d-tabs">
+          <span class="d-tab-composition">Composition</span><span>Recycling</span><span>Carbon</span><span>Cleanliness</span><span>Coverage</span><span class="d-tab-dumping" data-hit="tab-dumping">Dumping</span>
+        </div>
+        <div class="d-pane d-pane-composition">
+          <div class="d-card">
+            <p class="d-card-h">Material mix <span>last 30 days &middot; 48,210 photos</span></p>
+            <div class="d-hbars">${materials}</div>
+          </div>
+          <div class="d-tiles">
+            <div class="d-card d-tile"><span class="d-kick">Recovered value</span><b>KES 412k</b><em>estimated, from configured prices</em></div>
+            <div class="d-card d-tile"><span class="d-kick">CO2e avoided</span><b>18.4 t</b><em>method-versioned estimate</em></div>
+            <div class="d-card d-tile"><span class="d-kick">Human-reviewed</span><b>92%</b><em>of low-confidence photos</em></div>
+          </div>
+        </div>
+        <div class="d-pane d-pane-dumping">
+          ${realMap("d-map-hot", hotspotOverlay())}
+          <div class="d-card d-hot-list">
+            <p class="d-card-h">Confirmed hotspots</p>
+            <div class="d-hot-row"><b>14</b><span>Baba Dogo river crossing</span></div>
+            <div class="d-hot-row"><b>9</b><span>Kamunde Rd market</span></div>
+            <div class="d-hot-row"><b>6</b><span>Komarock shops</span></div>
+            <div class="d-hot-row"><b>4</b><span>Outer Ring service lane</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="v v-records">
+        <div class="d-tabs">
+          <span class="d-tab-bins" data-hit="tab-bins">Bins <b>1,482</b></span><span>Reports <b>12,406</b></span><span class="d-tab-review">Review <b>38</b></span><span>Volunteers</span>
+        </div>
+        <div class="d-pane d-pane-review">
+          <p class="d-lede">Lowest-confidence predictions first. Tap the right label; the highlighted one is the model&rsquo;s guess.</p>
+          <div class="d-revs">${reviewCards}</div>
+        </div>
+        <div class="d-pane d-pane-bins">
+          <div class="d-toolbar"><span class="d-field d-field-wide"><i class="fa-solid fa-magnifying-glass"></i>Search 1,482 bins by code, site or ward</span><span class="d-chip">Ward: all</span></div>
+          <div class="d-card d-table">
+            <div class="d-th d-th-bins"><span>Bin</span><span>Site</span><span>Ward</span><span>Last report</span></div>
+            ${binRows}
+            <div class="d-pager"><span>1&ndash;6 of 1,482</span><span class="d-pager-btns"><i class="fa-solid fa-chevron-left"></i><i class="fa-solid fa-chevron-right"></i></span></div>
           </div>
         </div>
       </section>
@@ -497,11 +612,11 @@ function dashFloat(): string {
   <div class="ft d-dlg" data-when="dlg">
     <b>Plan today&rsquo;s collection</b>
     <p>Pick which due bins to include, then plan routes across the available vehicles.</p>
-    <div class="d-chips"><span class="d-tag d-tag-gold">3 vehicles</span><span class="d-tag d-tag-line">17 Bins to collect</span><span class="d-tag d-tag-line">17 selected</span></div>
+    <div class="d-chips"><span class="d-tag d-tag-gold">3 vehicles</span><span class="d-tag d-tag-line">17 due</span><span class="d-tag d-tag-line">17 selected</span></div>
     <div class="d-picks">${picks}</div>
     <div class="d-dlg-a"><span>Cancel</span><span class="d-btn d-btn-ink" data-hit="plan-go">Plan today &middot; 17</span></div>
   </div>
-  <div class="ft ft-toast d-toast" data-when="toast"><i class="fa-solid fa-circle-check"></i> Routes planned &middot; 17 stops</div>
+  <div class="ft ft-toast d-toast" data-when="toast"><i class="fa-solid fa-circle-check"></i> Routes planned on real roads &middot; 17 stops</div>
   <span class="cursor cursor-arrow"><svg viewBox="0 0 14 21" aria-hidden="true"><path d="M1 1 V17.2 L4.9 13.6 L7.6 19.6 L10.2 18.5 L7.6 12.6 H12.8 Z" fill="#000" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/></svg></span>`;
 }
 

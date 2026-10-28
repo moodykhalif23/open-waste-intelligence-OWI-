@@ -21,6 +21,7 @@ import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import EChart, { donutOption, heatmapOption, hbarOption, RISK_HUE } from "./EChart";
 import { fetchBinHealth, type BinHealth } from "../lib/collect";
+import { ApiError } from "../lib/api";
 import { FILL_BANDS } from "../lib/queue";
 import { t, type Lang, type StringKey } from "../i18n";
 
@@ -28,7 +29,7 @@ type Risk = "high" | "medium" | "low";
 type Filter = "all" | Risk;
 type Load =
   | { kind: "loading" }
-  | { kind: "error" }
+  | { kind: "error"; message: StringKey }
   | { kind: "data"; bins: BinHealth[] };
 
 const RISK_ORDER: Risk[] = ["high", "medium", "low"];
@@ -82,11 +83,22 @@ export default function Insights({ lang, token }: { lang: Lang; token: string })
   const [query, setQuery] = useState("");
 
   const reload = useCallback(async () => {
-    if (!token) return setState({ kind: "error" });
+    if (!token) {
+      setState({ kind: "error", message: "tokenMissing" });
+      return;
+    }
     try {
       setState({ kind: "data", bins: await fetchBinHealth(token) });
-    } catch {
-      setState({ kind: "error" });
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.status === 401
+            ? "tokenInvalid"
+            : error.status === 403
+              ? "accessDenied"
+              : "loadFailed"
+          : "insightsOffline";
+      setState({ kind: "error", message });
     }
   }, [token]);
 
@@ -170,7 +182,7 @@ export default function Insights({ lang, token }: { lang: Lang; token: string })
         severity="warning"
         action={<Button color="inherit" size="small" onClick={() => void reload()}>{tr("retry")}</Button>}
       >
-        {tr("insightsOffline")}
+        {tr(state.message)}
       </Alert>
     );
   if (bins.length === 0)

@@ -1,4 +1,4 @@
-import { apiUrl } from "./api";
+import { ApiError, apiUrl } from "./api";
 
 export interface BinHealth {
   bin_id: string;
@@ -33,7 +33,7 @@ async function authed(path: string, token: string, init?: RequestInit): Promise<
       ...(typeof init?.body === "string" ? { "Content-Type": "application/json" } : {}),
     },
   });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  if (!response.ok) throw new ApiError(response.status);
   return response;
 }
 

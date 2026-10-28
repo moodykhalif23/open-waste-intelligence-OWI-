@@ -16,10 +16,11 @@ import {
   type BinHealth,
   type Route,
 } from "../lib/collect";
+import { ApiError } from "../lib/api";
 
 type Load =
   | { kind: "loading" }
-  | { kind: "error" }
+  | { kind: "error"; message: StringKey }
   | { kind: "routes"; routes: Route[] }
   | { kind: "list"; bins: BinHealth[] };
 
@@ -28,14 +29,25 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
   const [state, setState] = useState<Load>({ kind: "loading" });
 
   const reload = useCallback(async () => {
-    if (!token) return setState({ kind: "error" });
+    if (!token) {
+      setState({ kind: "error", message: "tokenMissing" });
+      return;
+    }
     try {
       const routes = (await fetchRoutes(token)).filter((r) => r.stops.length > 0);
       if (routes.length > 0) return setState({ kind: "routes", routes });
       // No route planned yet — fall back to the raw collect-today list.
       setState({ kind: "list", bins: await fetchCollectList(token) });
-    } catch {
-      setState({ kind: "error" });
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.status === 401
+            ? "tokenInvalid"
+            : error.status === 403
+              ? "accessDenied"
+              : "loadFailed"
+          : "collectOffline";
+      setState({ kind: "error", message });
     }
   }, [token]);
 
@@ -67,7 +79,7 @@ export default function CollectList({ lang, token }: { lang: Lang; token: string
         severity="warning"
         action={<Button color="inherit" size="small" onClick={() => void reload()}>{tr("retry")}</Button>}
       >
-        {tr("collectOffline")}
+        {tr(state.message)}
       </Alert>
     );
 

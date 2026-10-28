@@ -120,7 +120,7 @@ export default function Recycling() {
   const partnerCols: GridColDef<Partner>[] = [
     { field: "name", headerName: t("name"), flex: 1, minWidth: 120 },
     { field: "materials_accepted", headerName: t("accepts"), flex: 1.4, minWidth: 160, valueGetter: (_v, row) => row.materials_accepted.map(label).join(", ") },
-    { field: "min_kg_per_month", headerName: t("minKg"), type: "number", width: 120, valueFormatter: (v) => Number(v).toLocaleString() },
+    { field: "min_kg_per_month", headerName: t("minKg"), type: "number", width: 132, valueFormatter: (v) => Number(v).toLocaleString() },
   ];
 
   const kes = (v: number) => `KES ${Math.round(v).toLocaleString()}`;

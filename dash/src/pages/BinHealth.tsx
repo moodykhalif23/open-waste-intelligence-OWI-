@@ -163,8 +163,8 @@ export default function BinHealth() {
       width: 140,
       renderCell: (p) => <Meter value={Number(p.value)} bad={p.row.overflow_risk === "high"} />,
     },
-    { field: "days_to_full", headerName: t("daysToFull"), type: "number", width: 92, valueFormatter: days },
-    { field: "days_since_collection", headerName: t("sinceCollection"), type: "number", width: 102, valueFormatter: days },
+    { field: "days_to_full", headerName: t("daysToFull"), type: "number", width: 128, valueFormatter: days },
+    { field: "days_since_collection", headerName: t("sinceCollection"), type: "number", width: 164, valueFormatter: days },
     {
       field: "overflow_risk",
       headerName: t("risk"),

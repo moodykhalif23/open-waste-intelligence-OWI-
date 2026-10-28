@@ -14,3 +14,13 @@ pnpm dev            # http://localhost:5174 — /api is proxied to the local API
 Sign in with a coordinator/admin account.
 
 Checks: `pnpm check` (tsc + eslint).
+
+## Collector device onboarding
+
+From **Admin → Users**, create the person with the `collector` role. The
+dashboard creates the account and then issues a device token automatically.
+Copy the token into **Settings → Device token** in the field app; it is stored
+on that browser/device and remains valid for 180 days. The token is shown only
+while the dashboard page remains open. Existing collector accounts can be
+issued a token from their row. If a device is lost, revoke that user's tokens
+before issuing a replacement.

@@ -19,8 +19,10 @@ export default function Users() {
   const { t } = useI18n();
   const [users, setUsers] = useState<User[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [issued, setIssued] = useState<{ userId: string; token: string } | null>(null);
+  const [issued, setIssued] = useState<{ userId: string; userName: string; token: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busyUserId, setBusyUserId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -35,24 +37,55 @@ export default function Users() {
     void reload();
   }, [reload]);
 
-  async function issueToken(user: User) {
-    const response = await api<{ access_token: string }>("/api/v1/auth/device-tokens", {
-      method: "POST",
-      body: JSON.stringify({ user_id: user.id }),
-    });
-    setIssued({ userId: user.id, token: response.access_token });
-    setCopied(false);
+  async function issueToken(user: User, newlyCreated = false) {
+    setActionError(null);
+    setBusyUserId(user.id);
+    try {
+      const response = await api<{ access_token: string }>("/api/v1/auth/device-tokens", {
+        method: "POST",
+        body: JSON.stringify({ user_id: user.id }),
+      });
+      setIssued({ userId: user.id, userName: user.name, token: response.access_token });
+      setCopied(false);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      setActionError(
+        newlyCreated
+          ? `${t("collectorCreatedTokenFailed")} (${detail})`
+          : `${t("tokenIssueFailed")} (${detail})`,
+      );
+    } finally {
+      setBusyUserId(null);
+    }
   }
 
   async function revoke(user: User) {
-    await api(`/api/v1/users/${user.id}/revoke-tokens`, { method: "POST" });
-    if (issued?.userId === user.id) setIssued(null);
+    setActionError(null);
+    setBusyUserId(user.id);
+    try {
+      await api(`/api/v1/users/${user.id}/revoke-tokens`, { method: "POST" });
+      if (issued?.userId === user.id) setIssued(null);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyUserId(null);
+    }
   }
 
   async function copyToken() {
     if (!issued) return;
-    await navigator.clipboard.writeText(issued.token);
-    setCopied(true);
+    setActionError(null);
+    try {
+      await navigator.clipboard.writeText(issued.token);
+      setCopied(true);
+    } catch {
+      setActionError(t("copyTokenFailed"));
+    }
+  }
+
+  async function handleUserCreated(user: User) {
+    await reload();
+    if (user.role === "collector") await issueToken(user, true);
   }
 
   if (error) {
@@ -98,11 +131,22 @@ export default function Users() {
       renderCell: (p) => (
         <Stack direction="row" spacing={1} sx={{ height: "100%", alignItems: "center" }}>
           {p.row.role === "collector" && (
-            <Button variant="outlined" size="small" onClick={() => void issueToken(p.row)}>
-              {t("issueToken")}
+            <Button
+              variant="outlined"
+              size="small"
+              disabled={busyUserId === p.row.id}
+              onClick={() => void issueToken(p.row)}
+            >
+              {busyUserId === p.row.id ? t("issuingToken") : t("issueToken")}
             </Button>
           )}
-          <Button variant="outlined" size="small" color="error" onClick={() => void revoke(p.row)}>
+          <Button
+            variant="outlined"
+            size="small"
+            color="error"
+            disabled={busyUserId === p.row.id}
+            onClick={() => void revoke(p.row)}
+          >
             {t("revokeTokens")}
           </Button>
         </Stack>
@@ -113,7 +157,7 @@ export default function Users() {
   return (
     <PageStack>
       <SectionCard collapsible title={t("newUser")}>
-        <UserForm onCreated={reload} />
+        <UserForm onCreated={handleUserCreated} />
       </SectionCard>
 
       <TableSection title={t("users")}>
@@ -123,10 +167,18 @@ export default function Users() {
           <DataTable rows={users} columns={columns} />
         )}
 
+        {actionError && (
+          <Alert severity="error" sx={{ mt: 2.5 }}>
+            {actionError}
+          </Alert>
+        )}
+
         {issued && (
           <Alert severity="success" icon={false} sx={{ mt: 2.5 }}>
             <Stack spacing={1.5}>
-              <Typography variant="body2">{t("tokenIssuedHint")}</Typography>
+              <Typography variant="body2">
+                {t("tokenIssuedFor")} {issued.userName}. {t("tokenIssuedHint")}
+              </Typography>
               <TextField
                 value={issued.token}
                 fullWidth
@@ -156,7 +208,7 @@ export default function Users() {
   );
 }
 
-function UserForm({ onCreated }: { onCreated: () => Promise<void> }) {
+function UserForm({ onCreated }: { onCreated: (user: User) => Promise<void> }) {
   const { t } = useI18n();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -167,8 +219,9 @@ function UserForm({ onCreated }: { onCreated: () => Promise<void> }) {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    let createdUser: User;
     try {
-      await api("/api/v1/users", {
+      createdUser = await api<User>("/api/v1/users", {
         method: "POST",
         body: JSON.stringify({ name, phone, role, password: password || null }),
       });
@@ -179,7 +232,7 @@ function UserForm({ onCreated }: { onCreated: () => Promise<void> }) {
     setName("");
     setPhone("");
     setPassword("");
-    await onCreated();
+    await onCreated(createdUser);
   }
 
   return (
@@ -215,6 +268,11 @@ function UserForm({ onCreated }: { onCreated: () => Promise<void> }) {
             </MenuItem>
           ))}
         </TextField>
+        {role === "collector" && (
+          <Alert severity="info">
+            {t("collectorOnboardingHint")}
+          </Alert>
+        )}
         <TextField
           label={t("passwordOptional")}
           type="password"

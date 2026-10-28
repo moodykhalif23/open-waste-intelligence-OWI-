@@ -3,6 +3,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Grid from "@mui/material/Grid";
+import Alert from "@mui/material/Alert";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import PlaylistAddCheckOutlinedIcon from "@mui/icons-material/PlaylistAddCheckOutlined";
 import { api } from "../api";
@@ -33,6 +34,9 @@ export default function BinHealth() {
   const [rows, setRows] = useState<HealthRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [busyBinId, setBusyBinId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -48,21 +52,35 @@ export default function BinHealth() {
   }, [reload]);
 
   async function refresh() {
+    setActionError(null);
+    setActionNotice(null);
     setBusy(true);
     try {
       await api("/api/v1/admin/analytics/refresh", { method: "POST" });
       await reload();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
   }
 
   async function markCollected(row: HealthRow) {
-    await api("/api/v1/collections", {
-      method: "POST",
-      body: JSON.stringify({ bin_id: row.bin_id }),
-    });
-    await reload();
+    setActionError(null);
+    setActionNotice(null);
+    setBusyBinId(row.bin_id);
+    try {
+      await api("/api/v1/collections", {
+        method: "POST",
+        body: JSON.stringify({ bin_id: row.bin_id }),
+      });
+      setActionNotice(t("collectionMarked"));
+      await reload();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyBinId(null);
+    }
   }
 
   const stats = useMemo(() => {
@@ -129,8 +147,13 @@ export default function BinHealth() {
       sortable: false,
       filterable: false,
       renderCell: (p) => (
-        <Button variant="contained" size="small" onClick={() => void markCollected(p.row)}>
-          {t("markCollected")}
+        <Button
+          variant="contained"
+          size="small"
+          disabled={busy || busyBinId !== null}
+          onClick={() => void markCollected(p.row)}
+        >
+          {busyBinId === p.row.bin_id ? t("markingCollected") : t("markCollected")}
         </Button>
       ),
     },
@@ -154,6 +177,8 @@ export default function BinHealth() {
       </Grid>
 
       <TableSection title={t("collectToday")} action={refreshAction}>
+        {actionError && <Alert severity="error" sx={{ mb: 2 }}>{actionError}</Alert>}
+        {actionNotice && <Alert severity="success" sx={{ mb: 2 }}>{actionNotice}</Alert>}
         {rows.length === 0 ? (
           <EmptyState icon={<PlaylistAddCheckOutlinedIcon />} title={t("noHealthData")} />
         ) : (

@@ -27,6 +27,7 @@ export function DataTable({
   const apiRef = useGridApiRef();
   const [search, setSearch] = useState("");
   const sizes = Array.from(new Set([pageSize, 10, 25, 50, 100])).sort((a, b) => a - b);
+  const searchable = toolbar && (search !== "" || (rest.rows?.length ?? 0) > pageSize);
 
   const onSearch = (value: string) => {
     setSearch(value);
@@ -40,7 +41,7 @@ export function DataTable({
           start={filters}
           end={
             <>
-              {toolbar && (
+              {searchable && (
                 <SearchField value={search} onChange={onSearch} placeholder={searchPlaceholder ?? t("search")} />
               )}
               {toolbar && (

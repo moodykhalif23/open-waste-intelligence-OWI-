@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
-import Box from "@mui/material/Box";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 import MenuItem from "@mui/material/MenuItem";
@@ -11,15 +10,18 @@ import ShowChartOutlined from "@mui/icons-material/ShowChartOutlined";
 import VolunteerActivismOutlined from "@mui/icons-material/VolunteerActivismOutlined";
 import { api, apiUrl, getToken } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import EChart, { lineOption } from "../components/EChart";
+import EChart, { areaOption, intlLocale } from "../components/EChart";
 import {
   EmptyState,
   ErrorPanel,
+  FilterChips,
   PageSkeleton,
   PageStack,
   SectionCard,
   StatCard,
+  StatRow,
   TableSection,
+  Tag,
 } from "../components/ui";
 import { useI18n } from "../i18n";
 
@@ -52,11 +54,16 @@ interface Event {
   hours_total: number;
 }
 
+type TypeFilter = "all" | (typeof EVENT_TYPES)[number];
+
 export default function Volunteers() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [kind, setKind] = useState<TypeFilter>("all");
+
+  const shown = useMemo(() => (kind === "all" ? events : events.filter((e) => e.event_type === kind)), [events, kind]);
 
   const reload = useCallback(async () => {
     try {
@@ -96,36 +103,39 @@ export default function Volunteers() {
   }
   if (summary === null) return <PageSkeleton />;
 
+  const monthFmt = new Intl.DateTimeFormat(intlLocale(lang), { month: "short", year: "numeric" });
+  const monthLabel = (m: string) => {
+    const d = new Date(`${m}-01T00:00:00`);
+    return Number.isNaN(d.getTime()) ? m : monthFmt.format(d);
+  };
   const trend = {
-    categories: summary.monthly.map((m) => m.month),
+    categories: summary.monthly.map((m) => monthLabel(m.month)),
     values: summary.monthly.map((m) => m.hours),
   };
 
   const eventCols: GridColDef<Event>[] = [
-    { field: "occurred_on", headerName: t("date"), width: 120 },
-    { field: "event_type", headerName: t("type"), width: 120, valueGetter: (_v, row) => t(row.event_type as "cleanup") },
+    { field: "occurred_on", headerName: t("date"), width: 130 },
+    {
+      field: "event_type",
+      headerName: t("type"),
+      width: 130,
+      valueGetter: (_v, row) => t(row.event_type as "cleanup"),
+      renderCell: (p) => <Tag>{p.value as string}</Tag>,
+    },
     { field: "area", headerName: t("area"), flex: 1, minWidth: 120 },
     { field: "organizer", headerName: t("organizer"), flex: 1, minWidth: 120 },
-    { field: "participant_count", headerName: t("participants"), type: "number", width: 120 },
-    { field: "hours_total", headerName: t("hours"), type: "number", width: 100 },
+    { field: "participant_count", headerName: t("participants"), type: "number", width: 130, valueFormatter: (v) => Number(v).toLocaleString() },
+    { field: "hours_total", headerName: t("hours"), type: "number", width: 110, valueFormatter: (v) => Number(v).toLocaleString() },
   ];
 
   return (
     <PageStack>
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <StatCard label={t("eventsHeld")} value={summary.events} />
-        </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <StatCard label={t("participants")} value={summary.participants} />
-        </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <StatCard label={t("volunteerHours")} value={summary.hours} />
-        </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <StatCard label={t("kgCollected")} value={summary.kg_total} />
-        </Grid>
-      </Grid>
+      <StatRow>
+        <StatCard label={t("eventsHeld")} value={summary.events.toLocaleString()} spark={summary.monthly.map((m) => m.events)} />
+        <StatCard label={t("participants")} value={summary.participants.toLocaleString()} />
+        <StatCard label={t("volunteerHours")} value={summary.hours.toLocaleString()} spark={summary.monthly.map((m) => m.hours)} />
+        <StatCard label={t("kgCollected")} value={summary.kg_total.toLocaleString()} spark={summary.monthly.map((m) => m.kg)} />
+      </StatRow>
 
       <SectionCard
         title={t("hoursByMonth")}
@@ -141,11 +151,9 @@ export default function Volunteers() {
         }
       >
         {summary.monthly.length > 0 ? (
-          <EChart option={lineOption(trend.categories, trend.values)} />
+          <EChart height={240} option={areaOption(trend.categories, trend.values)} />
         ) : (
-          <Box sx={{ height: 280, display: "grid", placeItems: "center" }}>
-            <EmptyState icon={<ShowChartOutlined />} title={t("noData")} />
-          </Box>
+          <EmptyState icon={<ShowChartOutlined />} title={t("noData")} height={240} />
         )}
       </SectionCard>
 
@@ -153,9 +161,25 @@ export default function Volunteers() {
 
       <TableSection title={t("events")}>
         {events.length === 0 ? (
-          <EmptyState icon={<VolunteerActivismOutlined />} title={t("noData")} />
+          <SectionCard>
+            <EmptyState icon={<VolunteerActivismOutlined />} title={t("noData")} />
+          </SectionCard>
         ) : (
-          <DataTable rows={events} columns={eventCols} />
+          <DataTable
+            rows={shown}
+            columns={eventCols}
+            pageSize={10}
+            filters={
+              <FilterChips<TypeFilter>
+                value={kind}
+                onChange={setKind}
+                options={[
+                  { value: "all", label: t("all"), count: events.length },
+                  ...EVENT_TYPES.map((v) => ({ value: v, label: t(v), count: events.filter((e) => e.event_type === v).length })),
+                ]}
+              />
+            }
+          />
         )}
       </TableSection>
     </PageStack>

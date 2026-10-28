@@ -295,7 +295,7 @@ export default function App() {
         className="rise-stack"
         sx={{ flex: 1, p: 2, pb: 12, display: "flex", flexDirection: "column", gap: 1.5 }}
       >
-        <Box sx={{ pt: 0.5, pb: 0.5 }}>
+        <Box sx={{ pt: 0.5, pb: 0.5, display: "flex", justifyContent: "flex-end" }}>
           <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 540, mt: 0.25 }}>
             {todayLabel(lang)}
           </Typography>

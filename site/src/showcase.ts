@@ -6,6 +6,7 @@ type Point = [number, number];
 
 const TAP_TRAVEL = 420;
 const TAP_PRESS = 140;
+const BEAT_HOLD = 1600;
 
 const FIELD: Scene[] = [
   { view: "home", beat: 0, dur: 1500, steps: [{ at: 300, tap: "scan", view: "scan" }] },
@@ -393,6 +394,9 @@ const BINS: [string, string, string, string][] = [
   ["BIN-0004", "Baba Dogo bus stage", "Ward 3", "3 h ago"],
   ["BIN-0005", "Komarock shops", "Ward 4", "6 h ago"],
   ["BIN-0006", "Outer Ring junction", "Ward 2", "2 d ago"],
+  ["BIN-0007", "Kariobangi North school", "Ward 5", "4 h ago"],
+  ["BIN-0008", "Dandora Phase 2 clinic", "Ward 1", "1 h ago"],
+  ["BIN-0009", "Chief's camp", "Ward 3", "7 h ago"],
 ];
 
 const MATERIALS: [string, number][] = [
@@ -434,6 +438,9 @@ function dashScreen(): string {
       ["Plastic", 41, ["Plastic", "Paper", "Glass"]],
       ["Organic", 58, ["Organic", "Paper", "Other"]],
       ["Metal", 47, ["Metal", "Plastic", "Glass"]],
+      ["Glass", 52, ["Glass", "Plastic", "Other"]],
+      ["Paper", 44, ["Paper", "Plastic", "Organic"]],
+      ["Plastic", 49, ["Plastic", "Metal", "Other"]],
     ] as [string, number, string[]][]
   )
     .map(
@@ -495,6 +502,13 @@ function dashScreen(): string {
               <li><i class="b0"></i>Empty<b>178</b></li><li><i class="b1"></i>Low<b>341</b></li><li><i class="b2"></i>Half<b>459</b></li><li><i class="b3"></i>High<b>326</b></li><li><i class="b4"></i>Overflowing<b>178</b></li>
             </ul>
           </div>
+        </div>
+        <div class="d-card d-feed">
+          <p class="d-card-h">Latest reports <span>live from the field</span></p>
+          <div class="d-feed-row d-feed-new" data-when="ping"><span class="ph-thumb"></span><b>BIN-0142</b><span>Market gate</span><span class="d-tag d-risk-high">High</span><span>Truck 1 crew</span><time>just now</time></div>
+          <div class="d-feed-row"><span class="ph-thumb"></span><b>BIN-0139</b><span>Kamunde Rd clinic</span><span class="d-tag d-risk-medium">Half</span><span>Ward 2 crew</span><time>2 min</time></div>
+          <div class="d-feed-row"><span class="ph-thumb"></span><b>BIN-0136</b><span>Baba Dogo bus stage</span><span class="d-tag d-risk-low">Low</span><span>Ward 3 crew</span><time>4 min</time></div>
+          <div class="d-feed-row" data-when="!ping"><span class="ph-thumb"></span><b>BIN-0131</b><span>Komarock shops</span><span class="d-tag d-risk-high">Overflowing</span><span>Ward 4 crew</span><time>6 min</time></div>
         </div>
       </section>
 
@@ -596,7 +610,7 @@ function dashScreen(): string {
           <div class="d-card d-table">
             <div class="d-th d-th-bins"><span>Bin</span><span>Site</span><span>Ward</span><span>Last report</span></div>
             ${binRows}
-            <div class="d-pager"><span>1&ndash;6 of 1,482</span><span class="d-pager-btns"><i class="fa-solid fa-chevron-left"></i><i class="fa-solid fa-chevron-right"></i></span></div>
+            <div class="d-pager"><span>1&ndash;9 of 1,482</span><span class="d-pager-btns"><i class="fa-solid fa-chevron-left"></i><i class="fa-solid fa-chevron-right"></i></span></div>
           </div>
         </div>
       </section>
@@ -673,6 +687,10 @@ class Player {
   private userPaused = false;
   private view = "";
   private flags = new Set<string>();
+  private follow = false;
+  private currentBeat = -1;
+  private lockUntil = 0;
+  private beatObserver: IntersectionObserver | null = null;
   private readonly beats: HTMLButtonElement[];
   private readonly cursor: HTMLElement;
   private readonly screen: HTMLElement;
@@ -750,13 +768,38 @@ class Player {
     return last;
   }
 
-  private jump(beat: number): void {
+  setFollow(on: boolean): void {
+    this.follow = on;
+    if (!on || this.beatObserver) return;
+    this.beatObserver = new IntersectionObserver(
+      (entries) => {
+        if (!this.follow || performance.now() < this.lockUntil) return;
+        for (const entry of entries) {
+          if (entry.isIntersecting) this.activate(Number((entry.target as HTMLElement).dataset.beat));
+        }
+      },
+      { rootMargin: "-45% 0px -45% 0px" },
+    );
+    this.beats.forEach((btn) => this.beatObserver!.observe(btn));
+  }
+
+  private activate(beat: number): void {
+    if (beat === this.currentBeat) return;
     if (this.playing) {
       this.clear();
       this.run(this.firstSceneOf(beat));
     } else {
       this.snap(this.lastSceneOf(beat));
     }
+  }
+
+  private jump(beat: number): void {
+    if (this.follow) {
+      this.lockUntil = performance.now() + 1000;
+      this.beats[beat]?.scrollIntoView({ block: "center", behavior: this.reduced ? "auto" : "smooth" });
+    }
+    this.currentBeat = -1;
+    this.activate(beat);
   }
 
   private apply(view: string, flags: Set<string>): void {
@@ -783,6 +826,7 @@ class Player {
 
   private markBeat(i: number): void {
     const scene = this.scenes[i];
+    this.currentBeat = scene.beat;
     let offset = 0;
     let total = 0;
     this.scenes.forEach((s, k) => {
@@ -841,9 +885,10 @@ class Player {
         this.later(step.at, () => this.change(step));
       }
     }
-    this.later(scene.dur, () => {
+    const loop = this.follow && this.scenes[i + 1]?.beat !== scene.beat;
+    const next = loop ? this.firstSceneOf(scene.beat) : (i + 1) % this.scenes.length;
+    this.later(scene.dur + (loop ? BEAT_HOLD : 0), () => {
       this.timers = [];
-      const next = (i + 1) % this.scenes.length;
       if (next === 0) this.parkCursor();
       this.run(next);
     });
@@ -852,6 +897,7 @@ class Player {
   private snap(i: number): void {
     const scene = this.scenes[i];
     this.index = i;
+    this.currentBeat = scene.beat;
     this.apply(scene.view, new Set(tokens(scene.flags)));
     for (const step of scene.steps ?? []) this.change({ ...step, emit: undefined });
     this.beats.forEach((btn, b) => {
@@ -894,7 +940,10 @@ export function mountShowcase(): void {
     );
     mount.querySelectorAll<HTMLElement>("[data-today]").forEach((el) => (el.textContent = today));
     const rig = mount.querySelector<HTMLElement>(".rig")!;
-    new Player(stage, rig, phone ? FIELD : OPS, reduced);
+    const player = new Player(stage, rig, phone ? FIELD : OPS, reduced);
+    const wide = window.matchMedia("(min-width: 1000px)");
+    player.setFollow(wide.matches);
+    wide.addEventListener("change", (e) => player.setFollow(e.matches));
     if (!reduced) tilt(mount, rig);
   });
 

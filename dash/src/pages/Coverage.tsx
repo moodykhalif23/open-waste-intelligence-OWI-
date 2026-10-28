@@ -66,8 +66,10 @@ export default function Coverage() {
   const assessedBins = rows.reduce((sum, row) => sum + row.assessed_bin_count, 0);
   const highRisk = rows.reduce((sum, row) => sum + row.high_risk_bin_count, 0);
   const num = (v: unknown) => Number(v).toLocaleString();
+  const dates = new Set(rows.map((row) => row.health_data_date));
+  const asOf = dates.size === 1 ? [...dates][0] : null;
   const columns: GridColDef<WardCoverage>[] = [
-    { field: "ward", headerName: t("ward"), flex: 1, minWidth: 140, renderCell: (p) => <strong>{p.value as string}</strong> },
+    { field: "ward", headerName: t("ward"), flex: 1, minWidth: 160, renderCell: (p) => <strong>{p.value as string}</strong> },
     { field: "site_count", headerName: t("sites"), type: "number", width: 84, valueFormatter: num },
     {
       field: "sites_without_bins",
@@ -132,7 +134,14 @@ export default function Coverage() {
                 ? "coverageReasonTooFew"
                 : "coverageReasonMonitor",
         ),
-      renderCell: (p) => <span style={{ color: owi.muted }}>{p.value as string}</span>,
+      renderCell: (p) => (
+        <span
+          title={p.value as string}
+          style={{ color: owi.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+        >
+          {p.value as string}
+        </span>
+      ),
     },
   ];
 
@@ -141,7 +150,11 @@ export default function Coverage() {
       <PageHeader title={t("coverageTitle")} description={t("coverageDescription")} info={t("coverageLimit")} />
       <StatRow>
         <StatCard label={t("coverageAssess")} value={count("assess").toLocaleString()} caption={`${rows.length.toLocaleString()} ${t("wards").toLowerCase()}`} />
-        <StatCard label={t("assessedBins")} value={assessedBins.toLocaleString()} />
+        <StatCard
+          label={t("assessedBins")}
+          value={assessedBins.toLocaleString()}
+          caption={asOf ? t("asOfDate").replace("{d}", asOf) : undefined}
+        />
         <StatCard label={t("highRiskBins")} value={highRisk.toLocaleString()} color={highRisk > 0 ? owi.bad : undefined} />
       </StatRow>
       {rows.length === 0 ? (
@@ -153,6 +166,7 @@ export default function Coverage() {
           rows={shown}
           columns={columns}
           getRowId={(row) => row.ward}
+          columnVisibilityModel={{ health_data_date: dates.size > 1 }}
           pageSize={25}
           filters={
             <FilterChips<"all" | WardCoverage["priority"]>

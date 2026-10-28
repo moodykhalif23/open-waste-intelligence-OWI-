@@ -33,8 +33,8 @@ const FONT = '"Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sa
 // One easing + two durations everywhere: fast state changes read as responsiveness.
 const EASE = "cubic-bezier(0.2, 0, 0, 1)";
 const HOVER = `background-color 120ms ${EASE}, border-color 120ms ${EASE}, color 120ms ${EASE}, box-shadow 120ms ${EASE}`;
-const CARD_RADIUS = 14;
-const RADIUS = 10;
+const RADIUS = 6;
+const RADIUS_SM = 4;
 
 const theme = createTheme({
   palette: {
@@ -100,14 +100,14 @@ const theme = createTheme({
     },
     MuiPaper: {
       defaultProps: { elevation: 0 },
-      styleOverrides: { rounded: { borderRadius: CARD_RADIUS } },
+      styleOverrides: { rounded: { borderRadius: RADIUS } },
     },
     MuiCard: {
       defaultProps: { elevation: 0 },
       styleOverrides: {
         root: {
           border: `1px solid ${owi.line}`,
-          borderRadius: CARD_RADIUS,
+          borderRadius: RADIUS,
           boxShadow: "none",
         },
       },
@@ -144,24 +144,24 @@ const theme = createTheme({
       styleOverrides: {
         paper: {
           border: `1px solid ${owi.line}`,
-          borderRadius: 12,
+          borderRadius: RADIUS,
           boxShadow: "0 12px 32px rgba(16,24,40,0.10)",
         },
       },
     },
-    MuiPopover: { styleOverrides: { paper: { borderRadius: 12 } } },
+    MuiPopover: { styleOverrides: { paper: { borderRadius: RADIUS } } },
     MuiAutocomplete: {
       styleOverrides: {
         paper: {
           border: `1px solid ${owi.line}`,
-          borderRadius: 12,
+          borderRadius: RADIUS,
           boxShadow: "0 12px 32px rgba(16,24,40,0.10)",
         },
       },
     },
     MuiDialog: {
       styleOverrides: {
-        paper: { borderRadius: 16, boxShadow: "0 24px 64px rgba(16,24,40,0.18)" },
+        paper: { borderRadius: RADIUS, boxShadow: "0 24px 64px rgba(16,24,40,0.18)" },
       },
     },
     MuiDialogTitle: {
@@ -196,13 +196,26 @@ const theme = createTheme({
     MuiListItemButton: {
       styleOverrides: {
         root: {
-          borderRadius: RADIUS,
+          borderRadius: RADIUS_SM,
           marginInline: 10,
           paddingBlock: 8,
           transition: HOVER,
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            left: 0,
+            top: "50%",
+            width: 4,
+            height: 20,
+            borderRadius: 999,
+            backgroundColor: owi.brown,
+            transform: "translateY(-50%) scaleY(0)",
+            transition: `transform 160ms ${EASE}`,
+          },
           "&.Mui-selected": {
             backgroundColor: owi.goldTint,
             color: owi.brown,
+            "&::before": { transform: "translateY(-50%) scaleY(1)" },
             "&:hover": { backgroundColor: "#f6e0a8" },
             "& .MuiListItemIcon-root": { color: owi.brown },
           },
@@ -265,7 +278,7 @@ const theme = createTheme({
     MuiAlert: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
+          borderRadius: RADIUS,
           alignItems: "center",
           "&.MuiAlert-standard.MuiAlert-colorInfo": {
             backgroundColor: owi.wash,
@@ -292,14 +305,14 @@ const theme = createTheme({
     },
     MuiAccordion: {
       styleOverrides: {
-        root: { borderRadius: CARD_RADIUS, "&.Mui-expanded": { margin: 0 } },
+        root: { borderRadius: RADIUS, "&.Mui-expanded": { margin: 0 } },
       },
     },
     MuiTooltip: {
       styleOverrides: {
         tooltip: {
           backgroundColor: owi.ink,
-          borderRadius: 8,
+          borderRadius: RADIUS_SM,
           fontSize: "0.78rem",
           fontWeight: 560,
           padding: "6px 10px",
@@ -308,7 +321,7 @@ const theme = createTheme({
     },
     MuiSnackbarContent: {
       styleOverrides: {
-        root: { backgroundColor: owi.ink, borderRadius: 12, fontWeight: 560 },
+        root: { backgroundColor: owi.ink, borderRadius: RADIUS, fontWeight: 560 },
       },
     },
     MuiSkeleton: { styleOverrides: { root: { backgroundColor: "#f0ede5" } } },

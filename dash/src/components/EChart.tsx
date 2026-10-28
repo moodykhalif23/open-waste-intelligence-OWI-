@@ -49,7 +49,7 @@ const tooltipStyle = {
   borderWidth: 1,
   padding: [8, 12],
   textStyle: { color: owi.ink, fontSize: 12, fontFamily: CHART_FONT },
-  extraCssText: "box-shadow: 0 8px 24px rgba(16,24,40,0.10); border-radius: 10px;",
+  extraCssText: "box-shadow: 0 8px 24px rgba(16,24,40,0.10); border-radius: 6px;",
 };
 
 const tipHtml = (label: string, value: string) =>

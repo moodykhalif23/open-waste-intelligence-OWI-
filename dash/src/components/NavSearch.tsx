@@ -68,7 +68,7 @@ export default function NavSearch() {
                     display: { xs: "none", md: "inline-block" },
                     border: "1px solid",
                     borderColor: "divider",
-                    borderRadius: "6px",
+                    borderRadius: "4px",
                     px: 0.6,
                     py: 0.1,
                     fontSize: "0.7rem",

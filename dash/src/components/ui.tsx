@@ -123,7 +123,7 @@ export function SectionCard({
         sx={{
           border: "1px solid",
           borderColor: "divider",
-          borderRadius: "14px",
+          borderRadius: 1,
           bgcolor: "background.paper",
           "&:before": { display: "none" },
         }}
@@ -206,7 +206,7 @@ export function TableSection({
   );
 }
 
-export function MapFrame({ children, radius = 14 }: { children: ReactNode; radius?: number }) {
+export function MapFrame({ children, radius = 6 }: { children: ReactNode; radius?: number }) {
   return (
     <Box sx={{ borderRadius: `${radius}px`, overflow: "hidden", "& > div": { borderRadius: `${radius}px` } }}>{children}</Box>
   );
@@ -688,7 +688,7 @@ export function Pager({
             aria-label={b.label}
             disabled={b.off}
             onClick={() => onPage(b.to)}
-            sx={{ border: "1px solid", borderColor: "divider", borderRadius: "8px", width: 32, height: 32 }}
+            sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, width: 32, height: 32 }}
           >
             {b.icon}
           </IconButton>
@@ -726,7 +726,7 @@ export function StatRowSkeleton({ count = 3 }: { count?: number }) {
 
 export function TableSkeleton({ rows = 6 }: { rows?: number }) {
   return (
-    <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: "14px", p: 2.5, bgcolor: "background.paper" }}>
+    <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 2.5, bgcolor: "background.paper" }}>
       <Skeleton animation="wave" width="30%" height={24} />
       {Array.from({ length: rows }, (_, i) => (
         <Skeleton animation="wave" height={34} key={i} />
@@ -740,7 +740,7 @@ export function ChartSkeleton({ height = 240 }: { height?: number }) {
     <Card sx={{ height: "100%" }}>
       <CardContent>
         <Skeleton animation="wave" width="35%" height={24} />
-        <Skeleton animation="wave" variant="rounded" height={height} sx={{ mt: 2, borderRadius: "10px" }} />
+        <Skeleton animation="wave" variant="rounded" height={height} sx={{ mt: 2, borderRadius: "4px" }} />
       </CardContent>
     </Card>
   );

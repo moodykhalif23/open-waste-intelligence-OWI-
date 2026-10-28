@@ -77,7 +77,7 @@ export function DataTable({
         }}
         sx={{
           border: `1px solid ${owi.line}`,
-          borderRadius: "14px",
+          borderRadius: 1,
           bgcolor: "background.paper",
           fontSize: "0.92rem",
           color: owi.inkSoft,

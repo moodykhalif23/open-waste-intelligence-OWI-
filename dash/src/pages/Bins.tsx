@@ -176,7 +176,7 @@ export default function Bins() {
         action={addActions}
       >
         {bins.length > 0 ? (
-          <MapFrame radius={10}>
+          <MapFrame radius={4}>
             <MapView
               height={360}
               points={shown.map((b) => ({ lat: b.lat, lng: b.lng, label: `${b.qr_code} · ${siteName(b.site_id)}` }))}

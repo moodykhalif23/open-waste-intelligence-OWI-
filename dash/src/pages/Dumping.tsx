@@ -265,7 +265,7 @@ export default function Dumping() {
                           textAlign: "left",
                           borderTop: "1px solid",
                           borderColor: owi.rule,
-                          borderRadius: "8px",
+                          borderRadius: "4px",
                           "&:first-of-type": { borderTop: 0 },
                           "&:hover": { bgcolor: owi.wash },
                         }}

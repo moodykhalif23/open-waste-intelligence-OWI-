@@ -642,7 +642,7 @@ function RouteRow({
           alignItems: "center",
           gap: 1,
           px: 1,
-          borderRadius: "10px",
+          borderRadius: "4px",
           bgcolor: open ? owi.wash : "transparent",
         }}
       >
@@ -658,7 +658,7 @@ function RouteRow({
             py: 1.25,
             textAlign: "left",
             justifyContent: "stretch",
-            borderRadius: "10px",
+            borderRadius: "4px",
             minWidth: 0,
           }}
         >

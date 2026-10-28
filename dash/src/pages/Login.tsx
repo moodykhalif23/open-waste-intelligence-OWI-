@@ -75,7 +75,7 @@ export default function Login() {
               placeItems: "center",
               width: 56,
               height: 56,
-              borderRadius: "12px",
+              borderRadius: 1,
               bgcolor: "#ffffff",
             }}
           >

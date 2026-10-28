@@ -107,7 +107,7 @@ export default function OpenData() {
                 sx={{
                   mt: 0.5,
                   p: 1.5,
-                  borderRadius: "10px",
+                  borderRadius: "4px",
                   bgcolor: "#101828",
                   color: "#e2e8f0",
                   fontFamily: "ui-monospace, Consolas, monospace",

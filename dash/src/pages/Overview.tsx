@@ -284,7 +284,7 @@ export default function Overview() {
                       key={o.id}
                       sx={{
                         display: "grid",
-                        gridTemplateColumns: "minmax(6.5em, auto) minmax(0, 1fr) auto minmax(5.5em, auto)",
+                        gridTemplateColumns: "8.5em minmax(0, 1fr) auto 7em",
                         alignItems: "center",
                         columnGap: 2,
                         py: 1.25,
@@ -295,7 +295,9 @@ export default function Overview() {
                         "&:first-of-type": { borderTop: 0 },
                       }}
                     >
-                      <CodeLabel>{bin?.qr_code ?? t("noBin")}</CodeLabel>
+                      <Typography noWrap sx={{ fontSize: "inherit" }}>
+                        <CodeLabel>{bin?.qr_code ?? t("noBin")}</CodeLabel>
+                      </Typography>
                       <Typography noWrap sx={{ fontSize: "inherit", color: "inherit" }}>
                         {site?.name ?? "—"}
                       </Typography>

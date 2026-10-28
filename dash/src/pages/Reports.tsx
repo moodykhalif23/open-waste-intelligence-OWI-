@@ -101,7 +101,7 @@ export default function Reports() {
     {
       field: "bin_id",
       headerName: t("bin"),
-      width: 130,
+      width: 140,
       valueGetter: (_v, row) => binCode(row.bin_id),
       renderCell: (p) => <CodeLabel>{p.value as string}</CodeLabel>,
     },

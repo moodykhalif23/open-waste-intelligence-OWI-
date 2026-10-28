@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Link as RouterLink,
   Outlet,
@@ -62,10 +62,15 @@ export default function Layout() {
     document.title = `${leafTitle ?? sectionTitle} · OpenWaste`;
   }, [sectionTitle, leafTitle]);
 
+  const healthAt = useRef(0);
+
   useEffect(() => {
     void api<{ unreviewed: number }>("/api/v1/predictions?limit=1")
       .then((r) => setAlerts(r.unreviewed ?? 0))
       .catch(() => setAlerts(0));
+    const operational = ["/collect", "/routes"].some((p) => location.pathname.startsWith(p));
+    if (!operational && Date.now() - healthAt.current < 60_000) return;
+    healthAt.current = Date.now();
     void api<{ recommendation: string }[]>("/api/v1/bins/health")
       .then((rows) => setCollectCount(rows.filter((r) => r.recommendation === "collect_today").length))
       .catch(() => setCollectCount(0));

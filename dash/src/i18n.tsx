@@ -485,7 +485,7 @@ const strings = {
     riskLow: "Chini",
     collectTodayRec: "Kusanya leo",
     scheduleSoonRec: "Panga hivi karibuni",
-    markCollected: "Imekusanywa",
+    markCollected: "Weka imekusanywa",
     markingCollected: "Inahifadhi…",
     collected: "Imekusanywa",
     collectionMarked: "Ukusanyaji umerekodiwa.",

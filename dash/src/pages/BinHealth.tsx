@@ -154,8 +154,8 @@ export default function BinHealth() {
   const days = (v: unknown) => (v == null ? "—" : t("nDays").replace("{n}", Number(v).toFixed(1)));
 
   const columns: GridColDef<HealthRow>[] = [
-    { field: "qr_code", headerName: t("bin"), width: 112, renderCell: (p) => <CodeLabel>{p.value as string}</CodeLabel> },
-    { field: "site_name", headerName: t("site"), flex: 1, minWidth: 150 },
+    { field: "qr_code", headerName: t("bin"), width: 128, renderCell: (p) => <CodeLabel>{p.value as string}</CodeLabel> },
+    { field: "site_name", headerName: t("site"), flex: 1, minWidth: 136 },
     {
       field: "fill_pct",
       headerName: t("fillLevel"),
@@ -163,8 +163,8 @@ export default function BinHealth() {
       width: 140,
       renderCell: (p) => <Meter value={Number(p.value)} bad={p.row.overflow_risk === "high"} />,
     },
-    { field: "days_to_full", headerName: t("daysToFull"), type: "number", width: 96, valueFormatter: days },
-    { field: "days_since_collection", headerName: t("sinceCollection"), type: "number", width: 110, valueFormatter: days },
+    { field: "days_to_full", headerName: t("daysToFull"), type: "number", width: 92, valueFormatter: days },
+    { field: "days_since_collection", headerName: t("sinceCollection"), type: "number", width: 102, valueFormatter: days },
     {
       field: "overflow_risk",
       headerName: t("risk"),
@@ -180,14 +180,14 @@ export default function BinHealth() {
     {
       field: "recommendation",
       headerName: t("recommendation"),
-      width: 136,
+      width: 152,
       valueGetter: (_v, row) =>
         row.recommendation === "collect_today" ? t("collectTodayRec") : row.recommendation === "schedule_soon" ? t("scheduleSoonRec") : "—",
     },
     {
       field: "actions",
       headerName: "",
-      width: 136,
+      width: 130,
       sortable: false,
       filterable: false,
       disableExport: true,

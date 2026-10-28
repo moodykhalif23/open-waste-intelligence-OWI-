@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import Float, func, select
 from sqlalchemy.orm import Session
@@ -46,7 +46,8 @@ def review_queue(
     claims: Annotated[TokenClaims, require_roles(*REVIEWERS)],
     session: Annotated[Session, Depends(get_session)],
     status: ReviewStatus = ReviewStatus.UNREVIEWED,
-    limit: int = 100,
+    limit: Annotated[int, Query(gt=0, le=500)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> ReviewQueueOut:
     base = select(Prediction).where(
         Prediction.org_id == claims.org_id, Prediction.deleted_at.is_(None)
@@ -65,8 +66,9 @@ def review_queue(
     confidence = Prediction.payload["confidence"].astext.cast(Float)
     rows = session.scalars(
         base.where(Prediction.review_status == status)
-        .order_by(confidence.asc().nulls_last(), Prediction.created_at)
+        .order_by(confidence.asc().nulls_last(), Prediction.created_at, Prediction.id)
         .limit(limit)
+        .offset(offset)
     ).all()
     return ReviewQueueOut(
         unreviewed=unreviewed or 0,

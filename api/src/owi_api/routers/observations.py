@@ -120,8 +120,13 @@ def _first_error(exc: ValidationError) -> str:
 def _observation_ids_for_material(
     session: Session, org_id: uuid.UUID, material: str
 ) -> list[uuid.UUID]:
-    preds = session.scalars(
-        select(Prediction)
+    preds = session.execute(
+        select(
+            Prediction.observation_id,
+            Prediction.payload,
+            Prediction.corrected_payload,
+            Prediction.review_status,
+        )
         .where(
             Prediction.org_id == org_id,
             Prediction.task == PredictionTask.CLASSIFY,
@@ -131,12 +136,12 @@ def _observation_ids_for_material(
     )
     seen: set[uuid.UUID] = set()
     matching: list[uuid.UUID] = []
-    for pred in preds:
-        if pred.observation_id in seen:
+    for observation_id, payload, corrected, status in preds:
+        if observation_id in seen:
             continue
-        seen.add(pred.observation_id)
-        if effective_material(pred.payload, pred.corrected_payload, pred.review_status) == material:
-            matching.append(pred.observation_id)
+        seen.add(observation_id)
+        if effective_material(payload, corrected, status) == material:
+            matching.append(observation_id)
     return matching
 
 
@@ -145,13 +150,15 @@ def list_observations(
     claims: Annotated[TokenClaims, require_roles(*STAFF)],
     session: Annotated[Session, Depends(get_session)],
     limit: Annotated[int, Query(gt=0, le=1000)] = 500,
+    offset: Annotated[int, Query(ge=0)] = 0,
     material: str | None = None,
 ) -> list[ObservationOut]:
     query = (
         select(Observation, func.ST_Y(Observation.location), func.ST_X(Observation.location))
         .where(Observation.org_id == claims.org_id, Observation.deleted_at.is_(None))
-        .order_by(Observation.captured_at.desc())
+        .order_by(Observation.captured_at.desc(), Observation.id)
         .limit(limit)
+        .offset(offset)
     )
     if material is not None:
         # Composition drill-down: observations whose latest classify prediction reads `material`.

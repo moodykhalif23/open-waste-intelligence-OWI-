@@ -2,7 +2,7 @@ import uuid
 from datetime import UTC, date, datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
@@ -94,6 +94,8 @@ def record_collection(
 def bin_health(
     claims: Annotated[TokenClaims, require_roles(*STAFF)],
     session: Annotated[Session, Depends(get_session)],
+    limit: Annotated[int | None, Query(gt=0)] = None,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[BinHealthOut]:
     latest = (
         select(BinHealthDaily)
@@ -125,8 +127,8 @@ def bin_health(
         for row in rows
     ]
     risk_rank = {OverflowRisk.HIGH: 0, OverflowRisk.MEDIUM: 1, OverflowRisk.LOW: 2}
-    results.sort(key=lambda r: (risk_rank[r.overflow_risk], -r.fill_pct))
-    return results
+    results.sort(key=lambda r: (risk_rank[r.overflow_risk], -r.fill_pct, str(r.bin_id)))
+    return results[offset : None if limit is None else offset + limit]
 
 
 @router.get("/bins/coverage", response_model=list[WardCoverageOut])

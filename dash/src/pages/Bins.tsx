@@ -87,7 +87,7 @@ export default function Bins() {
     {
       field: "qr_code",
       headerName: t("qrCode"),
-      width: 130,
+      width: 150,
       renderCell: (p) => <CodeLabel>{p.value as string}</CodeLabel>,
     },
     {

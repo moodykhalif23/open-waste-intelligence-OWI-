@@ -3,7 +3,7 @@ from collections import Counter
 from datetime import UTC, date, datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from geoalchemy2 import Geography
 from pydantic import BaseModel
 from sqlalchemy import cast, func, select
@@ -57,7 +57,8 @@ class SiteOut(BaseModel):
 def list_candidates(
     claims: Annotated[TokenClaims, require_roles(*REVIEWERS)],
     session: Annotated[Session, Depends(get_session)],
-    limit: int = 100,
+    limit: Annotated[int, Query(gt=0, le=500)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[CandidateOut]:
     # Candidates = non-bin (street/area) observations no one has reviewed for dumping yet.
     reviewed = select(DumpingCandidate.observation_id).where(
@@ -71,8 +72,9 @@ def list_candidates(
             Observation.bin_id.is_(None),
             Observation.id.not_in(reviewed),
         )
-        .order_by(Observation.captured_at.desc())
+        .order_by(Observation.captured_at.desc(), Observation.id)
         .limit(limit)
+        .offset(offset)
     )
     return [
         CandidateOut(observation_id=obs.id, captured_at=obs.captured_at, lat=lat, lng=lng)

@@ -625,7 +625,21 @@ export function Meter({ value, bad }: { value: number; bad?: boolean }) {
 
 export function CodeLabel({ children }: { children: ReactNode }) {
   return (
-    <Box component="span" sx={{ fontWeight: 640, color: "text.primary", letterSpacing: "0.01em", whiteSpace: "nowrap" }}>
+    <Box
+      component="span"
+      title={typeof children === "string" ? children : undefined}
+      sx={{
+        display: "inline-block",
+        maxWidth: "100%",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        verticalAlign: "bottom",
+        fontWeight: 640,
+        color: "text.primary",
+        letterSpacing: "0.01em",
+        whiteSpace: "nowrap",
+      }}
+    >
       {children}
     </Box>
   );

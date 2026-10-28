@@ -29,7 +29,12 @@ def _materials(
     site_id: uuid.UUID | None,
 ) -> list[str]:
     query = (
-        select(Prediction, Observation.bin_id)
+        select(
+            Prediction.observation_id,
+            Prediction.payload,
+            Prediction.corrected_payload,
+            Prediction.review_status,
+        )
         .join(Observation, Observation.id == Prediction.observation_id)
         .where(
             Prediction.org_id == org_id,
@@ -46,11 +51,11 @@ def _materials(
 
     seen: set[uuid.UUID] = set()
     materials: list[str] = []
-    for pred, _ in session.execute(query):
-        if pred.observation_id in seen:
+    for observation_id, payload, corrected, status in session.execute(query):
+        if observation_id in seen:
             continue  # ordered newest-first, so the first row per observation is the latest
-        seen.add(pred.observation_id)
-        material = effective_material(pred.payload, pred.corrected_payload, pred.review_status)
+        seen.add(observation_id)
+        material = effective_material(payload, corrected, status)
         if material is not None:
             materials.append(material)
     return materials

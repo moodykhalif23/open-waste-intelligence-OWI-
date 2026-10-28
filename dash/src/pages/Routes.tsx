@@ -228,7 +228,7 @@ export default function Routes() {
   const truckCols: GridColDef<Truck>[] = [
     { field: "name", headerName: t("name"), flex: 1, minWidth: 120, renderCell: (p) => <CodeLabel>{p.value as string}</CodeLabel> },
     { field: "method", headerName: t("method"), minWidth: 100, flex: 0.8, valueFormatter: (v) => methodLabel(v) },
-    { field: "capacity_kg", headerName: t("capacityKg"), type: "number", width: 120, valueFormatter: (v) => Number(v).toLocaleString() },
+    { field: "capacity_kg", headerName: t("capacityKg"), type: "number", width: 140, valueFormatter: (v) => Number(v).toLocaleString() },
     { field: "fuel_l_per_100km", headerName: t("fuelUse"), type: "number", width: 130, valueFormatter: (v) => (v > 0 ? `${v} L/100km` : "—") },
     {
       field: "crew",

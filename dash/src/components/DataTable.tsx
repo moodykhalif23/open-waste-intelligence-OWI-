@@ -120,6 +120,8 @@ export function DataTable({
             WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical",
           },
+          "& .MuiDataGrid-columnHeader--alignRight .MuiDataGrid-columnHeaderTitle": { textAlign: "right" },
+          "& .MuiDataGrid-columnHeader--alignCenter .MuiDataGrid-columnHeaderTitle": { textAlign: "center" },
           "& .MuiDataGrid-cell": {
             borderColor: owi.rule,
             px: 1.75,

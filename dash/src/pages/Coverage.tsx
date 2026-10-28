@@ -147,7 +147,6 @@ export default function Coverage() {
 
   return (
     <PageStack>
-      <PageHeader title={t("coverageTitle")} description={t("coverageDescription")} info={t("coverageLimit")} />
       <StatRow>
         <StatCard label={t("coverageAssess")} value={count("assess").toLocaleString()} caption={`${rows.length.toLocaleString()} ${t("wards").toLowerCase()}`} />
         <StatCard

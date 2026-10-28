@@ -195,7 +195,6 @@ const strings = {
     cleanliness: "Cleanliness",
     coverage: "Coverage",
     coverageTitle: "Neighborhood coverage assessment",
-    coverageDescription: "Use recorded ward, site, and current bin-health evidence to identify where an operator should assess service coverage.",
     coverageLimit: "This is an assessment aid, not a recommended bin count or placement. Population, land area, and service targets are not recorded, so unmonitored wards may have needs this data cannot see.",
     coverageAssess: "Assess coverage",
     coverageMonitor: "Monitor",

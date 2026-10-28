@@ -534,19 +534,8 @@ export default function App() {
                 <Paper variant="outlined" sx={{ p: 2 }}>
                   {recent.length === 0 ? (
                     <Stack spacing={0.5} sx={{ alignItems: "center", textAlign: "center", py: 2.5 }}>
-                      <Box
-                        sx={{
-                          width: 56,
-                          height: 56,
-                          borderRadius: "50%",
-                          bgcolor: "#fbeecf",
-                          color: "#835a09",
-                          display: "grid",
-                          placeItems: "center",
-                          mb: 1,
-                        }}
-                      >
-                        <CloudDoneOutlined sx={{ fontSize: 28 }} />
+                      <Box sx={{ color: "#835a09", display: "grid", placeItems: "center", mb: 1 }}>
+                        <CloudDoneOutlined sx={{ fontSize: 40 }} />
                       </Box>
                       <Typography sx={{ fontWeight: 620 }}>{tr("noReports")}</Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 260 }}>
@@ -680,18 +669,7 @@ function Widget({
         <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem", fontWeight: 600 }} noWrap>
           {label}
         </Typography>
-        <Box
-          sx={{
-            width: 30,
-            height: 30,
-            borderRadius: "50%",
-            bgcolor: "background.default",
-            color: "text.secondary",
-            display: "grid",
-            placeItems: "center",
-            flexShrink: 0,
-          }}
-        >
+        <Box sx={{ color: "text.secondary", display: "grid", placeItems: "center", flexShrink: 0 }}>
           {icon}
         </Box>
       </Stack>

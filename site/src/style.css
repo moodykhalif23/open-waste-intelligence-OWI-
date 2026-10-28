@@ -289,20 +289,6 @@ p {
   justify-content: center;
 }
 
-/* ---------- icon chips ---------- */
-
-.chip {
-  display: grid;
-  place-items: center;
-  width: 54px;
-  height: 54px;
-  border-radius: 16px;
-  background: var(--gold-tint);
-  color: var(--brown);
-  font-size: 1.3rem;
-  margin-bottom: 18px;
-}
-
 /* Artwork only — the page carries its weight in type, not stock photography. */
 img {
   max-width: 100%;
@@ -376,9 +362,9 @@ img {
 
 .problem-icon {
   display: block;
-  margin: 0 auto 12px;
+  margin: 0 auto 18px;
   color: var(--brown);
-  font-size: 1.4rem;
+  font-size: 2.6rem;
 }
 
 .problem-grid .field-item {
@@ -417,15 +403,11 @@ img {
 
 .lines li > i {
   color: var(--brown);
-  background: var(--gold-tint);
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  font-size: 0.95rem;
+  width: 28px;
+  font-size: 1.3rem;
+  text-align: center;
   flex-shrink: 0;
-  margin-top: 3px;
+  margin-top: 4px;
 }
 
 /* ---------- footer ---------- */

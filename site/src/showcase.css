@@ -690,14 +690,8 @@
 }
 
 .ph-stat-h i {
-  display: grid;
-  place-items: center;
-  width: 2em;
-  height: 2em;
-  border-radius: 50%;
-  background: var(--paper);
-  color: #3a4256;
-  font-size: 0.85em;
+  color: #6b6456;
+  font-size: 0.95em;
 }
 
 .ph-stat b {
@@ -2800,12 +2794,11 @@
 .flow-steps li i {
   display: grid;
   place-items: center;
-  width: 48px;
+  width: 64px;
   height: 48px;
-  border-radius: 14px;
-  background: var(--gold-tint);
+  background: var(--paper);
   color: var(--brown);
-  font-size: 1.05rem;
+  font-size: 1.6rem;
 }
 
 .flow.run .flow-steps li i {
@@ -2821,9 +2814,8 @@
 @keyframes flow-lit {
   10%,
   40% {
-    background: var(--ink);
-    color: var(--gold);
-    transform: translateY(-3px);
+    color: var(--ink);
+    transform: translateY(-3px) scale(1.12);
   }
 }
 

@@ -1,10 +1,10 @@
 # Deployment
 
-One `docker compose` runs the backend: Postgres+PostGIS, Redis, Garage, Label Studio, the API, the inference worker, and the maintenance scheduler. Target: a single VPS (≤ USD 50/month) or an on-prem mini-PC.
+One `docker compose` runs the backend: Postgres+PostGIS, Redis, Garage, Label Studio, the API, the inference worker, the maintenance scheduler, and the basemap tile server. Target: a single VPS (≤ USD 50/month) or an on-prem mini-PC.
 
-The three frontends (`dash`, `app`, `site`) are **not** built in Docker. They are static Vite builds produced outside it. The optional `edge` compose profile serves them with Caddy, which also terminates TLS and proxies `/api` to the API (see [TLS edge](#tls-edge-caddy)). Otherwise serve them from whatever you prefer: a static host (Netlify, Cloudflare Pages, S3) or an existing nginx/Caddy on the box. They consume the API over HTTP; nothing else in the compose stack depends on them.
+The three frontends (`dash`, `app`, `site`) are **not** built in Docker. They are static Vite builds produced outside it. The optional `edge` compose profile serves them with Caddy, which also terminates TLS, proxies `/api` to the API and proxies the dashboard's `/tiles` to the tile server (see [TLS edge](#tls-edge-caddy)). Otherwise serve them from whatever you prefer: a static host (Netlify, Cloudflare Pages, S3) or an existing nginx/Caddy on the box. They consume the API over HTTP; nothing else in the compose stack depends on them.
 
-Every port the stack publishes is bound to `127.0.0.1`, except the edge's 80 and 443. Docker-published ports bypass host firewalls such as ufw, so this loopback binding is what keeps Postgres, Redis, Garage, Label Studio and the API off the network.
+Every port the stack publishes is bound to `127.0.0.1`, except the edge's 80 and 443. Docker-published ports bypass host firewalls such as ufw, so this loopback binding is what keeps Postgres, Redis, Garage, Label Studio, the API and the tile server off the network.
 
 ## Prerequisites
 
@@ -44,7 +44,9 @@ EOF
 # generate values with: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 # hex values with:      python3 -c "import secrets; print(secrets.token_hex(32))"
 
-# 2. Build and start the backend (make web wraps this):
+# 2. Download the basemap extract once (~25 MB into var/tiles/), then build and
+#    start the backend (make web wraps this):
+make tiles
 make web        # or: docker compose --profile prod up -d --build
 #    The organization, admin user and object-store bucket/key come from .env on first boot.
 
@@ -63,11 +65,11 @@ pnpm --dir site build                                        # → site/dist (no
 
 The `edge` profile adds a Caddy container (`deploy/Caddyfile`) that gets Let's Encrypt certificates for three hostnames and redirects HTTP to HTTPS:
 
-| Hostname          | Serves                       | `/api/*` → `api:8000` |
-| ----------------- | ---------------------------- | --------------------- |
-| `OWI_APP_DOMAIN`  | `app/dist` (field PWA)       | yes                   |
-| `OWI_DASH_DOMAIN` | `dash/dist` (dashboard)      | yes                   |
-| `OWI_SITE_DOMAIN` | `site/dist` (landing page)   | no                    |
+| Hostname          | Serves                       | `/api/*` → `api:8000` | `/tiles/*` → `tiles:8080` |
+| ----------------- | ---------------------------- | --------------------- | ------------------------- |
+| `OWI_APP_DOMAIN`  | `app/dist` (field PWA)       | yes                   | no                        |
+| `OWI_DASH_DOMAIN` | `dash/dist` (dashboard)      | yes                   | yes, prefix stripped      |
+| `OWI_SITE_DOMAIN` | `site/dist` (landing page)   | no                    | no                        |
 
 The `dist/` folders are mounted read-only. Unknown paths fall back to `index.html` so client-side routes survive a reload. Responses carry HSTS (without `includeSubDomains`, so a shared municipal domain is unaffected), `nosniff`, `X-Frame-Options: DENY`, a strict referrer policy and a `Permissions-Policy` that allows camera and geolocation for the page itself only. The field PWA gets its own origin, so its service worker (`/sw.js`, scope `/`) and camera work as-is. The frontends call relative `/api`, so build them **without** `VITE_API_URL` and leave `OWI_CORS_ORIGINS` at its default (`[]`).
 
@@ -132,12 +134,13 @@ Migrations run automatically when the `api` container starts. Model weights are 
 | `db` / `redis` / `garage` | Postgres+PostGIS / queue / object store       | `127.0.0.1` only: 5432 / 6379 / 3900 + 3903                |
 | `labelstudio`             | labeling UI for the Safi Waste Dataset        | `127.0.0.1:8080`                                           |
 | `osrm`                    | road distances for route planning             | — (the API reaches it as `osrm:5000`)                      |
+| `tiles`                   | basemap vector tiles from `var/tiles/`        | `127.0.0.1:8081`; public as `/tiles` on the dash host      |
 | `caddy` (`edge` profile)  | TLS, static frontends, `/api` proxy           | 80, 443/tcp, 443/udp                                       |
 | `dash` (built outside)    | dashboard SPA — static `dist/`, calls the API | `OWI_DASH_DOMAIN` via `caddy`, or wherever you host it     |
 | `app` (built outside)     | field PWA — static `dist/`, calls the API     | `OWI_APP_DOMAIN` via `caddy`, or any host (HTTPS required) |
 | `site` (built outside)    | landing page — static `dist/`, no API calls   | `OWI_SITE_DOMAIN` via `caddy`, or wherever you host it     |
 
-Local pilot without a static host: run the frontends from source against the containerised API — `make dash` (`http://localhost:5174`), `make app` (`https://localhost:5173`, accept the self-signed certificate once per device), `make site` (`http://localhost:5175`). Their dev servers proxy `/api` to `http://127.0.0.1:8000`; point that elsewhere with `OWI_API_PROXY` in `.env`.
+Local pilot without a static host: run the frontends from source against the containerised API — `make dash` (`http://localhost:5174`), `make app` (`https://localhost:5173`, accept the self-signed certificate once per device), `make site` (`http://localhost:5175`). Their dev servers proxy `/api` to `http://127.0.0.1:8000`; point that elsewhere with `OWI_API_PROXY` in `.env`. The dashboard's dev server also proxies `/tiles` to the tile server on `http://127.0.0.1:8081` (`OWI_TILES_PROXY`).
 
 ## Production checklist
 
@@ -168,6 +171,29 @@ OSRM_PBF_URL=https://download.geofabrik.de/europe/portugal-latest.osm.pbf
 To re-prepare after changing regions: delete `var/osrm/` and `make web` again.
 To opt out entirely (tiny hosts), set `OWI_OSRM_URL=` (empty) in `.env` —
 straight-line distances only, nothing else changes.
+
+## Basemap tiles (self-hosted)
+
+The dashboard maps draw a vector basemap from the `tiles` service, so a browser
+never contacts openstreetmap.org or any other tile host. `make tiles` uses
+`go-pmtiles extract` to cut a region out of a [Protomaps](https://protomaps.com)
+planet build into `var/tiles/nairobi.pmtiles` (gitignored, ~25 MB, zoom 0–15).
+The `tiles` service serves it read-only as `/nairobi/{z}/{x}/{y}.mvt`. The
+dashboard requests `/tiles/nairobi/{z}/{x}/{y}.mvt`, and the Vite proxy or Caddy
+strips the `/tiles` prefix. The download runs once and needs internet access;
+serving the maps afterwards does not.
+
+- **Area:** the default bbox is `36.60,-1.50,37.15,-1.10`, Nairobi County with a
+  margin. Set `TILES_BBOX=min_lon,min_lat,max_lon,max_lat` in `.env` and run
+  `make tiles` again to cover another area.
+- **Build:** the planet build date is pinned as `BUILD=` in `scripts/tiles.sh`.
+  To bump it, pick a newer key from
+  <https://build-metadata.protomaps.dev/builds.json> (older daily builds are
+  pruned), change `BUILD`, and run `make tiles`. The running service picks up the
+  new file without a restart.
+
+Without the file, or with the `tiles` service stopped, the maps still draw their
+markers and routes on a plain background.
 
 ## Updating
 

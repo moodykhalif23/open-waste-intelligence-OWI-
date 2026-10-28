@@ -2857,6 +2857,20 @@
     opacity: 1;
     box-shadow: 0 10px 30px rgb(16 24 40 / 8%);
   }
+  .stage-ops .beats {
+    padding-bottom: 146vh;
+  }
+  #app {
+    margin-bottom: -100vh;
+  }
+  #app + .wave,
+  #app + .wave + section {
+    position: relative;
+    z-index: 2;
+  }
+  #app + .wave + section + .wave {
+    z-index: 3;
+  }
   .rig-phone {
     --W: calc(clamp(230px, min(64cqw, 38vh), 300px) * var(--fit, 1));
   }

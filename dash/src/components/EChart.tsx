@@ -1,64 +1,28 @@
-import { BarChart, HeatmapChart, LineChart, PieChart } from "echarts/charts";
-import {
-  GridComponent,
-  LegendComponent,
-  TooltipComponent,
-  VisualMapComponent,
-} from "echarts/components";
+import { HeatmapChart, LineChart } from "echarts/charts";
+import { GridComponent, TooltipComponent, VisualMapComponent } from "echarts/components";
 import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import { useEffect, useRef } from "react";
+import { owi } from "../theme";
 
-echarts.use([
-  BarChart,
-  LineChart,
-  PieChart,
-  HeatmapChart,
-  GridComponent,
-  TooltipComponent,
-  LegendComponent,
-  VisualMapComponent,
-  CanvasRenderer,
-]);
+echarts.use([LineChart, HeatmapChart, GridComponent, TooltipComponent, VisualMapComponent, CanvasRenderer]);
 
 type ChartOption = echarts.EChartsCoreOption;
 
-const INK = "#201a10";
-const MUTED = "#6b6456";
-const LINE = "#eae6dd";
-const ACCENT = "#101828";
+const CHART_FONT = '"Inter Variable", system-ui, sans-serif';
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-// Validated categorical palette (dataviz skill, light surface: worst adjacent
-// CVD ΔE 24.2). Contrast WARN on aqua/yellow/magenta is relieved by the direct
-// labels on donuts and the accompanying data tables on every page that uses it.
-export const CATEGORICAL = [
+export const SERIES = [
+  owi.ink,
+  "#e0a526",
+  owi.ok,
   "#2a78d6",
-  "#1baf7a",
-  "#eda100",
-  "#008300",
-  "#4a3aa7",
-  "#e34948",
-  "#e87ba4",
-  "#eb6834",
+  "#7c5cc4",
+  "#1f9aa8",
+  owi.faint,
 ] as const;
 
-// Stable color per waste material so a material reads the same hue on every
-// chart (color follows the entity, never its rank).
-export const MATERIAL_COLORS: Record<string, string> = {
-  plastic: CATEGORICAL[0],
-  glass: CATEGORICAL[1],
-  metal: CATEGORICAL[2],
-  paper: CATEGORICAL[3],
-  organic: CATEGORICAL[4],
-  e_waste: CATEGORICAL[5],
-  textile: CATEGORICAL[6],
-  other_mixed: CATEGORICAL[7],
-};
-
-// Ink single-hue ramp, light→dark, for sequential (heatmap) magnitude.
-const SEQUENTIAL = ["#eceef1", "#c2c7d0", "#8a93a8", "#3a4256", "#05070c"];
-
-const CHART_FONT = '"Inter Variable", system-ui, sans-serif';
+const HEAT = [owi.wash, owi.goldTint, "#f5cd78", owi.gold, "#c98d16", owi.brown];
 
 export default function EChart({ option, height = 280 }: { option: ChartOption; height?: number }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -68,8 +32,6 @@ export default function EChart({ option, height = 280 }: { option: ChartOption; 
     if (!el) return;
     const chart = echarts.init(el);
     chart.setOption({ textStyle: { fontFamily: CHART_FONT }, ...option });
-    // Container-based: charts reflow when the drawer toggles or the grid
-    // re-breaks, not only on window resize.
     const observer = new ResizeObserver(() => chart.resize());
     observer.observe(el);
     return () => {
@@ -81,129 +43,98 @@ export default function EChart({ option, height = 280 }: { option: ChartOption; 
   return <div ref={ref} style={{ height }} />;
 }
 
-const flatTooltip = {
+const tooltipStyle = {
   backgroundColor: "#ffffff",
-  borderColor: LINE,
+  borderColor: owi.line,
   borderWidth: 1,
-  textStyle: { color: INK, fontSize: 12, fontFamily: CHART_FONT },
-  extraCssText: "box-shadow: 0 4px 16px rgba(16,24,40,0.10); border-radius: 4px;",
+  padding: [8, 12],
+  textStyle: { color: owi.ink, fontSize: 12, fontFamily: CHART_FONT },
+  extraCssText: "box-shadow: 0 8px 24px rgba(16,24,40,0.10); border-radius: 10px;",
 };
 
-const catAxis = {
-  type: "category" as const,
-  axisLine: { lineStyle: { color: LINE } },
-  axisTick: { show: false },
-  axisLabel: { color: MUTED, fontSize: 11 },
-};
+const tipHtml = (label: string, value: string) =>
+  `<div style="color:${owi.muted};font-size:11px;margin-bottom:2px">${label}</div>` +
+  `<div style="font-weight:700;font-size:14px;color:${owi.ink}">${value}</div>`;
 
-const valAxis = {
-  type: "value" as const,
-  splitLine: { lineStyle: { color: LINE } },
-  axisLabel: { color: MUTED, fontSize: 11 },
-};
+export const compact = (v: number) =>
+  Math.abs(v) >= 1_000_000
+    ? `${+(v / 1_000_000).toFixed(1)}M`
+    : Math.abs(v) >= 1000
+      ? `${+(v / 1000).toFixed(1)}k`
+      : `${+v.toFixed(1)}`;
 
-// Vertical bars — magnitude across a handful of ordered categories.
-export function barOption(categories: string[], values: number[]): ChartOption {
-  return {
-    animation: false,
-    grid: { left: 40, right: 10, top: 16, bottom: 28 },
-    tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, ...flatTooltip },
-    xAxis: { ...catAxis, data: categories },
-    yAxis: { ...valAxis, minInterval: 1 },
-    series: [
-      {
-        type: "bar",
-        data: values,
-        barMaxWidth: 28,
-        itemStyle: { color: ACCENT, borderRadius: [4, 4, 0, 0] },
-      },
-    ],
-  };
+function sparseLabels(n: number, target = 5) {
+  const step = Math.max(1, Math.ceil((n - 1) / (target - 1)));
+  return (index: number) =>
+    index === n - 1 || (index % step === 0 && n - 1 - index >= step / 2);
 }
 
-// Horizontal bars — ranking of labelled magnitudes (biggest on top).
-export function hbarOption(categories: string[], values: number[]): ChartOption {
+export function areaOption(
+  categories: string[],
+  values: number[],
+  format: (v: number) => string = (v) => v.toLocaleString(),
+): ChartOption {
   return {
     animation: false,
-    grid: { left: 8, right: 44, top: 8, bottom: 8, containLabel: true },
-    tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, ...flatTooltip },
-    xAxis: { ...valAxis },
-    yAxis: { ...catAxis, data: categories, inverse: true },
-    series: [
-      {
-        type: "bar",
-        data: values,
-        barMaxWidth: 20,
-        itemStyle: { color: ACCENT, borderRadius: [0, 4, 4, 0] },
-        label: { show: true, position: "right", color: MUTED, fontSize: 11 },
+    grid: { left: 2, right: 10, top: 12, bottom: 2, containLabel: true },
+    tooltip: {
+      trigger: "axis",
+      axisPointer: { type: "line", lineStyle: { color: owi.stroke, type: "dashed" } },
+      ...tooltipStyle,
+      formatter: (params: { axisValueLabel: string; value: number }[]) => {
+        const p = params[0];
+        return p ? tipHtml(p.axisValueLabel, format(p.value)) : "";
       },
-    ],
-  };
-}
-
-// Area line — a value changing over time.
-export function lineOption(categories: string[], values: number[]): ChartOption {
-  return {
-    animation: false,
-    grid: { left: 40, right: 12, top: 16, bottom: 28 },
-    tooltip: { trigger: "axis", axisPointer: { type: "line", lineStyle: { color: LINE } }, ...flatTooltip },
-    xAxis: { ...catAxis, boundaryGap: false, data: categories },
-    yAxis: { ...valAxis, minInterval: 1 },
+    },
+    xAxis: {
+      type: "category",
+      data: categories,
+      boundaryGap: false,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: {
+        color: owi.muted,
+        fontSize: 11,
+        margin: 12,
+        interval: sparseLabels(categories.length),
+      },
+    },
+    yAxis: {
+      type: "value",
+      splitNumber: 3,
+      minInterval: 1,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: owi.faint, fontSize: 11, formatter: compact },
+      splitLine: { lineStyle: { color: owi.rule } },
+    },
     series: [
       {
         type: "line",
         data: values,
-        smooth: 0.25,
-        showSymbol: false,
-        lineStyle: { color: ACCENT, width: 2 },
-        areaStyle: { color: "rgba(16,24,40,0.10)" },
+        showSymbol: values.length <= 2,
+        symbol: "circle",
+        symbolSize: 7,
+        lineStyle: { color: owi.ink, width: 2.25, join: "round" },
+        itemStyle: { color: owi.ink, borderColor: "#ffffff", borderWidth: 2 },
+        areaStyle: {
+          color: {
+            type: "linear",
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: "rgba(242,185,73,0.34)" },
+              { offset: 1, color: "rgba(242,185,73,0)" },
+            ],
+          },
+        },
       },
     ],
   };
 }
 
-interface Slice {
-  name: string;
-  value: number;
-  color?: string;
-}
-
-// Donut — parts of a whole. Direct % labels satisfy the relief rule, so the
-// low-contrast categorical hues are always identified by text, not color alone.
-export function donutOption(items: Slice[]): ChartOption {
-  return {
-    animation: false,
-    tooltip: { trigger: "item", ...flatTooltip },
-    legend: {
-      type: "scroll",
-      orient: "vertical",
-      right: 8,
-      top: "middle",
-      itemWidth: 10,
-      itemHeight: 10,
-      icon: "roundRect",
-      textStyle: { color: MUTED, fontSize: 12 },
-    },
-    series: [
-      {
-        type: "pie",
-        radius: ["52%", "76%"],
-        center: ["36%", "50%"],
-        avoidLabelOverlap: true,
-        itemStyle: { borderColor: "#ffffff", borderWidth: 2 },
-        label: { show: true, formatter: "{d}%", color: INK, fontSize: 11, fontWeight: 600 },
-        labelLine: { length: 8, length2: 6, lineStyle: { color: LINE } },
-        data: items.map((s, i) => ({
-          name: s.name,
-          value: s.value,
-          itemStyle: { color: s.color ?? CATEGORICAL[i % CATEGORICAL.length] },
-        })),
-      },
-    ],
-  };
-}
-
-// Heatmap — magnitude across two categorical axes (e.g. weekday × hour).
 export function heatmapOption(
   xLabels: string[],
   yLabels: string[],
@@ -212,42 +143,73 @@ export function heatmapOption(
 ): ChartOption {
   return {
     animation: false,
-    grid: { left: 8, right: 8, top: 8, bottom: 44, containLabel: true },
-    tooltip: { position: "top", ...flatTooltip },
+    grid: { left: 2, right: 2, top: 2, bottom: 2, containLabel: true },
+    tooltip: {
+      ...tooltipStyle,
+      formatter: (p: { value: [number, number, number] }) =>
+        tipHtml(`${yLabels[p.value[1]] ?? ""} · ${xLabels[p.value[0]] ?? ""}:00`, p.value[2].toLocaleString()),
+    },
     xAxis: {
       type: "category",
       data: xLabels,
       splitArea: { show: false },
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: MUTED, fontSize: 10, interval: 1 },
+      axisLabel: { color: owi.faint, fontSize: 10, interval: 5, margin: 8 },
     },
     yAxis: {
       type: "category",
       data: yLabels,
+      inverse: true,
+      splitArea: { show: false },
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: MUTED, fontSize: 11 },
+      axisLabel: { color: owi.muted, fontSize: 11, margin: 10 },
     },
     visualMap: {
+      show: false,
       min: 0,
       max: Math.max(1, maxValue),
-      calculable: false,
-      orient: "horizontal",
-      left: "center",
-      bottom: 0,
-      itemWidth: 12,
-      itemHeight: 120,
-      textStyle: { color: MUTED, fontSize: 10 },
-      inRange: { color: SEQUENTIAL },
+      inRange: { color: HEAT },
     },
     series: [
       {
         type: "heatmap",
         data,
-        itemStyle: { borderColor: "#ffffff", borderWidth: 2 },
-        emphasis: { itemStyle: { borderColor: INK, borderWidth: 1 } },
+        itemStyle: { borderColor: "#ffffff", borderWidth: 2, borderRadius: 3 },
+        emphasis: { itemStyle: { borderColor: owi.ink, borderWidth: 1 } },
       },
     ],
   };
+}
+
+export const intlLocale = (lang: string) => (lang === "sw" ? "sw-KE" : "en-GB");
+
+export function startOfDay(t: number) {
+  const d = new Date(t);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+export function bucketSeries(
+  stamps: Iterable<string | number>,
+  days: number,
+  locale: string,
+  now = Date.now(),
+): { labels: string[]; values: number[]; weekly: boolean } {
+  const weekly = days > 60;
+  const size = weekly ? 7 * DAY_MS : DAY_MS;
+  const count = weekly ? Math.ceil(days / 7) : days;
+  const end = startOfDay(now) + DAY_MS;
+  const first = end - count * size;
+  const fmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" });
+  const labels = Array.from({ length: count }, (_, i) => fmt.format(new Date(first + i * size)));
+  const values = new Array<number>(count).fill(0);
+  for (const s of stamps) {
+    const t = typeof s === "number" ? s : Date.parse(s);
+    if (t < first || t >= end) continue;
+    const i = Math.floor((t - first) / size);
+    values[i] = (values[i] ?? 0) + 1;
+  }
+  return { labels, values, weekly };
 }

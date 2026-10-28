@@ -38,17 +38,19 @@ Ops dashboard and aggregate open-data API
 | How fast is it accumulating? | Fill velocity calculated from human-reported fill taps for registered bins. | No automated fill-level model; estimates need multiple time-separated reports. |
 | How long before overflow? | A v1 estimate and risk recommendation based on recent fill history. | It is unavailable or uncertain with sparse reports and is not a sensor-based forecast. |
 | How efficient are collections? | Route plans and modeled fixed-sweep versus need-driven comparison, alongside GPS aggregate distance, elapsed duration, actual fuel, and weighed tonnage from completed routes. | Measured performance is available only for routes explicitly started and completed in the field app. |
-| Which neighborhoods need more bins? | Site-level cleanliness and bin-health views can help locate operational concerns. | No neighborhood coverage or bin-placement recommendation model yet. |
+| Which neighborhoods need more bins? | A ward-level assessment view flags registered sites without bins and wards where at least half of assessed bins have medium/high fill risk. | This is an assessment priority, not an estimate of bin count or placement; population, area, and service-target denominators are not recorded. |
 | Which routes waste fuel? | Completed routes expose actual fuel against planned fuel, distance, duration, and weighed tonnage. | Fuel use is manually entered and the comparison is operational, not a causal fuel-efficiency model. |
 | Which recyclables are most common? | Material counts and shares over a selected time window. | These are image-classification estimates, not audited material weights. |
 | Which locations are repeatedly littered? | Staff-reviewed dumping observations are grouped into recurring dumping hotspots. | Hotspots are human-confirmed dumping sites, not automated street-litter detection. |
 
 These are current product boundaries, not a claim that every question is fully
 resolved. In particular, object-level waste detection and tracking, automated
-fill estimation, neighborhood bin-coverage
-recommendations, and automated litter detection remain future work. See
+fill estimation, denominator-based bin-coverage recommendations, and automated
+litter detection remain future work. See
 [the ML evaluation report](ml/reports/classifier-evaluation.md) for the public
-dataset metrics and the local-data limitation.
+dataset metrics and the local-data limitation. See the
+[product readiness tracker](docs/product-readiness.md) for implementation
+progress and validation evidence.
 
 ## Modules
 

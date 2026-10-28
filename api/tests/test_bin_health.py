@@ -3,6 +3,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from owi_api.analytics.bin_health import BAND_PCT, compute_health
+from owi_api.analytics.coverage import recommend_ward_assessment
 from owi_api.models.enums import FillBand, OverflowRisk
 
 NOW = datetime(2026, 7, 13, 8, 0, tzinfo=UTC)
@@ -79,3 +80,67 @@ def test_days_since_collection() -> None:
     health = compute_health([(days_ago(1), 50.0)], days_ago(4), NOW)
     assert health is not None
     assert health.days_since_collection == pytest.approx(4.0)
+
+
+def test_ward_with_sites_without_bins_is_flagged_for_assessment() -> None:
+    coverage = recommend_ward_assessment(
+        ward="Central",
+        site_count=4,
+        bin_count=3,
+        assessed_bin_count=3,
+        high_risk_bin_count=0,
+        medium_risk_bin_count=0,
+        sites_without_bins=1,
+        health_data_date=None,
+    )
+
+    assert coverage.priority == "assess"
+    assert coverage.reason == "registered_sites_without_bins"
+
+
+def test_ward_with_repeated_fill_pressure_is_flagged_for_assessment() -> None:
+    coverage = recommend_ward_assessment(
+        ward="Central",
+        site_count=3,
+        bin_count=6,
+        assessed_bin_count=4,
+        high_risk_bin_count=1,
+        medium_risk_bin_count=1,
+        sites_without_bins=0,
+        health_data_date=None,
+    )
+
+    assert coverage.priority == "assess"
+    assert coverage.reason == "repeated_capacity_pressure"
+
+
+def test_ward_with_few_assessed_bins_is_not_overstated() -> None:
+    coverage = recommend_ward_assessment(
+        ward="Central",
+        site_count=3,
+        bin_count=2,
+        assessed_bin_count=2,
+        high_risk_bin_count=2,
+        medium_risk_bin_count=0,
+        sites_without_bins=0,
+        health_data_date=None,
+    )
+
+    assert coverage.priority == "insufficient_data"
+    assert coverage.reason == "too_few_assessed_bins"
+
+
+def test_ward_without_pressure_is_monitored() -> None:
+    coverage = recommend_ward_assessment(
+        ward="Central",
+        site_count=3,
+        bin_count=5,
+        assessed_bin_count=4,
+        high_risk_bin_count=0,
+        medium_risk_bin_count=1,
+        sites_without_bins=0,
+        health_data_date=None,
+    )
+
+    assert coverage.priority == "monitor"
+    assert coverage.reason == "no_priority_signal"

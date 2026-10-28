@@ -1,12 +1,13 @@
 import uuid
 from datetime import UTC, date, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
+from owi_api.analytics.coverage import recommend_ward_assessment
 from owi_api.analytics.refresh import refresh_bin
 from owi_api.db import get_session
 from owi_api.models.enums import OverflowRisk, UserRole
@@ -45,6 +46,24 @@ class BinHealthOut(BaseModel):
     overflow_risk: OverflowRisk
     recommendation: str
     collected: bool
+
+
+class WardCoverageOut(BaseModel):
+    ward: str
+    site_count: int
+    bin_count: int
+    assessed_bin_count: int
+    high_risk_bin_count: int
+    medium_risk_bin_count: int
+    sites_without_bins: int
+    priority: Literal["assess", "monitor", "insufficient_data"]
+    reason: Literal[
+        "registered_sites_without_bins",
+        "repeated_capacity_pressure",
+        "too_few_assessed_bins",
+        "no_priority_signal",
+    ]
+    health_data_date: date | None
 
 
 @router.post("/collections", response_model=CollectionOut, status_code=201)
@@ -108,3 +127,92 @@ def bin_health(
     risk_rank = {OverflowRisk.HIGH: 0, OverflowRisk.MEDIUM: 1, OverflowRisk.LOW: 2}
     results.sort(key=lambda r: (risk_rank[r.overflow_risk], -r.fill_pct))
     return results
+
+
+@router.get("/bins/coverage", response_model=list[WardCoverageOut])
+def ward_coverage(
+    claims: Annotated[TokenClaims, require_roles(*STAFF)],
+    session: Annotated[Session, Depends(get_session)],
+) -> list[WardCoverageOut]:
+    latest = (
+        select(
+            BinHealthDaily.bin_id,
+            BinHealthDaily.date,
+            BinHealthDaily.overflow_risk,
+        )
+        .where(
+            BinHealthDaily.org_id == claims.org_id,
+            BinHealthDaily.deleted_at.is_(None),
+        )
+        .order_by(BinHealthDaily.bin_id, BinHealthDaily.date.desc())
+        .distinct(BinHealthDaily.bin_id)
+        .subquery()
+    )
+    rows = session.execute(
+        select(
+            Site.ward,
+            func.count(func.distinct(Site.id)),
+            func.count(func.distinct(Bin.id)),
+            func.count(func.distinct(latest.c.bin_id)),
+            func.count(func.distinct(case((latest.c.overflow_risk == OverflowRisk.HIGH, Bin.id)))),
+            func.count(
+                func.distinct(case((latest.c.overflow_risk == OverflowRisk.MEDIUM, Bin.id)))
+            ),
+            func.count(func.distinct(case((Bin.id.is_(None), Site.id)))),
+            func.max(latest.c.date),
+        )
+        .select_from(Site)
+        .outerjoin(
+            Bin,
+            (Bin.site_id == Site.id) & Bin.deleted_at.is_(None),
+        )
+        .outerjoin(latest, latest.c.bin_id == Bin.id)
+        .where(
+            Site.org_id == claims.org_id,
+            Site.deleted_at.is_(None),
+            Site.ward.is_not(None),
+        )
+        .group_by(Site.ward)
+        .order_by(Site.ward)
+    ).all()
+
+    recommendations = []
+    for row in rows:
+        (
+            ward,
+            site_count,
+            bin_count,
+            assessed_bin_count,
+            high_risk_bin_count,
+            medium_risk_bin_count,
+            sites_without_bins,
+            health_data_date,
+        ) = row
+        assert ward is not None
+        recommendations.append(
+            recommend_ward_assessment(
+                ward=ward,
+                site_count=site_count,
+                bin_count=bin_count,
+                assessed_bin_count=assessed_bin_count,
+                high_risk_bin_count=high_risk_bin_count,
+                medium_risk_bin_count=medium_risk_bin_count,
+                sites_without_bins=sites_without_bins,
+                health_data_date=health_data_date,
+            )
+        )
+    return [
+        WardCoverageOut(
+            ward=item.ward,
+            site_count=item.site_count,
+            bin_count=item.bin_count,
+            assessed_bin_count=item.assessed_bin_count,
+            high_risk_bin_count=item.high_risk_bin_count,
+            medium_risk_bin_count=item.medium_risk_bin_count,
+            sites_without_bins=item.sites_without_bins,
+            priority=item.priority,
+            reason=item.reason,
+            health_data_date=item.health_data_date,
+        )
+        for item in recommendations
+    ]

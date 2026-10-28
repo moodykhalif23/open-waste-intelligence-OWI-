@@ -212,6 +212,39 @@ def main() -> None:
     refresh = client.post("/api/v1/admin/analytics/refresh", headers=admin)
     check("analytics refresh runs", refresh.status_code == 200 and refresh.json()["bins"] >= 1)
 
+    unserved_site = client.post(
+        "/api/v1/sites",
+        headers=admin,
+        json={"name": "Ward Site Without Bins", "site_type": "estate", "ward": "Test Ward"},
+    )
+    check("create site without bins for coverage assessment", unserved_site.status_code == 201)
+    check(
+        "ward coverage requires authentication",
+        client.get("/api/v1/bins/coverage").status_code == 401,
+    )
+    coverage = client.get("/api/v1/bins/coverage", headers=admin)
+    ward_coverage = (
+        next(
+            (row for row in coverage.json() if row["ward"] == "Test Ward"),
+            None,
+        )
+        if coverage.status_code == 200
+        else None
+    )
+    check(
+        "ward coverage identifies sites needing assessment",
+        ward_coverage is not None
+        and ward_coverage["site_count"] == 2
+        and ward_coverage["bin_count"] == 1
+        and ward_coverage["assessed_bin_count"] == 1
+        and ward_coverage["high_risk_bin_count"] == 1
+        and ward_coverage["sites_without_bins"] == 1
+        and ward_coverage["health_data_date"] is not None
+        and ward_coverage["priority"] == "assess"
+        and ward_coverage["reason"] == "registered_sites_without_bins",
+        coverage.text[:180],
+    )
+
     health = client.get("/api/v1/bins/health", headers=admin).json()
     ours = next((r for r in health if r["bin_id"] == bin_data["id"]), None)
     check("bin health scored", ours is not None, str(ours)[:120])
@@ -232,6 +265,30 @@ def main() -> None:
         ours_after is not None and (ours_after["days_since_collection"] or 0) < 1,
     )
 
+    refill = client.post(
+        "/api/v1/observations/batch",
+        headers=device_auth,
+        data={
+            "meta": json.dumps(
+                [
+                    {
+                        "captured_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        "bin_qr": bin_data["qr_code"],
+                        "fill_tap": "overflowing",
+                    }
+                ]
+            )
+        },
+        files=[("files", ("refill.jpg", make_jpeg(run_seed + 30), "image/jpeg"))],
+    )
+    check(
+        "post-collection refill report accepted",
+        refill.status_code == 200 and refill.json()["results"][0]["status"] == "created",
+        refill.text[:120],
+    )
+    refreshed = client.post("/api/v1/admin/analytics/refresh", headers=admin)
+    check("post-collection refill refreshes health", refreshed.status_code == 200)
+
     truck = client.post(
         "/api/v1/trucks",
         headers=admin,
@@ -244,12 +301,16 @@ def main() -> None:
         },
     )
     check("create truck", truck.status_code == 201, truck.text[:120])
-    plan = client.post("/api/v1/routes/optimize", headers=admin, json={})
+    plan = client.post(
+        "/api/v1/routes/optimize",
+        headers=admin,
+        json={"bin_ids": [bin_data["id"]]},
+    )
     check("route optimization runs", plan.status_code == 200, plan.text[:150])
     if plan.status_code == 200:
         routes = plan.json()
         served = sum(r["bins_served"] for r in routes)
-        check("route covers collect-today bins", served >= 1, f"served={served}")
+        check("route covers the selected bin", served >= 1, f"served={served}")
         check("route reports distance + fuel", all(r["planned_km"] >= 0 for r in routes))
         check("route reports collection method", all(r.get("method") for r in routes))
     replan = client.post("/api/v1/routes/replan", headers=admin, json={})
@@ -604,6 +665,30 @@ def main() -> None:
         phones_set.status_code == 200 and phones_set.json()["notify_phones"] == ["+254700000321"],
         phones_set.text[:100],
     )
+    digest_refill = client.post(
+        "/api/v1/observations/batch",
+        headers=device_auth,
+        data={
+            "meta": json.dumps(
+                [
+                    {
+                        "captured_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        "bin_qr": bin_data["qr_code"],
+                        "fill_tap": "overflowing",
+                    }
+                ]
+            )
+        },
+        files=[("files", ("digest-refill.jpg", make_jpeg(run_seed + 31), "image/jpeg"))],
+    )
+    check(
+        "overflow digest refill report accepted",
+        digest_refill.status_code == 200
+        and digest_refill.json()["results"][0]["status"] == "created",
+        digest_refill.text[:120],
+    )
+    digest_refresh = client.post("/api/v1/admin/analytics/refresh", headers=admin)
+    check("overflow digest health refreshes", digest_refresh.status_code == 200)
     digest = client.post("/api/v1/admin/notifications/digest", headers=admin)
     check(
         "overflow digest dispatches",

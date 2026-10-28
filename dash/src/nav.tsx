@@ -18,6 +18,7 @@ import ManageAccountsOutlined from "@mui/icons-material/ManageAccountsOutlined";
 import PublicOutlined from "@mui/icons-material/PublicOutlined";
 import HistoryOutlined from "@mui/icons-material/HistoryOutlined";
 import TuneOutlined from "@mui/icons-material/TuneOutlined";
+import PlaceOutlined from "@mui/icons-material/PlaceOutlined";
 import type { StringKey } from "./i18n";
 
 // A leaf destination.
@@ -50,6 +51,7 @@ export const NAV: NavEntry[] = [
       { path: "/intelligence/recycling", key: "recycling", icon: <RecyclingOutlined fontSize="small" /> },
       { path: "/intelligence/carbon", key: "carbon", icon: <EnergySavingsLeafOutlined fontSize="small" /> },
       { path: "/intelligence/cleanliness", key: "cleanliness", icon: <CleaningServicesOutlined fontSize="small" /> },
+      { path: "/intelligence/coverage", key: "coverage", icon: <PlaceOutlined fontSize="small" /> },
       { path: "/intelligence/dumping", key: "dumping", icon: <WarningAmberOutlined fontSize="small" /> },
     ],
   },

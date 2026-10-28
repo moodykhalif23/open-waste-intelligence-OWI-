@@ -80,6 +80,13 @@ Days since collection   4
 Recommendation          Collect today
 ```
 
+The staff dashboard also groups registered sites and their bins by the site's
+recorded ward. It flags a ward for human assessment when a registered site has
+no bins, or when at least half of three or more bins with current health data
+have medium/high fill risk. Fewer than three assessed bins is shown as
+insufficient evidence. This does not estimate a required bin count or placement:
+population, service-area size, and coverage targets are not captured.
+
 ## Cleanliness index (v1 components)
 
 Score 0–100 per area (estate/ward), weighted sum — weights tuned with Safi during Phase 2:
@@ -103,7 +110,7 @@ Published with methodology version; never compare scores across methodology vers
 |---|---|
 | Sync | `POST /observations/batch` (multipart, resumable), `GET /sync/manifest` |
 | Registry | CRUD `/bins`, `/sites`, `/trucks`, `/users`, `/routes` |
-| Ops | `GET /bins/health?date=`, `POST /routes/optimize`, `POST /routes/{id}/start`, `POST /routes/{id}/complete`, `POST /routes/stops/{id}/collect` |
+| Ops | `GET /bins/health?date=`, `GET /bins/coverage` (ward-level assessment signals), `POST /routes/optimize`, `POST /routes/{id}/start`, `POST /routes/{id}/complete`, `POST /routes/stops/{id}/collect` |
 | Review | `GET /predictions?status=unreviewed`, `POST /predictions/{id}/correct` |
 | Analytics | `GET /analytics/composition`, `/cleanliness`, `/carbon`, `/volunteers` with `scope` + `window` params |
 | Reports | `POST /reports` (template, range) → PDF/CSV |

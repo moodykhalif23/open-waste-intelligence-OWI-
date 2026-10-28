@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Alert from "@mui/material/Alert";
-import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
@@ -16,7 +15,7 @@ import AddBoxOutlinedIcon from "@mui/icons-material/AddBoxOutlined";
 import { api, apiBlob, type Bin, type Site } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import MapView from "../components/MapView";
-import { EmptyState, ErrorPanel, PageSkeleton, PageStack, SectionCard, TableSection } from "../components/ui";
+import { CodeLabel, EmptyState, ErrorPanel, PageSkeleton, PageStack, SectionCard } from "../components/ui";
 import { useI18n } from "../i18n";
 
 export default function Bins() {
@@ -26,6 +25,17 @@ export default function Bins() {
   const [error, setError] = useState<string | null>(null);
   const [siteDialogOpen, setSiteDialogOpen] = useState(false);
   const [binDialogOpen, setBinDialogOpen] = useState(false);
+  const [ward, setWard] = useState("");
+
+  const siteById = useMemo(() => new Map(sites.map((s) => [s.id, s])), [sites]);
+  const wards = useMemo(
+    () => Array.from(new Set(sites.map((s) => s.ward).filter((w): w is string => !!w))).sort(),
+    [sites],
+  );
+  const shown = useMemo(
+    () => (ward ? (bins ?? []).filter((b) => siteById.get(b.site_id)?.ward === ward) : (bins ?? [])),
+    [bins, ward, siteById],
+  );
 
   const reload = useCallback(async () => {
     try {
@@ -71,38 +81,44 @@ export default function Bins() {
     );
   }
   if (bins === null) return <PageSkeleton />;
-  const siteName = (id: string) => sites.find((s) => s.id === id)?.name ?? id.slice(0, 8);
+  const siteName = (id: string) => siteById.get(id)?.name ?? id.slice(0, 8);
 
   const columns: GridColDef<Bin>[] = [
     {
       field: "qr_code",
       headerName: t("qrCode"),
-      flex: 1,
-      minWidth: 130,
-      renderCell: (p) => (
-        <Box sx={{ fontFamily: "ui-monospace, monospace" }}>{p.value as string}</Box>
-      ),
+      width: 130,
+      renderCell: (p) => <CodeLabel>{p.value as string}</CodeLabel>,
     },
     {
       field: "site_id",
       headerName: t("site"),
       flex: 1,
-      minWidth: 130,
+      minWidth: 170,
       valueGetter: (_v, row) => siteName(row.site_id),
     },
+    {
+      field: "ward",
+      headerName: t("ward"),
+      flex: 0.6,
+      minWidth: 120,
+      valueGetter: (_v, row) => siteById.get(row.site_id)?.ward ?? "—",
+    },
     { field: "bin_type", headerName: t("binType"), width: 120 },
-    { field: "volume_liters", headerName: t("volume"), type: "number", width: 100 },
+    { field: "volume_liters", headerName: t("volume"), type: "number", width: 110, valueFormatter: (v) => Number(v).toLocaleString() },
     { field: "lat", headerName: t("lat"), type: "number", width: 110, valueFormatter: (v) => Number(v).toFixed(5) },
     { field: "lng", headerName: t("lng"), type: "number", width: 110, valueFormatter: (v) => Number(v).toFixed(5) },
     {
       field: "actions",
       headerName: "",
-      width: 120,
+      width: 100,
       sortable: false,
       filterable: false,
+      disableExport: true,
+      align: "right",
       renderCell: (p) => (
         <Button
-          variant="outlined"
+          variant="text"
           size="small"
           startIcon={<DownloadIcon />}
           onClick={() => void downloadQr(p.row)}
@@ -113,40 +129,71 @@ export default function Bins() {
     },
   ];
 
+  const wardSelect = wards.length > 1 && (
+    <TextField
+      select
+      value={ward}
+      onChange={(e) => setWard(e.target.value)}
+      sx={{ minWidth: 190, "& .MuiSelect-select": { py: "7px", fontSize: "0.9rem" } }}
+      slotProps={{ select: { displayEmpty: true }, htmlInput: { "aria-label": t("ward") } }}
+    >
+      <MenuItem value="">{t("allWards")}</MenuItem>
+      {wards.map((w) => (
+        <MenuItem key={w} value={w}>
+          {w}
+        </MenuItem>
+      ))}
+    </TextField>
+  );
+
+  const addActions = (
+    <>
+      <Button
+        variant="outlined"
+        size="small"
+        startIcon={<AddLocationAltOutlinedIcon />}
+        onClick={() => setSiteDialogOpen(true)}
+      >
+        {t("newSite")}
+      </Button>
+      <Button
+        variant="contained"
+        size="small"
+        startIcon={<AddBoxOutlinedIcon />}
+        disabled={sites.length === 0}
+        onClick={() => setBinDialogOpen(true)}
+      >
+        {t("newBin")}
+      </Button>
+    </>
+  );
+
   return (
     <PageStack>
-      <Stack direction="row" spacing={1.5} sx={{ justifyContent: "flex-end", flexWrap: "wrap" }}>
-        <Button
-          variant="outlined"
-          startIcon={<AddLocationAltOutlinedIcon />}
-          onClick={() => setSiteDialogOpen(true)}
-        >
-          {t("newSite")}
-        </Button>
-        <Button
-          variant="contained"
-          startIcon={<AddBoxOutlinedIcon />}
-          disabled={sites.length === 0}
-          onClick={() => setBinDialogOpen(true)}
-        >
-          {t("newBin")}
-        </Button>
-      </Stack>
-      {bins.length > 0 && (
-        <SectionCard title={t("map")}>
+      <SectionCard
+        title={t("map")}
+        hint={bins.length > 0 ? `${shown.length.toLocaleString()} ${t("bins").toLowerCase()}` : undefined}
+        action={addActions}
+      >
+        {bins.length > 0 ? (
           <MapView
-            points={bins.map((b) => ({ lat: b.lat, lng: b.lng, label: `${b.qr_code} · ${siteName(b.site_id)}` }))}
+            height={360}
+            points={shown.map((b) => ({ lat: b.lat, lng: b.lng, label: `${b.qr_code} · ${siteName(b.site_id)}` }))}
           />
-        </SectionCard>
-      )}
-
-      <TableSection title={t("bins")}>
-        {bins.length === 0 ? (
-          <EmptyState icon={<DeleteOutlineOutlinedIcon />} title={t("noData")} hint={t("newSite")} />
         ) : (
-          <DataTable rows={bins} columns={columns} />
+          <EmptyState icon={<DeleteOutlineOutlinedIcon />} title={t("noData")} hint={t("newSite")} />
         )}
-      </TableSection>
+      </SectionCard>
+
+      {bins.length > 0 && (
+        <DataTable
+          rows={shown}
+          columns={columns}
+          pageSize={25}
+          searchPlaceholder={t("searchBinsLong")}
+          filters={wardSelect || undefined}
+        />
+      )}
 
       <Dialog open={siteDialogOpen} onClose={() => setSiteDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{t("newSite")}</DialogTitle>

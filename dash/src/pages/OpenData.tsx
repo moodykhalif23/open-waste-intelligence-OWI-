@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -10,7 +9,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import PublicOutlined from "@mui/icons-material/PublicOutlined";
 import { api, type ApiKey, type ApiKeyCreated, type PublicMeta } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import { EmptyState, ErrorPanel, PageSkeleton, PageStack, SectionCard, TableSection } from "../components/ui";
+import { CodeLabel, EmptyState, ErrorPanel, PageSkeleton, PageStack, SectionCard, TableSection, Tag } from "../components/ui";
 import { useApi } from "../useApi";
 import { useI18n } from "../i18n";
 
@@ -60,8 +59,8 @@ export default function OpenData() {
   if (keys === null) return <PageSkeleton />;
 
   const columns: GridColDef<ApiKey>[] = [
-    { field: "label", headerName: t("keyLabel"), flex: 1, minWidth: 120 },
-    { field: "key_prefix", headerName: t("keyPrefix"), width: 140, renderCell: (p) => <Box sx={{ fontFamily: "ui-monospace, monospace" }}>{p.value as string}</Box> },
+    { field: "label", headerName: t("keyLabel"), flex: 1, minWidth: 140, renderCell: (p) => <CodeLabel>{p.value as string}</CodeLabel> },
+    { field: "key_prefix", headerName: t("keyPrefix"), width: 140, renderCell: (p) => <Box sx={{ fontFamily: "ui-monospace, monospace", fontSize: "0.86rem" }}>{p.value as string}</Box> },
     { field: "created_at", headerName: t("created"), width: 130, valueFormatter: (v) => fmtDate(v as string) },
     { field: "last_used_at", headerName: t("lastUsed"), width: 130, valueGetter: (_v, row) => (row.last_used_at ? fmtDate(row.last_used_at) : t("never")) },
     {
@@ -70,7 +69,7 @@ export default function OpenData() {
       width: 110,
       sortable: false,
       renderCell: (p) => (
-        <Chip size="small" color={p.row.revoked_at ? "default" : "success"} label={p.row.revoked_at ? t("revoked") : t("active")} />
+        <Tag tone={p.row.revoked_at ? "neutral" : "ok"}>{p.row.revoked_at ? t("revoked") : t("active")}</Tag>
       ),
     },
     {
@@ -79,9 +78,11 @@ export default function OpenData() {
       width: 110,
       sortable: false,
       filterable: false,
+      disableExport: true,
+      align: "right",
       renderCell: (p) =>
         p.row.revoked_at ? null : (
-          <Button size="small" variant="outlined" color="error" onClick={() => void revoke(p.row.id)}>
+          <Button size="small" variant="text" sx={{ color: "text.secondary" }} onClick={() => void revoke(p.row.id)}>
             {t("revoke")}
           </Button>
         ),
@@ -106,8 +107,8 @@ export default function OpenData() {
                 sx={{
                   mt: 0.5,
                   p: 1.5,
-                  borderRadius: 2,
-                  bgcolor: "#201a10",
+                  borderRadius: "10px",
+                  bgcolor: "#101828",
                   color: "#e2e8f0",
                   fontFamily: "ui-monospace, Consolas, monospace",
                   fontSize: "0.82rem",
@@ -160,7 +161,9 @@ export default function OpenData() {
           </Alert>
         )}
         {keys.length === 0 ? (
-          <EmptyState icon={<PublicOutlined />} title={t("noKeys")} />
+          <SectionCard>
+            <EmptyState icon={<PublicOutlined />} title={t("noKeys")} />
+          </SectionCard>
         ) : (
           <DataTable rows={keys} columns={columns} toolbar={false} />
         )}

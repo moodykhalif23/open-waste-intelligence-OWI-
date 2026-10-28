@@ -4,8 +4,10 @@ import {
   EmptyState,
   ErrorPanel,
   PageStack,
+  SectionCard,
   TableSection,
   TableSkeleton,
+  Tag,
 } from "../components/ui";
 import { useI18n } from "../i18n";
 import { useApi } from "../useApi";
@@ -49,8 +51,9 @@ export default function Audit() {
     {
       field: "created_at",
       headerName: t("auditTime"),
-      minWidth: 170,
-      valueFormatter: (v: string) => new Date(v).toLocaleString(),
+      minWidth: 200,
+      valueFormatter: (v: string) => new Date(v).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }),
+      renderCell: (p) => <span style={{ whiteSpace: "nowrap" }}>{p.formattedValue as string}</span>,
     },
     {
       field: "actor_name",
@@ -58,7 +61,7 @@ export default function Audit() {
       minWidth: 140,
       valueFormatter: (v: string | null) => v ?? "—",
     },
-    { field: "action", headerName: t("auditAction"), minWidth: 160 },
+    { field: "action", headerName: t("auditAction"), minWidth: 180, renderCell: (p) => <Tag>{p.value as string}</Tag> },
     { field: "entity", headerName: t("auditEntity"), minWidth: 110 },
     {
       field: "ip",
@@ -78,9 +81,11 @@ export default function Audit() {
 
   return (
     <PageStack>
-      <TableSection title={t("audit")}>
+      <TableSection title={t("audit")} hint={rows.length > 0 ? rows.length.toLocaleString() : undefined}>
         {rows.length === 0 ? (
-          <EmptyState icon={<HistoryOutlined />} title={t("noAudit")} />
+          <SectionCard>
+            <EmptyState icon={<HistoryOutlined />} title={t("noAudit")} />
+          </SectionCard>
         ) : (
           <DataTable rows={rows} columns={columns} pageSize={25} />
         )}

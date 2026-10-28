@@ -18,7 +18,6 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import AltRouteOutlined from "@mui/icons-material/AltRouteOutlined";
-import BuildOutlined from "@mui/icons-material/BuildOutlined";
 import ExpandMoreOutlined from "@mui/icons-material/ExpandMoreOutlined";
 import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
 import { api } from "../api";
@@ -268,7 +267,7 @@ export default function Routes() {
         </SectionCard>
       ) : (
         <Grid container spacing={GAP}>
-          <Grid size={{ xs: 12, lg: 7.5 }}>
+          <Grid size={{ xs: 12, lg: 7 }}>
             {mapPoints.length > 0 ? (
               <MapView points={mapPoints} lines={mapLines} height={480} />
             ) : (
@@ -277,7 +276,7 @@ export default function Routes() {
               </SectionCard>
             )}
           </Grid>
-          <Grid size={{ xs: 12, lg: 4.5 }}>
+          <Grid size={{ xs: 12, lg: 5 }}>
             <SectionCard title={t("todaysRoutes")} hint={`${routes.length}`}>
               <Box sx={{ mx: -1, maxHeight: { lg: 404 }, overflowY: "auto" }}>
                 {sorted.map((route) => (
@@ -298,7 +297,7 @@ export default function Routes() {
         </Grid>
       )}
 
-      <Grid container spacing={GAP}>
+      <Grid container spacing={GAP} sx={{ alignItems: "flex-start" }}>
         <Grid size={{ xs: 12, md: 6 }}>
           <SectionCard title={t("savingsTitle")} action={savingsAction}>
             {savings === null ? (
@@ -577,8 +576,7 @@ function RouteRow({
     : [
         `${route.bins_served} ${t("stops")}`,
         `${route.planned_km} km`,
-        route.planned_fuel_l > 0 ? `${route.planned_fuel_l} L` : null,
-        `${Math.round(route.demand_kg).toLocaleString()} kg`,
+        route.planned_fuel_l > 0 ? `${route.planned_fuel_l} L` : `${Math.round(route.demand_kg).toLocaleString()} kg`,
       ]
         .filter(Boolean)
         .join(" · ");
@@ -618,13 +616,15 @@ function RouteRow({
               <Typography noWrap sx={{ fontWeight: 680, color: "text.primary", fontSize: "0.98rem" }}>
                 {route.truck_name}
               </Typography>
-              <Typography noWrap sx={{ color: "text.secondary", fontSize: "0.82rem" }}>
+              <Typography noWrap sx={{ color: "text.secondary", fontSize: "0.82rem", flexShrink: 0 }}>
                 {methodLabel}
               </Typography>
-              {skipped > 0 && <Tag tone="bad">{`${skipped} ${t("stopsSkipped")}`}</Tag>}
             </Box>
             <Typography noWrap sx={{ color: owi.inkSoft, fontSize: "0.86rem", fontVariantNumeric: "tabular-nums" }}>
               {meta}
+              {skipped > 0 && (
+                <Box component="span" sx={{ color: owi.bad, fontWeight: 620 }}>{` · ${skipped} ${t("stopsSkipped")}`}</Box>
+              )}
             </Typography>
           </Box>
           {!empty && (
@@ -637,17 +637,25 @@ function RouteRow({
           variant="outlined"
           size="small"
           color="error"
-          startIcon={<BuildOutlined sx={{ fontSize: "16px !important" }} />}
           disabled={disabled}
           title={t("breakdownHint")}
           onClick={onBreakdown}
-          sx={{ borderColor: owi.badLine }}
+          sx={{ borderColor: owi.badLine, px: 1.25, minWidth: 0 }}
         >
           {t("breakdown")}
         </Button>
       </Box>
       <Collapse in={open} unmountOnExit>
         <Box sx={{ px: 2.5, pb: 2, pt: 1 }}>
+          <Typography sx={{ color: "text.secondary", fontSize: "0.84rem", mb: 1.25, fontVariantNumeric: "tabular-nums" }}>
+            {[
+              `${route.planned_km} km`,
+              route.planned_fuel_l > 0 ? `${route.planned_fuel_l} L` : null,
+              `${Math.round(route.demand_kg).toLocaleString()} kg`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </Typography>
           {!hasPendingStops && (
             <Typography sx={{ color: "text.secondary", fontSize: "0.84rem", mb: 1.25 }}>{t("routeComplete")}</Typography>
           )}

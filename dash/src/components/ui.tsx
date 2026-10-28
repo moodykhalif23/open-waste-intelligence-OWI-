@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import Accordion from "@mui/material/Accordion";
 import AccordionDetails from "@mui/material/AccordionDetails";
 import AccordionSummary from "@mui/material/AccordionSummary";
@@ -335,7 +335,15 @@ export interface Part {
 
 const pct = (v: number, total: number) => (total > 0 ? (v / total) * 100 : 0);
 
-export function StackBar({ items, format = (v) => v.toLocaleString() }: { items: Part[]; format?: (v: number) => string }) {
+export function StackBar({
+  items,
+  format = (v) => v.toLocaleString(),
+  inline,
+}: {
+  items: Part[];
+  format?: (v: number) => string;
+  inline?: boolean;
+}) {
   const total = items.reduce((s, i) => s + i.value, 0);
   return (
     <Box>
@@ -364,11 +372,17 @@ export function StackBar({ items, format = (v) => v.toLocaleString() }: { items:
             </Tooltip>
           ))}
       </Box>
-      <Stack spacing={1.1}>
+      <Box
+        sx={
+          inline
+            ? { display: "flex", flexWrap: "wrap", columnGap: 4, rowGap: 1 }
+            : { display: "flex", flexDirection: "column", gap: 1.1 }
+        }
+      >
         {items.map((i) => (
           <Box key={i.label} sx={{ display: "flex", alignItems: "center", gap: 1.25, fontSize: "0.92rem" }}>
             <Box sx={{ width: 10, height: 10, borderRadius: "3px", bgcolor: i.color ?? owi.ink, flexShrink: 0 }} />
-            <Typography sx={{ color: owi.inkSoft, fontSize: "inherit", flex: 1, minWidth: 0 }} noWrap>
+            <Typography sx={{ color: owi.inkSoft, fontSize: "inherit", flex: inline ? "none" : 1, minWidth: 0 }} noWrap>
               {i.label}
             </Typography>
             <Typography sx={{ fontWeight: 660, fontSize: "inherit", fontVariantNumeric: "tabular-nums" }}>
@@ -387,7 +401,7 @@ export function StackBar({ items, format = (v) => v.toLocaleString() }: { items:
             </Typography>
           </Box>
         ))}
-      </Stack>
+      </Box>
     </Box>
   );
 }
@@ -413,18 +427,19 @@ export function RankBars({
 }) {
   const max = Math.max(1, ...items.map((i) => i.value));
   return (
-    <Stack spacing={1.6} sx={{ pt: 0.5 }}>
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: `minmax(5em, ${labelWidth}) 1fr auto`,
+        alignItems: "center",
+        columnGap: 1.75,
+        rowGap: 1.6,
+        pt: 0.5,
+        fontSize: "0.92rem",
+      }}
+    >
       {items.map((i, k) => (
-        <Box
-          key={i.label}
-          sx={{
-            display: "grid",
-            gridTemplateColumns: `minmax(5em, ${labelWidth}) 1fr minmax(3.5em, auto)`,
-            alignItems: "center",
-            gap: 1.75,
-            fontSize: "0.92rem",
-          }}
-        >
+        <Fragment key={i.label}>
           <Typography sx={{ color: owi.inkSoft, fontSize: "inherit" }} noWrap title={i.label}>
             {i.label}
           </Typography>
@@ -440,13 +455,13 @@ export function RankBars({
             />
           </Box>
           <Typography
-            sx={{ fontWeight: 660, fontSize: "inherit", textAlign: "right", fontVariantNumeric: "tabular-nums" }}
+            sx={{ fontWeight: 660, fontSize: "inherit", textAlign: "right", fontVariantNumeric: "tabular-nums", minWidth: "3em" }}
           >
             {format(i.value)}
           </Typography>
-        </Box>
+        </Fragment>
       ))}
-    </Stack>
+    </Box>
   );
 }
 
@@ -610,7 +625,7 @@ export function Meter({ value, bad }: { value: number; bad?: boolean }) {
       </Box>
       <Box
         component="span"
-        sx={{ color: "text.secondary", fontSize: "0.85rem", width: "2.8em", textAlign: "right", fontVariantNumeric: "tabular-nums" }}
+        sx={{ color: "text.secondary", fontSize: "0.85rem", width: "3.2em", textAlign: "right", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}
       >
         {Math.round(value)}%
       </Box>

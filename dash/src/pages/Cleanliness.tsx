@@ -1,10 +1,23 @@
+import { useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import CleaningServicesOutlinedIcon from "@mui/icons-material/CleaningServicesOutlined";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import { EmptyState, ErrorPanel, Muted, PageSkeleton, PageStack } from "../components/ui";
+import {
+  EmptyState,
+  ErrorPanel,
+  FilterChips,
+  Note,
+  PageSkeleton,
+  PageStack,
+  SectionCard,
+  StackBar,
+  Tag,
+  type Tone,
+} from "../components/ui";
 import { useApi } from "../useApi";
 import { useI18n, type StringKey } from "../i18n";
+import { owi } from "../theme";
 
 interface Component {
   name: string;
@@ -27,18 +40,36 @@ interface Methodology {
   note: string;
 }
 
+type Band = "good" | "fair" | "poor" | "none";
+
 // Higher score = cleaner area.
-function scoreHex(score: number): string {
-  if (score >= 75) return "#0e7a55";
-  if (score >= 50) return "#b4791a";
-  return "#c0392b";
+function band(a: AreaScore): Band {
+  if (!a.sufficient || a.score == null) return "none";
+  if (a.score >= 75) return "good";
+  if (a.score >= 50) return "fair";
+  return "poor";
 }
+
+const BAND_TONE: Record<Exclude<Band, "none">, Tone> = { good: "ok", fair: "warn", poor: "bad" };
+const BAND_COLOR: Record<Band, string> = { good: owi.ok, fair: owi.gold, poor: owi.bad, none: "#e6e1d5" };
 
 export default function Cleanliness() {
   const { t } = useI18n();
   const { data: areas, error, retry } = useApi<AreaScore[]>("/api/v1/cleanliness");
   // Methodology is a secondary footnote: on failure the line is simply omitted.
   const { data: method } = useApi<Methodology>("/api/v1/cleanliness/methodology");
+  const [view, setView] = useState<"all" | Band>("all");
+
+  const counts = useMemo(() => {
+    const c: Record<Band, number> = { good: 0, fair: 0, poor: 0, none: 0 };
+    for (const a of areas ?? []) c[band(a)] += 1;
+    return c;
+  }, [areas]);
+
+  const shown = useMemo(
+    () => (view === "all" ? (areas ?? []) : (areas ?? []).filter((a) => band(a) === view)),
+    [areas, view],
+  );
 
   if (error) {
     return (
@@ -50,21 +81,30 @@ export default function Cleanliness() {
   if (areas === null) return <PageSkeleton />;
 
   const compNames = Array.from(new Set(areas.flatMap((a) => a.components.map((c) => c.name))));
+  const bandLabel: Record<Band, string> = {
+    good: t("scoreGood"),
+    fair: t("scoreFair"),
+    poor: t("scorePoor"),
+    none: t("insufficient"),
+  };
+  const order: Band[] = ["good", "fair", "poor", "none"];
 
   const columns: GridColDef<AreaScore>[] = [
-    { field: "site_name", headerName: t("site"), flex: 1, minWidth: 150 },
+    { field: "site_name", headerName: t("site"), flex: 1.4, minWidth: 180 },
     {
       field: "score",
       headerName: t("score"),
       width: 120,
       type: "number",
       valueGetter: (_v, row) => (row.sufficient && row.score != null ? Math.round(row.score) : null),
-      renderCell: (p) =>
-        p.value == null ? (
-          <Box sx={{ color: "text.secondary" }}>{t("insufficient")}</Box>
+      renderCell: (p) => {
+        const b = band(p.row);
+        return b === "none" ? (
+          <Box title={t("insufficient")} sx={{ color: "text.secondary" }}>—</Box>
         ) : (
-          <Box sx={{ fontWeight: 800, fontSize: "1.05rem", color: scoreHex(p.value as number) }}>{p.value as number}</Box>
-        ),
+          <Tag tone={BAND_TONE[b]}>{p.value as number}</Tag>
+        );
+      },
     },
     ...compNames.map(
       (name): GridColDef<AreaScore> => ({
@@ -72,7 +112,7 @@ export default function Cleanliness() {
         headerName: t(`comp_${name}` as StringKey),
         type: "number",
         flex: 1,
-        minWidth: 130,
+        minWidth: 120,
         valueGetter: (_v, row) => {
           const c = row.components.find((x) => x.name === name);
           return c ? Math.round(c.value) : null;
@@ -87,15 +127,40 @@ export default function Cleanliness() {
       <Typography variant="h5">{t("cleanlinessIndex")}</Typography>
 
       {areas.length === 0 ? (
-        <EmptyState icon={<CleaningServicesOutlinedIcon />} title={t("noAreas")} />
+        <SectionCard>
+          <EmptyState icon={<CleaningServicesOutlinedIcon />} title={t("noAreas")} />
+        </SectionCard>
       ) : (
-        <DataTable rows={areas} columns={columns} getRowId={(r) => r.site_id} toolbar={false} />
+        <>
+          <SectionCard title={t("scoreBands")} hint={t("areasN").replace("{n}", areas.length.toLocaleString())}>
+            <StackBar
+              inline
+              items={order.map((b) => ({ label: bandLabel[b], value: counts[b], color: BAND_COLOR[b] }))}
+            />
+          </SectionCard>
+          <DataTable
+            rows={shown}
+            columns={columns}
+            getRowId={(r) => r.site_id}
+            pageSize={25}
+            filters={
+              <FilterChips<"all" | Band>
+                value={view}
+                onChange={setView}
+                options={[
+                  { value: "all", label: t("all"), count: areas.length },
+                  ...order.map((b) => ({ value: b, label: bandLabel[b], count: counts[b] })),
+                ]}
+              />
+            }
+          />
+        </>
       )}
 
       {method && (
-        <Muted>
+        <Note>
           {t("methodology")} {method.version}: {method.note}
-        </Muted>
+        </Note>
       )}
     </PageStack>
   );

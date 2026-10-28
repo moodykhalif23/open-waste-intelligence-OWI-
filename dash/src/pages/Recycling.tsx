@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
@@ -14,14 +13,20 @@ import RecyclingOutlined from "@mui/icons-material/RecyclingOutlined";
 import SellOutlined from "@mui/icons-material/SellOutlined";
 import { api } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
+import { compact } from "../components/EChart";
 import {
   EmptyState,
   ErrorPanel,
+  GAP,
+  Note,
   PageSkeleton,
   PageStack,
+  RankBars,
   SectionCard,
   StatCard,
+  StatRow,
   TableSection,
+  rankWithOther,
 } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 
@@ -96,9 +101,9 @@ export default function Recycling() {
 
   const valueCols: GridColDef<MaterialValue>[] = [
     { field: "material", headerName: t("material"), flex: 1, minWidth: 110, valueGetter: (_v, row) => label(row.material) },
-    { field: "kg", headerName: t("kgEst"), type: "number", width: 100, valueFormatter: (v) => Number(v).toLocaleString() },
+    { field: "kg", headerName: t("kgEst"), type: "number", width: 110, valueFormatter: (v) => Math.round(Number(v)).toLocaleString() },
     { field: "kes_per_kg", headerName: t("pricePerKg"), type: "number", width: 110, valueFormatter: (v) => (v == null ? "—" : `KES ${v}`) },
-    { field: "value_kes", headerName: t("valueKes"), type: "number", flex: 1, minWidth: 120, valueFormatter: (v) => (v ? `KES ${Math.round(Number(v)).toLocaleString()}` : "—") },
+    { field: "value_kes", headerName: t("valueKes"), type: "number", flex: 1, minWidth: 130, valueFormatter: (v) => (v ? `KES ${Math.round(Number(v)).toLocaleString()}` : "—") },
     { field: "partners", headerName: t("matchingPartners"), type: "number", width: 100 },
   ];
   const priceCols: GridColDef<Price>[] = [
@@ -109,64 +114,73 @@ export default function Recycling() {
   const partnerCols: GridColDef<Partner>[] = [
     { field: "name", headerName: t("name"), flex: 1, minWidth: 120 },
     { field: "materials_accepted", headerName: t("accepts"), flex: 1.4, minWidth: 160, valueGetter: (_v, row) => row.materials_accepted.map(label).join(", ") },
-    { field: "min_kg_per_month", headerName: t("minKg"), type: "number", width: 100 },
+    { field: "min_kg_per_month", headerName: t("minKg"), type: "number", width: 120, valueFormatter: (v) => Number(v).toLocaleString() },
   ];
+
+  const kes = (v: number) => `KES ${Math.round(v).toLocaleString()}`;
+  const bars = rankWithOther(
+    value.materials.map((m) => ({ label: label(m.material), value: m.value_kes })),
+    6,
+    label("other_mixed"),
+  );
 
   return (
     <PageStack>
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <StatCard label={t("kgCollected30")} value={Math.round(value.total_kg).toLocaleString()} />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <StatCard
-            label={t("estValue30")}
-            value={`KES ${Math.round(value.total_value_kes).toLocaleString()}`}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <StatCard label={t("partnersRegistered")} value={partners.length} />
-        </Grid>
-      </Grid>
+      <StatRow>
+        <StatCard label={t("kgCollected30")} value={Math.round(value.total_kg).toLocaleString()} />
+        <StatCard label={t("estValue30")} value={kes(value.total_value_kes)} />
+        <StatCard label={t("partnersRegistered")} value={partners.length.toLocaleString()} />
+      </StatRow>
 
-      <TableSection title={t("recoverableValue")}>
-        {value.materials.length === 0 ? (
+      {value.materials.length === 0 ? (
+        <SectionCard title={t("recoverableValue")}>
           <EmptyState icon={<RecyclingOutlined />} title={t("noValueYet")} />
-        ) : (
-          <DataTable rows={value.materials} columns={valueCols} getRowId={(r) => r.material} toolbar={false} />
-        )}
-        <Alert severity="info" sx={{ mt: 2 }}>
-          {t("valueMethod")}
-        </Alert>
-      </TableSection>
-
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <PriceForm onSaved={reload} />
+        </SectionCard>
+      ) : (
+        <Grid container spacing={GAP}>
+          <Grid size={{ xs: 12, md: 5 }}>
+            <SectionCard title={t("recoverableValue")}>
+              <RankBars items={bars} format={(v) => `KES ${compact(v)}`} labelWidth="7em" />
+            </SectionCard>
+          </Grid>
+          <Grid size={{ xs: 12, md: 7 }}>
+            <DataTable rows={value.materials} columns={valueCols} getRowId={(r) => r.material} toolbar={false} />
+          </Grid>
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <PartnerForm onSaved={reload} />
-        </Grid>
-      </Grid>
+      )}
+      <Note>{t("valueMethod")}</Note>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={GAP} sx={{ alignItems: "flex-start" }}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <TableSection title={t("priceTable")}>
+          <TableSection title={t("priceTable")} hint={prices.length > 0 ? prices.length.toLocaleString() : undefined}>
             {prices.length === 0 ? (
-              <EmptyState icon={<SellOutlined />} title={t("noPrices")} />
+              <SectionCard>
+                <EmptyState icon={<SellOutlined />} title={t("noPrices")} />
+              </SectionCard>
             ) : (
               <DataTable rows={prices} columns={priceCols} toolbar={false} pageSize={5} />
             )}
           </TableSection>
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <TableSection title={t("partners")}>
+          <TableSection title={t("partners")} hint={partners.length > 0 ? partners.length.toLocaleString() : undefined}>
             {partners.length === 0 ? (
-              <EmptyState icon={<HandshakeOutlined />} title={t("noPartners")} />
+              <SectionCard>
+                <EmptyState icon={<HandshakeOutlined />} title={t("noPartners")} />
+              </SectionCard>
             ) : (
               <DataTable rows={partners} columns={partnerCols} toolbar={false} pageSize={5} />
             )}
           </TableSection>
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={GAP} sx={{ alignItems: "flex-start" }}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <PriceForm onSaved={reload} />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <PartnerForm onSaved={reload} />
         </Grid>
       </Grid>
     </PageStack>

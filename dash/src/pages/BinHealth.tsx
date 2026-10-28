@@ -154,8 +154,8 @@ export default function BinHealth() {
   const days = (v: unknown) => (v == null ? "—" : t("nDays").replace("{n}", Number(v).toFixed(1)));
 
   const columns: GridColDef<HealthRow>[] = [
-    { field: "qr_code", headerName: t("bin"), minWidth: 120, flex: 0.7, renderCell: (p) => <CodeLabel>{p.value as string}</CodeLabel> },
-    { field: "site_name", headerName: t("site"), flex: 1.2, minWidth: 150 },
+    { field: "qr_code", headerName: t("bin"), width: 120, renderCell: (p) => <CodeLabel>{p.value as string}</CodeLabel> },
+    { field: "site_name", headerName: t("site"), flex: 1, minWidth: 180 },
     {
       field: "fill_pct",
       headerName: t("fillLevel"),
@@ -180,22 +180,21 @@ export default function BinHealth() {
     {
       field: "recommendation",
       headerName: t("recommendation"),
-      flex: 1,
-      minWidth: 140,
+      width: 150,
       valueGetter: (_v, row) =>
         row.recommendation === "collect_today" ? t("collectTodayRec") : row.recommendation === "schedule_soon" ? t("scheduleSoonRec") : "—",
     },
     {
       field: "actions",
       headerName: "",
-      width: 160,
+      width: 150,
       sortable: false,
       filterable: false,
       disableExport: true,
       align: "right",
       renderCell: (p) => (
         <Button
-          variant="outlined"
+          variant="text"
           size="small"
           disabled={busy || busyBinId !== null || p.row.collected}
           onClick={() => void markCollected(p.row)}

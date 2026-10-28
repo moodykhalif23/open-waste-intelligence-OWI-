@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -15,7 +15,17 @@ import ManageAccountsOutlinedIcon from "@mui/icons-material/ManageAccountsOutlin
 import PersonAddAlt1OutlinedIcon from "@mui/icons-material/PersonAddAlt1Outlined";
 import { api, type Role, type User } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import { EmptyState, ErrorPanel, PageStack, TableSection, TableSkeleton } from "../components/ui";
+import {
+  CodeLabel,
+  EmptyState,
+  ErrorPanel,
+  FilterChips,
+  PageStack,
+  SectionCard,
+  TableSection,
+  TableSkeleton,
+  Tag,
+} from "../components/ui";
 import { useI18n } from "../i18n";
 import { useApi } from "../useApi";
 
@@ -31,6 +41,11 @@ export default function Users() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [roleView, setRoleView] = useState<"all" | Role>("all");
+  const shown = useMemo(
+    () => (roleView === "all" ? (users ?? []) : (users ?? []).filter((u) => u.role === roleView)),
+    [users, roleView],
+  );
 
   const reload = useCallback(async () => {
     try {
@@ -122,26 +137,33 @@ export default function Users() {
   }
 
   const columns: GridColDef<User>[] = [
-    { field: "name", headerName: t("name"), flex: 1, minWidth: 130 },
+    { field: "name", headerName: t("name"), flex: 1, minWidth: 160, renderCell: (p) => <CodeLabel>{p.value as string}</CodeLabel> },
     {
       field: "phone",
       headerName: t("phone"),
       flex: 1,
-      minWidth: 130,
-      renderCell: (p) => <Box sx={{ fontFamily: "ui-monospace, monospace" }}>{(p.value as string) ?? "—"}</Box>,
+      minWidth: 140,
+      valueFormatter: (v: string | null) => v ?? "—",
     },
-    { field: "role", headerName: t("role"), width: 130 },
+    {
+      field: "role",
+      headerName: t("role"),
+      width: 140,
+      renderCell: (p) => <Tag tone={p.value === "admin" ? "warn" : "neutral"}>{p.value as string}</Tag>,
+    },
     {
       field: "actions",
       headerName: "",
-      width: 240,
+      width: 300,
       sortable: false,
       filterable: false,
+      disableExport: true,
+      align: "right",
       renderCell: (p) => (
-        <Stack direction="row" spacing={1} sx={{ height: "100%", alignItems: "center" }}>
+        <Stack direction="row" spacing={0.5} sx={{ height: "100%", alignItems: "center", justifyContent: "flex-end", width: "100%" }}>
           {p.row.role === "collector" && (
             <Button
-              variant="outlined"
+              variant="text"
               size="small"
               disabled={busyUserId === p.row.id}
               onClick={() => void issueToken(p.row)}
@@ -150,11 +172,11 @@ export default function Users() {
             </Button>
           )}
           <Button
-            variant="outlined"
+            variant="text"
             size="small"
-            color="error"
             disabled={busyUserId === p.row.id}
             onClick={() => void revoke(p.row)}
+            sx={{ color: "text.secondary" }}
           >
             {t("revokeTokens")}
           </Button>
@@ -167,6 +189,7 @@ export default function Users() {
     <PageStack>
       <TableSection
         title={t("users")}
+        hint={users.length > 0 ? users.length.toLocaleString() : undefined}
         action={
           <Button
             variant="contained"
@@ -178,9 +201,27 @@ export default function Users() {
         }
       >
         {users.length === 0 ? (
-          <EmptyState icon={<ManageAccountsOutlinedIcon />} title={t("noData")} />
+          <SectionCard>
+            <EmptyState icon={<ManageAccountsOutlinedIcon />} title={t("noData")} />
+          </SectionCard>
         ) : (
-          <DataTable rows={users} columns={columns} />
+          <DataTable
+            rows={shown}
+            columns={columns}
+            pageSize={25}
+            filters={
+              <FilterChips<"all" | Role>
+                value={roleView}
+                onChange={setRoleView}
+                options={[
+                  { value: "all", label: t("all"), count: users.length },
+                  ...ROLES.map((r) => ({ value: r, label: r, count: users.filter((u) => u.role === r).length })).filter(
+                    (o) => o.count > 0,
+                  ),
+                ]}
+              />
+            }
+          />
         )}
 
         {actionError && (

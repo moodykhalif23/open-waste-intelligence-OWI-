@@ -13,7 +13,7 @@ import PhotoCameraOutlined from "@mui/icons-material/PhotoCameraOutlined";
 import ShowChartOutlined from "@mui/icons-material/ShowChartOutlined";
 import StackedBarChartOutlined from "@mui/icons-material/StackedBarChartOutlined";
 import { type Bin, type FillBand, type Observation, type Site } from "../api";
-import EChart, { areaOption, bucketSeries, heatmapOption, intlLocale } from "../components/EChart";
+import EChart, { areaOption, bucketHours, bucketSeries, heatmapOption, intlLocale } from "../components/EChart";
 import {
   ChartSkeleton,
   CodeLabel,
@@ -71,22 +71,34 @@ export default function Overview() {
     [observations],
   );
 
-  const perDay = useMemo(
-    () => bucketSeries((observations ?? []).map((o) => o.captured_at), 14, locale),
-    [observations, locale],
-  );
-
-  const sparks = useMemo(() => {
+  const sample = useMemo(() => {
     const list = observations ?? [];
+    const truncated = list.length >= OBS_LIMIT;
+    const oldest = list.length > 0 ? Date.parse(list[list.length - 1]!.captured_at) : Date.now();
+    const spanDays = (Date.now() - oldest) / DAY_MS;
+    return { truncated, spanDays, partialWeek: truncated && spanDays < 7 };
+  }, [observations]);
+
+  const trend = useMemo(() => {
+    const stamps = (observations ?? []).map((o) => o.captured_at);
+    const overflow = (observations ?? []).filter((o) => o.fill_tap === "overflowing").map((o) => o.captured_at);
+    if (sample.truncated && sample.spanDays < 3) {
+      const hours = Math.max(6, Math.ceil(sample.spanDays * 24));
+      return {
+        unit: "hour" as const,
+        main: bucketHours(stamps, hours, locale),
+        reports: bucketHours(stamps, hours, locale).values,
+        overflow: bucketHours(overflow, hours, locale).values,
+      };
+    }
+    const days = sample.truncated ? Math.max(3, Math.min(14, Math.floor(sample.spanDays))) : 14;
     return {
-      reports: bucketSeries(list.map((o) => o.captured_at), 7, locale).values,
-      overflow: bucketSeries(
-        list.filter((o) => o.fill_tap === "overflowing").map((o) => o.captured_at),
-        7,
-        locale,
-      ).values,
+      unit: "day" as const,
+      main: bucketSeries(stamps, days, locale),
+      reports: bucketSeries(stamps, 7, locale).values,
+      overflow: bucketSeries(overflow, 7, locale).values,
     };
-  }, [observations, locale]);
+  }, [observations, sample, locale]);
 
   const weekdays = useMemo(() => {
     const fmt = new Intl.DateTimeFormat(locale, { weekday: "short" });
@@ -143,10 +155,10 @@ export default function Overview() {
       <PageStack>
         <StatRowSkeleton />
         <Grid container spacing={GAP}>
-          <Grid size={{ xs: 12, md: 7.5 }}>
+          <Grid size={{ xs: 12, md: 7 }}>
             <ChartSkeleton />
           </Grid>
-          <Grid size={{ xs: 12, md: 4.5 }}>
+          <Grid size={{ xs: 12, md: 5 }}>
             <ChartSkeleton />
           </Grid>
         </Grid>
@@ -192,8 +204,8 @@ export default function Overview() {
 
   const overflowing = week.filter((o) => o.fill_tap === "overflowing").length;
   const reportingBins = new Set(week.map((o) => o.bin_id).filter(Boolean)).size;
-  const truncated = observations.length >= OBS_LIMIT;
-  const sample = truncated ? t("basedOnLatest").replace("{n}", OBS_LIMIT.toLocaleString()) : undefined;
+  const sampleHint = sample.truncated ? t("basedOnLatest").replace("{n}", OBS_LIMIT.toLocaleString()) : undefined;
+  const atLeast = (n: number) => `${n.toLocaleString()}${sample.partialWeek ? "+" : ""}`;
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "short" });
   const ago = (iso: string) => {
     const s = (Date.now() - Date.parse(iso)) / 1000;
@@ -209,31 +221,31 @@ export default function Overview() {
         <StatCard
           label={t("totalBins")}
           value={bins.length.toLocaleString()}
-          caption={t("binsReported").replace("{n}", reportingBins.toLocaleString())}
+          caption={t("binsReported").replace("{n}", atLeast(reportingBins))}
         />
-        <StatCard label={t("reports7d")} value={week.length.toLocaleString()} spark={sparks.reports} />
+        <StatCard label={t("reports7d")} value={atLeast(week.length)} spark={trend.reports} />
         <StatCard
           label={t("overflowing7d")}
-          value={overflowing.toLocaleString()}
+          value={atLeast(overflowing)}
           color={overflowing > 0 ? owi.bad : undefined}
-          spark={sparks.overflow}
+          spark={trend.overflow}
         />
       </StatRow>
 
       <Grid container spacing={GAP}>
-        <Grid size={{ xs: 12, md: 7.5 }}>
+        <Grid size={{ xs: 12, md: 7 }}>
           <SectionCard
-            title={t("reportsPerDayTitle")}
-            hint={sample ?? t("lastDaysHint").replace("{n}", "14")}
+            title={t(trend.unit === "hour" ? "reportsPerHourTitle" : "reportsPerDayTitle")}
+            hint={sampleHint ?? t("lastDaysHint").replace("{n}", String(trend.main.values.length))}
           >
-            {perDay.values.some((v) => v > 0) ? (
-              <EChart height={236} option={areaOption(perDay.labels, perDay.values)} />
+            {trend.main.values.some((v) => v > 0) ? (
+              <EChart height={236} option={areaOption(trend.main.labels, trend.main.values)} />
             ) : (
               <EmptyState icon={<ShowChartOutlined />} title={t("noData")} height={236} />
             )}
           </SectionCard>
         </Grid>
-        <Grid size={{ xs: 12, md: 4.5 }}>
+        <Grid size={{ xs: 12, md: 5 }}>
           <SectionCard title={t("fillMix")} hint={t("lastDaysHint").replace("{n}", "7")}>
             {fillMix.some((b) => b.value > 0) ? (
               <StackBar items={fillMix} />
@@ -245,7 +257,7 @@ export default function Overview() {
       </Grid>
 
       <Grid container spacing={GAP}>
-        <Grid size={{ xs: 12, lg: 7 }}>
+        <Grid size={{ xs: 12, md: 7 }}>
           <SectionCard
             title={t("latestReports")}
             hint={t("liveFromField")}
@@ -302,8 +314,8 @@ export default function Overview() {
             )}
           </SectionCard>
         </Grid>
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <SectionCard title={t("activityTitle")} hint={sample ?? t("byDayHour")}>
+        <Grid size={{ xs: 12, md: 5 }}>
+          <SectionCard title={t("activityTitle")} hint={sampleHint ?? t("byDayHour")}>
             {observations.length > 0 ? (
               <EChart height={250} option={heatmapOption(HOURS, weekdays, activity.data, activity.max)} />
             ) : (

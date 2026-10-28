@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import ButtonBase from "@mui/material/ButtonBase";
 import Card from "@mui/material/Card";
 import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
 import CardMedia from "@mui/material/CardMedia";
-import Chip from "@mui/material/Chip";
 import Drawer from "@mui/material/Drawer";
 import Grid from "@mui/material/Grid";
 import IconButton from "@mui/material/IconButton";
@@ -25,7 +25,21 @@ import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
 import { api, apiBlob } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import MapView from "../components/MapView";
-import { EmptyState, ErrorPanel, Muted, PageSkeleton, PageStack, TableSection } from "../components/ui";
+import {
+  EmptyState,
+  ErrorPanel,
+  FilterChips,
+  GAP,
+  Muted,
+  PageSkeleton,
+  PageStack,
+  Pager,
+  SectionCard,
+  TableSection,
+  Tag,
+  type Tone,
+} from "../components/ui";
+import { owi } from "../theme";
 import { useI18n, type StringKey } from "../i18n";
 
 const INTERVENTIONS = ["bin_added", "signage", "cleanup", "engagement"] as const;
@@ -66,11 +80,12 @@ interface SiteDetail extends Site {
   interventions: Intervention[];
 }
 
-const STATUS_COLOR: Record<Site["status"], "error" | "warning" | "success"> = {
-  active: "error",
-  recurring: "warning",
-  cleaned: "success",
+const STATUS_TONE: Record<Site["status"], Tone> = {
+  active: "bad",
+  recurring: "warn",
+  cleaned: "ok",
 };
+const CANDIDATES_PER_PAGE = 6;
 
 const STATUS_HEX: Record<Site["status"], string> = {
   active: "#c0392b",
@@ -84,6 +99,13 @@ export default function Dumping() {
   const [sites, setSites] = useState<Site[] | null>(null);
   const [selected, setSelected] = useState<SiteDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [status, setStatus] = useState<"all" | Site["status"]>("all");
+
+  const shownSites = useMemo(
+    () => (status === "all" ? (sites ?? []) : (sites ?? []).filter((x) => x.status === status)),
+    [sites, status],
+  );
 
   const reload = useCallback(async () => {
     // Swallow into error state: reload is shared with mutation flows and must not reject.
@@ -125,15 +147,22 @@ export default function Dumping() {
   }
   if (sites === null) return <PageSkeleton />;
 
+  const where = (x: Site) => x.area ?? `${x.lat.toFixed(4)}, ${x.lng.toFixed(4)}`;
   const siteCols: GridColDef<Site>[] = [
     {
       field: "location",
       headerName: t("location"),
       flex: 1,
-      minWidth: 150,
-      sortable: false,
-      valueGetter: (_v, row) => `${row.lat.toFixed(4)}, ${row.lng.toFixed(4)}`,
-      renderCell: (p) => <Box sx={{ fontFamily: "ui-monospace, monospace" }}>{p.value as string}</Box>,
+      minWidth: 180,
+      valueGetter: (_v, row) => where(row),
+      renderCell: (p) => (
+        <Box sx={{ minWidth: 0 }}>
+          <Box sx={{ color: "text.primary", fontWeight: 600 }}>{p.value as string}</Box>
+          {p.row.area && (
+            <Box sx={{ color: "text.secondary", fontSize: "0.8rem" }}>{`${p.row.lat.toFixed(4)}, ${p.row.lng.toFixed(4)}`}</Box>
+          )}
+        </Box>
+      ),
     },
     { field: "event_count", headerName: t("events"), type: "number", width: 100 },
     { field: "last_seen", headerName: t("lastSeen"), width: 130, valueFormatter: (v) => new Date(v as string).toLocaleDateString() },
@@ -141,53 +170,133 @@ export default function Dumping() {
     {
       field: "status",
       headerName: t("status"),
-      width: 120,
-      renderCell: (p) => <Chip size="small" color={STATUS_COLOR[p.row.status]} label={t(`dump_${p.row.status}` as StringKey)} />,
+      width: 130,
+      valueGetter: (_v, row) => t(`dump_${row.status}` as StringKey),
+      renderCell: (p) => <Tag tone={STATUS_TONE[p.row.status]}>{p.value as string}</Tag>,
     },
     {
       field: "actions",
       headerName: "",
-      width: 90,
+      width: 100,
       sortable: false,
       filterable: false,
+      disableExport: true,
+      align: "right",
       renderCell: (p) => (
-        <Button variant="outlined" size="small" onClick={() => void openSite(p.row.id)}>
+        <Button variant="text" size="small" onClick={() => void openSite(p.row.id)}>
           {t("view")}
         </Button>
       ),
     },
   ];
 
+  const pages = Math.max(1, Math.ceil(candidates.length / CANDIDATES_PER_PAGE));
+  const current = Math.min(page, pages - 1);
+  const pageItems = candidates.slice(current * CANDIDATES_PER_PAGE, (current + 1) * CANDIDATES_PER_PAGE);
+  const hottest = [...sites].filter((x) => x.status !== "cleaned").sort((a, b) => b.hotspot_score - a.hotspot_score).slice(0, 7);
+  const statusCount = (k: Site["status"]) => sites.filter((x) => x.status === k).length;
+
   return (
     <PageStack>
-      <TableSection title={t("reviewQueue")}>
+      <TableSection title={t("reviewQueue")} hint={candidates.length > 0 ? candidates.length.toLocaleString() : undefined}>
         {candidates.length === 0 ? (
-          <EmptyState icon={<FactCheckOutlinedIcon />} title={t("noCandidates")} />
+          <SectionCard>
+            <EmptyState icon={<FactCheckOutlinedIcon />} title={t("noCandidates")} />
+          </SectionCard>
         ) : (
-          <Grid container spacing={{ xs: 2, md: 2.5 }}>
-            {candidates.map((c) => (
-              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={c.observation_id}>
-                <CandidateItem candidate={c} onReview={(d) => void review(c.observation_id, d)} />
-              </Grid>
-            ))}
-          </Grid>
+          <>
+            <Grid container spacing={GAP}>
+              {pageItems.map((c) => (
+                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={c.observation_id}>
+                  <CandidateItem candidate={c} onReview={(d) => void review(c.observation_id, d)} />
+                </Grid>
+              ))}
+            </Grid>
+            {candidates.length > CANDIDATES_PER_PAGE && (
+              <Pager
+                page={current}
+                pageSize={CANDIDATES_PER_PAGE}
+                total={candidates.length}
+                onPage={setPage}
+                ofLabel={t("of")}
+              />
+            )}
+          </>
         )}
       </TableSection>
 
-      <TableSection title={t("hotspots")}>
+      <TableSection title={t("hotspots")} hint={sites.length > 0 ? sites.length.toLocaleString() : undefined}>
         {sites.length === 0 ? (
-          <EmptyState icon={<WarningAmberOutlinedIcon />} title={t("noSites")} />
+          <SectionCard>
+            <EmptyState icon={<WarningAmberOutlinedIcon />} title={t("noSites")} />
+          </SectionCard>
         ) : (
-          <Stack spacing={2.5}>
-            <MapView
-              points={sites.map((s) => ({
-                lat: s.lat,
-                lng: s.lng,
-                color: STATUS_HEX[s.status],
-                label: `${t(`dump_${s.status}` as StringKey)} · ${s.hotspot_score}`,
-              }))}
+          <Stack spacing={GAP}>
+            <Grid container spacing={GAP}>
+              <Grid size={{ xs: 12, md: 7 }}>
+                <MapView
+                  height={400}
+                  points={sites.map((x) => ({
+                    lat: x.lat,
+                    lng: x.lng,
+                    color: STATUS_HEX[x.status],
+                    label: `${t(`dump_${x.status}` as StringKey)} · ${x.hotspot_score}`,
+                  }))}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 5 }}>
+                <SectionCard>
+                  <Box sx={{ mx: -1 }}>
+                    {hottest.map((x) => (
+                      <ButtonBase
+                        key={x.id}
+                        onClick={() => void openSite(x.id)}
+                        sx={{
+                          display: "grid",
+                          gridTemplateColumns: "auto 1fr auto",
+                          alignItems: "center",
+                          gap: 1.5,
+                          width: "100%",
+                          px: 1,
+                          py: 1.1,
+                          textAlign: "left",
+                          borderTop: "1px solid",
+                          borderColor: owi.rule,
+                          borderRadius: "8px",
+                          "&:first-of-type": { borderTop: 0 },
+                          "&:hover": { bgcolor: owi.wash },
+                        }}
+                      >
+                        <Tag tone={STATUS_TONE[x.status]}>{x.event_count}</Tag>
+                        <Typography noWrap sx={{ fontSize: "0.92rem", color: owi.inkSoft, minWidth: 0 }}>
+                          {where(x)}
+                        </Typography>
+                        <Typography sx={{ fontSize: "0.86rem", fontWeight: 660, fontVariantNumeric: "tabular-nums" }}>
+                          {x.hotspot_score}
+                        </Typography>
+                      </ButtonBase>
+                    ))}
+                  </Box>
+                </SectionCard>
+              </Grid>
+            </Grid>
+            <DataTable
+              rows={shownSites}
+              columns={siteCols}
+              pageSize={10}
+              filters={
+                <FilterChips<"all" | Site["status"]>
+                  value={status}
+                  onChange={setStatus}
+                  options={[
+                    { value: "all", label: t("all"), count: sites.length },
+                    { value: "active", label: t("dump_active"), count: statusCount("active") },
+                    { value: "recurring", label: t("dump_recurring"), count: statusCount("recurring") },
+                    { value: "cleaned", label: t("dump_cleaned"), count: statusCount("cleaned") },
+                  ]}
+                />
+              }
             />
-            <DataTable rows={sites} columns={siteCols} />
           </Stack>
         )}
       </TableSection>
@@ -224,27 +333,27 @@ function CandidateItem({
   }, [candidate.observation_id]);
 
   return (
-    <Card variant="outlined" sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+    <Card sx={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <CardMedia
         component="img"
         image={imageUrl ?? undefined}
         alt=""
-        sx={{ height: 168, objectFit: "cover", bgcolor: "#f0ede5" }}
+        sx={{ height: 160, objectFit: "cover", bgcolor: "#f0ede5" }}
       />
-      <CardContent sx={{ flexGrow: 1, pb: 1 }}>
+      <CardContent sx={{ flexGrow: 1, pb: "8px !important", pt: 1.75 }}>
         <Muted>
           {candidate.lat.toFixed(4)}, {candidate.lng.toFixed(4)} ·{" "}
           {new Date(candidate.captured_at).toLocaleDateString()}
         </Muted>
       </CardContent>
-      <CardActions sx={{ px: 2, pb: 2, pt: 0, flexWrap: "wrap", gap: 1 }}>
+      <CardActions sx={{ px: 2, pb: 2, pt: 0.5, flexWrap: "wrap", gap: 0.75 }}>
         <Button size="small" variant="contained" color="primary" onClick={() => onReview("confirmed")}>
           {t("confirmDumping")}
         </Button>
-        <Button size="small" variant="outlined" color="error" onClick={() => onReview("rejected")}>
+        <Button size="small" variant="outlined" onClick={() => onReview("rejected")}>
           {t("reject")}
         </Button>
-        <Button size="small" variant="outlined" onClick={() => onReview("duplicate")}>
+        <Button size="small" variant="text" onClick={() => onReview("duplicate")}>
           {t("duplicate")}
         </Button>
       </CardActions>

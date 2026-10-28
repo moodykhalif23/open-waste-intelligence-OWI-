@@ -2,17 +2,17 @@ import { useCallback, useEffect, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
-import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
 import CardMedia from "@mui/material/CardMedia";
-import Chip from "@mui/material/Chip";
 import Grid from "@mui/material/Grid";
-import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 import { api, apiBlob } from "../api";
-import { EmptyState, ErrorPanel, PageSkeleton, PageStack, SectionCard } from "../components/ui";
-import { useI18n } from "../i18n";
+import { EmptyState, ErrorPanel, GAP, PageHeader, PageSkeleton, PageStack, Pager, SectionCard, Tag } from "../components/ui";
+import { useI18n, type StringKey } from "../i18n";
+import { owi } from "../theme";
+
+const PER_PAGE = 9;
 
 const FILL_BANDS = ["empty", "low", "half", "high", "overflowing"] as const;
 
@@ -44,6 +44,7 @@ export default function Review() {
   const { t } = useI18n();
   const [queue, setQueue] = useState<Queue | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
 
   const reload = useCallback(async () => {
     setError(null);
@@ -83,17 +84,29 @@ export default function Review() {
   }
   if (queue === null) return <PageSkeleton />;
 
+  const pages = Math.max(1, Math.ceil(queue.items.length / PER_PAGE));
+  const current = Math.min(page, pages - 1);
+  const items = queue.items.slice(current * PER_PAGE, (current + 1) * PER_PAGE);
+
   return (
     <PageStack>
-      <SectionCard
-        title={t("reviewQueue")}
-        action={<Chip size="small" label={t("pendingCount").replace("{n}", String(queue.unreviewed))} />}
-      >
-        {queue.items.length === 0 ? (
+      <PageHeader
+        title={
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
+            <Typography variant="h5">{t("reviewQueue")}</Typography>
+            <Tag tone="warn">{t("pendingCount").replace("{n}", queue.unreviewed.toLocaleString())}</Tag>
+          </Box>
+        }
+        description={queue.items.length > 0 ? `${t("reviewLede")} ${t("reviewPickHint")}` : undefined}
+      />
+      {queue.items.length === 0 ? (
+        <SectionCard>
           <EmptyState icon={<FactCheckOutlinedIcon />} title={t("reviewEmpty")} />
-        ) : (
-          <Grid container spacing={{ xs: 2, md: 2.5 }}>
-            {queue.items.map((p) => (
+        </SectionCard>
+      ) : (
+        <Box>
+          <Grid container spacing={GAP}>
+            {items.map((p) => (
               <Grid size={{ xs: 12, sm: 6, md: 4 }} key={p.id}>
                 <ReviewItem
                   prediction={p}
@@ -103,8 +116,11 @@ export default function Review() {
               </Grid>
             ))}
           </Grid>
-        )}
-      </SectionCard>
+          {queue.items.length > PER_PAGE && (
+            <Pager page={current} pageSize={PER_PAGE} total={queue.items.length} onPage={setPage} ofLabel={t("of")} />
+          )}
+        </Box>
+      )}
     </PageStack>
   );
 }
@@ -138,51 +154,53 @@ function ReviewItem({
   const predicted = String(prediction.payload[labelKey(prediction)] ?? "");
   const confidence = typeof prediction.payload.confidence === "number" ? prediction.payload.confidence : null;
   const options = labelOptions(prediction);
+  const name = (v: string) => (t(v as StringKey) as string | undefined) ?? v;
 
   return (
-    <Card variant="outlined" sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+    <Card sx={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <CardMedia
         component="img"
         image={imageUrl ?? undefined}
         alt=""
-        sx={{ height: 168, objectFit: "cover", bgcolor: "#f0ede5" }}
+        sx={{ height: 150, objectFit: "cover", bgcolor: "#f0ede5" }}
       />
-      <CardContent sx={{ flexGrow: 1, pb: 1 }}>
-        <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-          <Chip size="small" variant="outlined" label={prediction.task} />
-          <Typography variant="body2" color="text.secondary">
-            {t("predicted")}:{" "}
+      <CardContent sx={{ flexGrow: 1, display: "flex", flexDirection: "column", gap: 1.25, pt: 1.75 }}>
+        <Box sx={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 1 }}>
+          <Typography variant="body2" sx={{ color: owi.inkSoft }}>
+            {t("model")}:{" "}
             <Box component="strong" sx={{ color: "text.primary" }}>
-              {predicted || "—"}
+              {predicted ? name(predicted) : "—"}
             </Box>
-            {confidence !== null && ` · ${Math.round(confidence * 100)}%`}
+            {confidence !== null && (
+              <Box component="span" sx={{ color: "text.secondary" }}>{` · ${Math.round(confidence * 100)}%`}</Box>
+            )}
           </Typography>
-        </Stack>
-        {options.length > 0 && (
-          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
-            {t("reviewPickHint")}
-          </Typography>
-        )}
-      </CardContent>
-      <CardActions sx={{ px: 2, pb: 2, pt: 0, flexWrap: "wrap", gap: 1 }}>
-        {options.length > 0 ? (
-          options.map((value) => (
-            <Button
-              key={value}
-              size="small"
-              variant={value === predicted ? "contained" : "outlined"}
-              onClick={() => (value === predicted ? onConfirm() : onCorrect(value))}
-              sx={{ textTransform: "capitalize" }}
-            >
-              {prediction.task === "fill" ? t(value as (typeof FILL_BANDS)[number]) : value}
+          <Tag>{prediction.task}</Tag>
+        </Box>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: "auto" }}>
+          {options.length > 0 ? (
+            options.map((value) => {
+              const guess = value === predicted;
+              return (
+                <Button
+                  key={value}
+                  size="small"
+                  variant={guess ? "contained" : "outlined"}
+                  color={guess ? "secondary" : "primary"}
+                  onClick={() => (guess ? onConfirm() : onCorrect(value))}
+                  sx={{ borderRadius: 999, px: 1.5, minWidth: 0, height: 30 }}
+                >
+                  {prediction.task === "fill" ? t(value as (typeof FILL_BANDS)[number]) : name(value)}
+                </Button>
+              );
+            })
+          ) : (
+            <Button variant="contained" size="small" onClick={onConfirm}>
+              {t("confirm")}
             </Button>
-          ))
-        ) : (
-          <Button variant="contained" onClick={onConfirm}>
-            {t("confirm")}
-          </Button>
-        )}
-      </CardActions>
+          )}
+        </Box>
+      </CardContent>
     </Card>
   );
 }

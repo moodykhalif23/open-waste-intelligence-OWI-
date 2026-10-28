@@ -96,6 +96,8 @@ export function areaOption(
         color: owi.muted,
         fontSize: 11,
         margin: 12,
+        alignMinLabel: "left",
+        alignMaxLabel: "right",
         interval: sparseLabels(categories.length),
       },
     },
@@ -191,6 +193,18 @@ export function startOfDay(t: number) {
   return d.getTime();
 }
 
+function tally(stamps: Iterable<string | number>, first: number, size: number, count: number) {
+  const values = new Array<number>(count).fill(0);
+  const end = first + count * size;
+  for (const s of stamps) {
+    const t = typeof s === "number" ? s : Date.parse(s);
+    if (t < first || t >= end) continue;
+    const i = Math.floor((t - first) / size);
+    values[i] = (values[i] ?? 0) + 1;
+  }
+  return values;
+}
+
 export function bucketSeries(
   stamps: Iterable<string | number>,
   days: number,
@@ -200,16 +214,21 @@ export function bucketSeries(
   const weekly = days > 60;
   const size = weekly ? 7 * DAY_MS : DAY_MS;
   const count = weekly ? Math.ceil(days / 7) : days;
-  const end = startOfDay(now) + DAY_MS;
-  const first = end - count * size;
+  const first = startOfDay(now) + DAY_MS - count * size;
   const fmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" });
   const labels = Array.from({ length: count }, (_, i) => fmt.format(new Date(first + i * size)));
-  const values = new Array<number>(count).fill(0);
-  for (const s of stamps) {
-    const t = typeof s === "number" ? s : Date.parse(s);
-    if (t < first || t >= end) continue;
-    const i = Math.floor((t - first) / size);
-    values[i] = (values[i] ?? 0) + 1;
-  }
-  return { labels, values, weekly };
+  return { labels, values: tally(stamps, first, size, count), weekly };
+}
+
+export function bucketHours(
+  stamps: Iterable<string | number>,
+  hours: number,
+  locale: string,
+  now = Date.now(),
+): { labels: string[]; values: number[] } {
+  const size = 60 * 60 * 1000;
+  const first = Math.floor(now / size) * size + size - hours * size;
+  const fmt = new Intl.DateTimeFormat(locale, { weekday: "short", hour: "2-digit", minute: "2-digit" });
+  const labels = Array.from({ length: hours }, (_, i) => fmt.format(new Date(first + i * size)));
+  return { labels, values: tally(stamps, first, size, hours) };
 }

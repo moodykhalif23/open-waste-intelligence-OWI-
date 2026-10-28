@@ -186,6 +186,7 @@ const theme = createTheme({
             color: owi.ink,
             backgroundColor: "#ffffff",
             "&:hover": { borderColor: owi.ink, backgroundColor: owi.wash },
+            "&.Mui-disabled": { borderColor: owi.line, color: "#b5ae9f", backgroundColor: owi.wash },
           },
         },
         sizeSmall: { paddingInline: 12, fontSize: "0.84rem" },

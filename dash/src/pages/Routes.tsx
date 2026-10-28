@@ -229,7 +229,7 @@ export default function Routes() {
         variant="contained"
         size="small"
         color="primary"
-        disabled={planning || !hasPendingStops}
+        disabled={planning || hasPendingStops}
         onClick={() => setPlanOpen(true)}
       >
         {t("planToday")}

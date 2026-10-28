@@ -394,7 +394,7 @@ img {
 
 .iphone-screen {
   overflow: hidden;
-  aspect-ratio: 262 / 570;
+  aspect-ratio: 412 / 915;
   border-radius: 30px;
   background: var(--paper);
 }

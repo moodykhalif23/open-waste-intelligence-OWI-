@@ -2,7 +2,7 @@
 COMPOSE := docker compose --profile prod
 ADMIN_PHONE ?= +254700000000
 
-.PHONY: help web front up down restart logs ps status smoke seed bootstrap dev dash app site build clean backup restore tiles ml-setup ml-data ml-train ml-register ml-export ml-retrain
+.PHONY: help web front up down restart logs ps status smoke seed seed-heavy seed-heavy-purge bootstrap dev dash app site build clean backup restore tiles ml-setup ml-data ml-train ml-register ml-export ml-retrain
 
 # make runs these through cmd.exe or sh depending on where it was invoked. Only
 # plain text survives both — no parens, ampersands or pipes — and sh's echo eats
@@ -22,6 +22,8 @@ help: ## Show available targets
 	@echo build - Build images only
 	@echo smoke - Run the end-to-end smoke suite, needs PASSWORD=...
 	@echo seed - Load a realistic demo dataset, needs PASSWORD=...
+	@echo seed-heavy - Load the heavy demo dataset into the admin org, about 60k observations
+	@echo seed-heavy-purge - Remove exactly the heavy demo dataset and its images
 	@echo bootstrap - Sync the admin login from .env
 	@echo backup - Run an immediate backup, db dump plus image mirror
 	@echo restore - Restore the latest db dump. DESTRUCTIVE, needs CONFIRM=yes
@@ -71,6 +73,12 @@ smoke: ## Run the smoke suite against the running API
 
 seed: ## Load a realistic demo dataset (idempotent; safe to re-run)
 	cd api && uv run python scripts/seed.py http://127.0.0.1:8000 $(ADMIN_PHONE) $(PASSWORD)
+
+seed-heavy: ## Heavy demo dataset in the admin's org; a re-run replaces it, ARGS passes flags
+	$(COMPOSE) exec -T api uv run python - $(ARGS) < api/scripts/seed_heavy.py
+
+seed-heavy-purge: ## Remove exactly the heavy demo dataset and its images
+	$(COMPOSE) exec -T api uv run python - --purge $(ARGS) < api/scripts/seed_heavy.py
 
 bootstrap: ## Sync the admin login from .env (also runs automatically on every up)
 	$(COMPOSE) exec api uv run python -m owi_api.bootstrap

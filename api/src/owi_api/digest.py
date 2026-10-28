@@ -25,16 +25,18 @@ def build_digest(rows: list[tuple[str, str, float]]) -> str:
 
 
 def _due_bins(session: Session, org_id: uuid.UUID) -> list[tuple[str, str, float]]:
-    rows = session.execute(
-        select(Site.name, Bin.qr_code, BinHealthDaily.fill_pct)
-        .join(Bin, Bin.id == BinHealthDaily.bin_id)
-        .join(Site, Site.id == Bin.site_id)
-        .where(
-            BinHealthDaily.org_id == org_id,
-            BinHealthDaily.recommendation == "collect_today",
-        )
+    latest = (
+        select(BinHealthDaily.bin_id, BinHealthDaily.fill_pct, BinHealthDaily.recommendation)
+        .where(BinHealthDaily.org_id == org_id)
         .order_by(BinHealthDaily.bin_id, BinHealthDaily.date.desc())
         .distinct(BinHealthDaily.bin_id)
+        .subquery()
+    )
+    rows = session.execute(
+        select(Site.name, Bin.qr_code, latest.c.fill_pct)
+        .join(Bin, Bin.id == latest.c.bin_id)
+        .join(Site, Site.id == Bin.site_id)
+        .where(latest.c.recommendation == "collect_today")
     ).all()
     return sorted([(site, qr, fill) for site, qr, fill in rows], key=lambda r: r[2], reverse=True)
 

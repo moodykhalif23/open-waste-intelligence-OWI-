@@ -167,7 +167,7 @@ export default function Dumping() {
     },
     { field: "event_count", headerName: t("events"), type: "number", width: 100 },
     { field: "last_seen", headerName: t("lastSeen"), width: 130, valueFormatter: (v) => new Date(v as string).toLocaleDateString() },
-    { field: "hotspot_score", headerName: t("risk"), type: "number", width: 90 },
+    { field: "hotspot_score", headerName: t("risk"), type: "number", width: 90, valueFormatter: (v) => Number(v).toFixed(1) },
     {
       field: "status",
       headerName: t("status"),
@@ -242,7 +242,7 @@ export default function Dumping() {
                       lat: x.lat,
                       lng: x.lng,
                       color: STATUS_HEX[x.status],
-                      label: `${t(`dump_${x.status}` as StringKey)} · ${x.hotspot_score}`,
+                      label: `${t(`dump_${x.status}` as StringKey)} · ${x.hotspot_score.toFixed(1)}`,
                     }))}
                   />
                 </MapFrame>
@@ -275,7 +275,7 @@ export default function Dumping() {
                           {where(x)}
                         </Typography>
                         <Typography sx={{ fontSize: "0.86rem", fontWeight: 660, fontVariantNumeric: "tabular-nums" }}>
-                          {x.hotspot_score}
+                          {x.hotspot_score.toFixed(1)}
                         </Typography>
                       </ButtonBase>
                     ))}

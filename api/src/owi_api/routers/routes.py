@@ -449,12 +449,19 @@ def routes_savings(
     )
     today_bins = _collect_today_bins(session, requester.org_id)
 
-    baseline = _scenario(
-        _bin_demand(session, requester.org_id, all_bins), len(trucks), depot, matrix, fuel_rate
-    )
-    optimized = _scenario(
-        _bin_demand(session, requester.org_id, today_bins), len(trucks), depot, matrix, fuel_rate
-    )
+    try:
+        baseline = _scenario(
+            _bin_demand(session, requester.org_id, all_bins), len(trucks), depot, matrix, fuel_rate
+        )
+        optimized = _scenario(
+            _bin_demand(session, requester.org_id, today_bins),
+            len(trucks),
+            depot,
+            matrix,
+            fuel_rate,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     report = compute_savings(baseline, optimized, effective_fuel_price(session, requester.org_id))
 
     return SavingsOut(

@@ -19,7 +19,7 @@
   --wave-h: clamp(42px, 7vw, 80px);
   --pad-band: clamp(52px, 6.5vw, 84px);
   --pad-hero: clamp(60px, 7.5vw, 96px);
-  --wave-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 64' preserveAspectRatio='none'%3E%3Cpath d='M0 34C220 66 480 2 740 30C1000 58 1240 10 1440 34V64H0Z'/%3E%3C/svg%3E");
+  --wave-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 64' preserveAspectRatio='none'%3E%3Cpath d='M0 34C220 66 480 2 740 30C1000 58 1240 10 1440 34V66H0Z'/%3E%3C/svg%3E");
 }
 
 * {
@@ -97,10 +97,14 @@ section {
 .wave::after {
   content: "";
   position: absolute;
-  inset: 0 0 -1px;
+  inset: 0;
   background-color: var(--to);
   -webkit-mask: var(--wave-mask) center / 100% 100% no-repeat;
   mask: var(--wave-mask) center / 100% 100% no-repeat;
+}
+
+.wave + section {
+  margin-top: -1px;
 }
 
 .wave.flip::after {

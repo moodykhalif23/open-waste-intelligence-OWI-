@@ -127,7 +127,7 @@ export default function MfaDialog({ open, onClose }: { open: boolean; onClose: (
                 p: 1.5,
                 border: "1px solid",
                 borderColor: "divider",
-                borderRadius: "4px",
+                borderRadius: "10px",
                 fontFamily: "ui-monospace, monospace",
                 fontSize: "0.9rem",
                 columnCount: 2,

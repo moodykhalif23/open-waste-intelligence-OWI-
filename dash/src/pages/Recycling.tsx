@@ -140,7 +140,7 @@ export default function Recycling() {
         <Grid container spacing={GAP}>
           <Grid size={{ xs: 12, md: 5 }}>
             <SectionCard title={t("recoverableValue")}>
-              <RankBars items={bars} format={(v) => `KES ${compact(v)}`} labelWidth="7em" />
+              <RankBars items={bars} format={(v) => `KES ${compact(v)}`} />
             </SectionCard>
           </Grid>
           <Grid size={{ xs: 12, md: 7 }}>

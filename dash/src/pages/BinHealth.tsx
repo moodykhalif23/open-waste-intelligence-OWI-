@@ -154,21 +154,21 @@ export default function BinHealth() {
   const days = (v: unknown) => (v == null ? "—" : t("nDays").replace("{n}", Number(v).toFixed(1)));
 
   const columns: GridColDef<HealthRow>[] = [
-    { field: "qr_code", headerName: t("bin"), width: 120, renderCell: (p) => <CodeLabel>{p.value as string}</CodeLabel> },
-    { field: "site_name", headerName: t("site"), flex: 1, minWidth: 180 },
+    { field: "qr_code", headerName: t("bin"), width: 112, renderCell: (p) => <CodeLabel>{p.value as string}</CodeLabel> },
+    { field: "site_name", headerName: t("site"), flex: 1, minWidth: 150 },
     {
       field: "fill_pct",
       headerName: t("fillLevel"),
       type: "number",
-      width: 150,
+      width: 140,
       renderCell: (p) => <Meter value={Number(p.value)} bad={p.row.overflow_risk === "high"} />,
     },
-    { field: "days_to_full", headerName: t("daysToFull"), type: "number", width: 110, valueFormatter: days },
-    { field: "days_since_collection", headerName: t("sinceCollection"), type: "number", width: 130, valueFormatter: days },
+    { field: "days_to_full", headerName: t("daysToFull"), type: "number", width: 96, valueFormatter: days },
+    { field: "days_since_collection", headerName: t("sinceCollection"), type: "number", width: 110, valueFormatter: days },
     {
       field: "overflow_risk",
       headerName: t("risk"),
-      width: 120,
+      width: 108,
       sortComparator: (a, b) => RISK_RANK[a as HealthRow["overflow_risk"]] - RISK_RANK[b as HealthRow["overflow_risk"]],
       renderCell: (p) =>
         p.row.collected ? (
@@ -180,14 +180,14 @@ export default function BinHealth() {
     {
       field: "recommendation",
       headerName: t("recommendation"),
-      width: 150,
+      width: 136,
       valueGetter: (_v, row) =>
         row.recommendation === "collect_today" ? t("collectTodayRec") : row.recommendation === "schedule_soon" ? t("scheduleSoonRec") : "—",
     },
     {
       field: "actions",
       headerName: "",
-      width: 150,
+      width: 136,
       sortable: false,
       filterable: false,
       disableExport: true,

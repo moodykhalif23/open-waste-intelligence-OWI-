@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Alert from "@mui/material/Alert";
 import AddOutlined from "@mui/icons-material/AddOutlined";
 import Box from "@mui/material/Box";
@@ -30,6 +30,7 @@ import {
   ErrorPanel,
   GAP,
   InlineStat,
+  MapFrame,
   Kicker,
   Muted,
   PageSkeleton,
@@ -269,7 +270,9 @@ export default function Routes() {
         <Grid container spacing={GAP}>
           <Grid size={{ xs: 12, lg: 7 }}>
             {mapPoints.length > 0 ? (
-              <MapView points={mapPoints} lines={mapLines} height={480} />
+              <MapFrame>
+                <MapView points={mapPoints} lines={mapLines} height={480} />
+              </MapFrame>
             ) : (
               <SectionCard>
                 <EmptyState icon={<AltRouteOutlined />} title={t("noStops")} height={420} />
@@ -522,7 +525,7 @@ function PlanDialog({
                   sx={{ gap: 1.25, mx: 0, py: 0.75 }}
                 >
                   <Checkbox edge="start" checked={selected.has(r.bin_id)} tabIndex={-1} disableRipple sx={{ p: 0.5 }} />
-                  <Box sx={{ minWidth: 0, flex: 1, display: "flex", gap: 1.25, alignItems: "baseline" }}>
+                  <Box sx={{ minWidth: 0, flex: 1, display: "flex", gap: 1.25, alignItems: "baseline", fontSize: "0.9rem" }}>
                     <CodeLabel>{r.qr_code}</CodeLabel>
                     <Typography noWrap sx={{ fontSize: "0.88rem", color: owi.inkSoft, minWidth: 0 }}>
                       {r.site_name}
@@ -566,6 +569,7 @@ function RouteRow({
   onBreakdown: () => void;
 }) {
   const { t } = useI18n();
+  const rowRef = useRef<HTMLDivElement>(null);
   const empty = route.stops.length === 0;
   const hasPendingStops = route.stops.some((stop) => !stop.collected && !stop.skipped);
   const skipped = route.stops.filter((stop) => stop.skipped).length;
@@ -582,7 +586,7 @@ function RouteRow({
         .join(" · ");
 
   return (
-    <Box sx={{ borderTop: "1px solid", borderColor: owi.rule, "&:first-of-type": { borderTop: 0 } }}>
+    <Box ref={rowRef} sx={{ borderTop: "1px solid", borderColor: owi.rule, "&:first-of-type": { borderTop: 0 } }}>
       <Box
         sx={{
           display: "grid",
@@ -620,7 +624,7 @@ function RouteRow({
                 {methodLabel}
               </Typography>
             </Box>
-            <Typography noWrap sx={{ color: owi.inkSoft, fontSize: "0.86rem", fontVariantNumeric: "tabular-nums" }}>
+            <Typography sx={{ color: owi.inkSoft, fontSize: "0.86rem", fontVariantNumeric: "tabular-nums" }}>
               {meta}
               {skipped > 0 && (
                 <Box component="span" sx={{ color: owi.bad, fontWeight: 620 }}>{` · ${skipped} ${t("stopsSkipped")}`}</Box>
@@ -645,7 +649,11 @@ function RouteRow({
           {t("breakdown")}
         </Button>
       </Box>
-      <Collapse in={open} unmountOnExit>
+      <Collapse
+        in={open}
+        unmountOnExit
+        onEntered={() => rowRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })}
+      >
         <Box sx={{ px: 2.5, pb: 2, pt: 1 }}>
           <Typography sx={{ color: "text.secondary", fontSize: "0.84rem", mb: 1.25, fontVariantNumeric: "tabular-nums" }}>
             {[
@@ -702,7 +710,10 @@ function RouteRow({
             {[...route.stops]
               .sort((a, b) => a.seq - b.seq)
               .map((s) => (
-                <Box key={s.bin_id} sx={{ display: "flex", alignItems: "baseline", gap: 1, py: 0.4, minWidth: 0 }}>
+                <Box
+                  key={s.bin_id}
+                  sx={{ display: "flex", alignItems: "baseline", gap: 1, py: 0.4, minWidth: 0, gridColumn: s.skipped ? "1 / -1" : "auto" }}
+                >
                   <Typography
                     sx={{ width: 22, flexShrink: 0, color: "text.secondary", fontSize: "0.78rem", fontVariantNumeric: "tabular-nums", textAlign: "right" }}
                   >

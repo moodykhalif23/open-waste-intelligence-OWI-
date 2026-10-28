@@ -15,7 +15,7 @@ import AddBoxOutlinedIcon from "@mui/icons-material/AddBoxOutlined";
 import { api, apiBlob, type Bin, type Site } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import MapView from "../components/MapView";
-import { CodeLabel, EmptyState, ErrorPanel, PageSkeleton, PageStack, SectionCard } from "../components/ui";
+import { CodeLabel, EmptyState, ErrorPanel, MapFrame, PageSkeleton, PageStack, SectionCard } from "../components/ui";
 import { useI18n } from "../i18n";
 
 export default function Bins() {
@@ -176,10 +176,12 @@ export default function Bins() {
         action={addActions}
       >
         {bins.length > 0 ? (
-          <MapView
-            height={360}
-            points={shown.map((b) => ({ lat: b.lat, lng: b.lng, label: `${b.qr_code} · ${siteName(b.site_id)}` }))}
-          />
+          <MapFrame radius={10}>
+            <MapView
+              height={360}
+              points={shown.map((b) => ({ lat: b.lat, lng: b.lng, label: `${b.qr_code} · ${siteName(b.site_id)}` }))}
+            />
+          </MapFrame>
         ) : (
           <EmptyState icon={<DeleteOutlineOutlinedIcon />} title={t("noData")} hint={t("newSite")} />
         )}

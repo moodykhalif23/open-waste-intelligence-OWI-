@@ -353,9 +353,7 @@ const strings = {
     liveFromField: "live from the field",
     viewAll: "View all",
     lastDaysHint: "last {n} days",
-    lastWeeksHint: "last {n} weeks",
     reportsPerDayTitle: "Reports per day",
-    reportsPerWeekTitle: "Reports per week",
     reportsPerHourTitle: "Reports per hour",
     fillMix: "Fill level mix",
     activityTitle: "Reporting activity",
@@ -386,8 +384,6 @@ const strings = {
     latestNShown: "Showing the latest {n} reports",
     model: "Model",
     reviewLede: "Lowest-confidence predictions first.",
-    statusAll: "All statuses",
-    eventsN: "{n} events",
   },
   sw: {
     appName: "OpenWaste Intelligence",
@@ -741,9 +737,7 @@ const strings = {
     liveFromField: "moja kwa moja kutoka uwandani",
     viewAll: "Tazama zote",
     lastDaysHint: "siku {n} zilizopita",
-    lastWeeksHint: "wiki {n} zilizopita",
     reportsPerDayTitle: "Ripoti kwa siku",
-    reportsPerWeekTitle: "Ripoti kwa wiki",
     reportsPerHourTitle: "Ripoti kwa saa",
     fillMix: "Mchanganyiko wa viwango vya kujaa",
     activityTitle: "Shughuli za kuripoti",
@@ -774,8 +768,6 @@ const strings = {
     latestNShown: "Inaonyesha ripoti {n} za hivi karibuni",
     model: "Modeli",
     reviewLede: "Utabiri wenye uhakika mdogo zaidi huja kwanza.",
-    statusAll: "Hali zote",
-    eventsN: "matukio {n}",
   },
 } as const;
 

@@ -206,19 +206,9 @@ export function TableSection({
   );
 }
 
-export function Panel({ children }: { children: ReactNode }) {
+export function MapFrame({ children, radius = 14 }: { children: ReactNode; radius?: number }) {
   return (
-    <Box
-      sx={{
-        border: "1px solid",
-        borderColor: "divider",
-        borderRadius: "12px",
-        p: { xs: 1.75, md: 2 },
-        bgcolor: "background.paper",
-      }}
-    >
-      {children}
-    </Box>
+    <Box sx={{ borderRadius: `${radius}px`, overflow: "hidden", "& > div": { borderRadius: `${radius}px` } }}>{children}</Box>
   );
 }
 
@@ -419,7 +409,7 @@ export function rankWithOther(items: Part[], keep: number, otherLabel: string, p
 export function RankBars({
   items,
   format = (v) => v.toLocaleString(),
-  labelWidth = "8.5em",
+  labelWidth = "11em",
 }: {
   items: Part[];
   format?: (v: number) => string;
@@ -430,7 +420,7 @@ export function RankBars({
     <Box
       sx={{
         display: "grid",
-        gridTemplateColumns: `minmax(5em, ${labelWidth}) 1fr auto`,
+        gridTemplateColumns: `fit-content(${labelWidth}) minmax(80px, 1fr) auto`,
         alignItems: "center",
         columnGap: 1.75,
         rowGap: 1.6,

@@ -85,7 +85,7 @@ export function DataTable({
           "--DataGrid-containerBackground": "#ffffff",
           "--DataGrid-rowBorderColor": owi.rule,
           "& .MuiDataGrid-columnHeaders": { borderBottom: `1px solid ${owi.line}` },
-          "& .MuiDataGrid-columnHeader": { px: 2 },
+          "& .MuiDataGrid-columnHeader": { px: 1.75 },
           "& .MuiDataGrid-columnHeaderTitle": {
             fontWeight: 700,
             fontSize: "0.7rem",
@@ -97,7 +97,7 @@ export function DataTable({
           },
           "& .MuiDataGrid-cell": {
             borderColor: owi.rule,
-            px: 2,
+            px: 1.75,
             py: 1.1,
             minHeight: 48,
             whiteSpace: "normal",
@@ -107,6 +107,7 @@ export function DataTable({
             alignItems: "center",
           },
           "& .MuiDataGrid-cell--textRight": { justifyContent: "flex-end" },
+          "& .MuiDataGrid-cellEmpty, & .MuiDataGrid-filler": { p: 0 },
           "& .MuiDataGrid-row:hover": { bgcolor: "#faf8f3" },
           "& .MuiDataGrid-columnSeparator": { color: "transparent" },
           "& .MuiDataGrid-columnHeader:hover .MuiDataGrid-columnSeparator": { color: owi.line },

@@ -75,7 +75,7 @@ export default function Login() {
               placeItems: "center",
               width: 56,
               height: 56,
-              borderRadius: "4px",
+              borderRadius: "12px",
               bgcolor: "#ffffff",
             }}
           >
@@ -114,18 +114,7 @@ export default function Login() {
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, mb: 4 }}>
-            <Box
-              sx={{
-                display: "grid",
-                placeItems: "center",
-                width: 44,
-                height: 44,
-                borderRadius: "4px",
-                bgcolor: "#eceef1",
-              }}
-            >
-              <Box component="img" src="/icon.svg" alt="" sx={{ width: 30, height: 30, display: "block" }} />
-            </Box>
+            <Box component="img" src="/icon.svg" alt="" sx={{ width: 32, height: 32, display: "block" }} />
             <Typography sx={{ fontWeight: 700, fontSize: "1.15rem", letterSpacing: "-0.01em" }}>
               OpenWaste Intelligence
             </Typography>
@@ -166,7 +155,7 @@ export default function Login() {
             />
           )}
           {error && (
-            <Alert severity="error" variant="outlined" sx={{ mt: 1.5 }}>
+            <Alert severity="error" sx={{ mt: 1.5 }}>
               {t("loginFailed")}
             </Alert>
           )}

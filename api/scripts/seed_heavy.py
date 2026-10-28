@@ -1,7 +1,7 @@
 """Heavy demo dataset for the dashboard admin's organization: make seed-heavy / seed-heavy-purge
 
 Runs inside the api container (it needs the database, the object store and OSRM):
-    docker compose --profile prod exec -T api uv run python - [--purge|--dry-run] < api/scripts/seed_heavy.py
+    docker compose --profile prod exec -T api uv run python - [--purge] < api/scripts/seed_heavy.py
 """
 
 import argparse
@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta, timezone
 from datetime import time as dtime
+from itertools import pairwise
 from typing import Any
 
 import cv2
@@ -258,12 +259,7 @@ BINS_PER_SITE = {
     "collection_point": (0, 0),
 }
 SPREAD_M = {"market": 120, "estate": 280, "residential": 230, "lane": 190, "industrial": 260}
-BIN_TYPES = {
-    "standard": 240,
-    "communal": 1100,
-    "recycling": 660,
-    "drum": 200,
-}
+BIN_TYPES = {"standard": 240, "communal": 1100, "recycling": 660, "drum": 200}
 BIN_MIX = {
     "market": {"communal": 0.4, "standard": 0.3, "drum": 0.15, "recycling": 0.15},
     "lane": {"drum": 0.5, "standard": 0.45, "communal": 0.05},
@@ -294,7 +290,7 @@ VISITS_PER_DAY = {
     "church": 0.26,
     "industrial": 0.32,
 }
-VISIT_SCALE = 1.0
+VISIT_SCALE = 0.84
 OBS_DOW = [1.15, 1.12, 1.1, 1.08, 1.0, 0.62, 0.3]
 OBS_HOURS = {
     6: 0.35,
@@ -314,24 +310,7 @@ OBS_HOURS = {
 }
 DEPOSIT_BY_HOUR = (
     [0.2] * 6
-    + [
-        1.2,
-        1.6,
-        1.4,
-        1.0,
-        0.9,
-        0.9,
-        1.0,
-        0.9,
-        0.8,
-        0.8,
-        0.9,
-        1.2,
-        1.5,
-        1.6,
-        1.3,
-        0.9,
-    ]
+    + [1.2, 1.6, 1.4, 1.0, 0.9, 0.9, 1.0, 0.9, 0.8, 0.8, 0.9, 1.2, 1.5, 1.6, 1.3, 0.9]
     + [0.5, 0.3]
 )
 BAND_EDGES = [(0.15, FillBand.EMPTY), (0.375, FillBand.LOW), (0.625, FillBand.HALF)]
@@ -386,100 +365,100 @@ class VehicleSpec:
 DEPOT = (-1.2600, 36.8870)
 VEHICLES = [
     VehicleSpec(
-        "truck-a",
-        "Isuzu FVR KDH 214J",
-        CollectionMethod.TRUCK,
-        5000.0,
-        30.0,
-        DEPOT,
-        ("Dandora Area I", "Dandora Area II", "Dandora Area III", "Dandora Area IV"),
-        None,
-        "Joseph Mwangi",
-        95,
-        6.0,
-        14.0,
-        3.5,
-        0.86,
+        key="truck-a",
+        name="Isuzu FVR KDH 214J",
+        method=CollectionMethod.TRUCK,
+        capacity_kg=5000.0,
+        fuel_l_per_100km=30.0,
+        depot=DEPOT,
+        wards=("Dandora Area I", "Dandora Area II", "Dandora Area III", "Dandora Area IV"),
+        lanes_of=None,
+        crew="Joseph Mwangi",
+        max_stops=95,
+        start_hour=6.0,
+        speed_kmh=14.0,
+        service_min=3.5,
+        target_load=0.86,
     ),
     VehicleSpec(
-        "truck-b",
-        "Isuzu NQR KDB 908Q",
-        CollectionMethod.TRUCK,
-        3500.0,
-        22.0,
-        DEPOT,
-        ("Kariobangi North", "Kariobangi South", "Mowlem", "Komarock"),
-        None,
-        "Collins Wekesa",
-        95,
-        6.25,
-        15.0,
-        3.5,
-        0.97,
+        key="truck-b",
+        name="Isuzu NQR KDB 908Q",
+        method=CollectionMethod.TRUCK,
+        capacity_kg=3500.0,
+        fuel_l_per_100km=22.0,
+        depot=DEPOT,
+        wards=("Kariobangi North", "Kariobangi South", "Mowlem", "Komarock"),
+        lanes_of=None,
+        crew="Collins Wekesa",
+        max_stops=95,
+        start_hour=6.25,
+        speed_kmh=15.0,
+        service_min=3.5,
+        target_load=0.97,
     ),
     VehicleSpec(
-        "truck-c",
-        "Mitsubishi Canter KCU 233T",
-        CollectionMethod.TRUCK,
-        3000.0,
-        18.0,
-        DEPOT,
-        ("Baba Dogo", "Lucky Summer", "Umoja", "Korogocho"),
-        None,
-        "Samuel Mutua",
-        95,
-        6.5,
-        15.0,
-        3.5,
-        0.85,
+        key="truck-c",
+        name="Mitsubishi Canter KCU 233T",
+        method=CollectionMethod.TRUCK,
+        capacity_kg=3000.0,
+        fuel_l_per_100km=18.0,
+        depot=DEPOT,
+        wards=("Baba Dogo", "Lucky Summer", "Umoja", "Korogocho"),
+        lanes_of=None,
+        crew="Samuel Mutua",
+        max_stops=95,
+        start_hour=6.5,
+        speed_kmh=15.0,
+        service_min=3.5,
+        target_load=0.85,
     ),
     VehicleSpec(
-        "tuktuk",
-        "TVS King tuk-tuk KMFJ 117A",
-        CollectionMethod.TRICYCLE,
-        800.0,
-        6.0,
-        (-1.2590, 36.8700),
-        ("Huruma", "Mathare"),
-        None,
-        "Dennis Omondi",
-        40,
-        7.0,
-        16.0,
-        4.0,
-        0.9,
+        key="tuktuk",
+        name="TVS King tuk-tuk KMFJ 117A",
+        method=CollectionMethod.TRICYCLE,
+        capacity_kg=800.0,
+        fuel_l_per_100km=6.0,
+        depot=(-1.2590, 36.8700),
+        wards=("Huruma", "Mathare"),
+        lanes_of=None,
+        crew="Dennis Omondi",
+        max_stops=40,
+        start_hour=7.0,
+        speed_kmh=16.0,
+        service_min=4.0,
+        target_load=0.9,
     ),
     VehicleSpec(
-        "cart-mathare",
-        "Mkokoteni crew Mathare",
-        CollectionMethod.HANDCART,
-        350.0,
-        0.0,
-        (-1.2615, 36.8560),
-        (),
-        "Mathare",
-        "Kevin Ouma",
-        24,
-        6.5,
-        4.0,
-        6.0,
-        1.03,
+        key="cart-mathare",
+        name="Mkokoteni crew Mathare",
+        method=CollectionMethod.HANDCART,
+        capacity_kg=350.0,
+        fuel_l_per_100km=0.0,
+        depot=(-1.2615, 36.8560),
+        wards=(),
+        lanes_of="Mathare",
+        crew="Kevin Ouma",
+        max_stops=24,
+        start_hour=6.5,
+        speed_kmh=4.0,
+        service_min=6.0,
+        target_load=1.03,
     ),
     VehicleSpec(
-        "cart-korogocho",
-        "Mkokoteni crew Korogocho",
-        CollectionMethod.HANDCART,
-        350.0,
-        0.0,
-        (-1.2475, 36.8835),
-        (),
-        "Korogocho",
-        "Brian Kiprotich",
-        24,
-        6.5,
-        4.0,
-        6.0,
-        1.0,
+        key="cart-korogocho",
+        name="Mkokoteni crew Korogocho",
+        method=CollectionMethod.HANDCART,
+        capacity_kg=350.0,
+        fuel_l_per_100km=0.0,
+        depot=(-1.2475, 36.8835),
+        wards=(),
+        lanes_of="Korogocho",
+        crew="Brian Kiprotich",
+        max_stops=24,
+        start_hour=6.5,
+        speed_kmh=4.0,
+        service_min=6.0,
+        target_load=1.0,
     ),
 ]
 SKIP_REASONS = [
@@ -649,10 +628,7 @@ def ewkt(lat: float, lng: float) -> str:
 
 
 def offset(lat: float, lng: float, east_m: float, north_m: float) -> tuple[float, float]:
-    return (
-        lat + north_m / 111_320,
-        lng + east_m / (111_320 * math.cos(math.radians(lat))),
-    )
+    return (lat + north_m / 111_320, lng + east_m / (111_320 * math.cos(math.radians(lat))))
 
 
 def random_offset(
@@ -678,7 +654,12 @@ def band_for(level: float) -> FillBand:
 
 class Osrm:
     def __init__(self, base_url: str) -> None:
-        self._client = httpx.Client(base_url=base_url.rstrip("/"), timeout=30)
+        self._client = httpx.Client(
+            base_url=base_url.rstrip("/"),
+            timeout=30,
+            headers={"Connection": "close"},
+            limits=httpx.Limits(max_keepalive_connections=0),
+        )
 
     def nearest(self, point: tuple[float, float]) -> tuple[float, float, float]:
         lat, lng = point
@@ -701,10 +682,7 @@ class Osrm:
                 return round(float(data["routes"][0]["distance"]) / 1000, 2)
         except httpx.HTTPError:
             pass
-        legs = sum(
-            haversine_m((a[1], a[0]), (b[1], b[0]))
-            for a, b in zip(points, points[1:], strict=False)
-        )
+        legs = sum(haversine_m((a[1], a[0]), (b[1], b[0])) for a, b in pairwise(points))
         return round(legs * 1.35 / 1000, 2)
 
     def snap(
@@ -1102,218 +1080,62 @@ class World:
     counts: Counter[str] = field(default_factory=Counter)
 
 
-COLUMNS: dict[str, tuple[str, ...]] = {
-    "sites": ("id", "org_id", "created_at", "updated_at", "name", "site_type", "ward"),
-    "bins": (
-        "id",
-        "org_id",
-        "created_at",
-        "updated_at",
-        "site_id",
-        "qr_code",
-        "location",
-        "volume_liters",
-        "bin_type",
-    ),
+COLUMN_SPEC = {
+    "sites": "id org_id created_at updated_at name site_type ward",
+    "bins": "id org_id created_at updated_at site_id qr_code location volume_liters bin_type",
     "trucks": (
-        "id",
-        "org_id",
-        "created_at",
-        "updated_at",
-        "name",
-        "method",
-        "capacity_kg",
-        "fuel_l_per_100km",
-        "depot",
-        "active",
+        "id org_id created_at updated_at name method capacity_kg fuel_l_per_100km depot active"
     ),
-    "ml_models": (
-        "id",
-        "org_id",
-        "created_at",
-        "updated_at",
-        "task",
-        "version",
-        "metrics",
-        "active",
-        "labels",
-    ),
-    "material_prices": (
-        "id",
-        "org_id",
-        "created_at",
-        "updated_at",
-        "material",
-        "kes_per_kg",
-        "effective_date",
-        "source",
-    ),
+    "ml_models": "id org_id created_at updated_at task version metrics active labels",
+    "material_prices": "id org_id created_at updated_at material kes_per_kg effective_date source",
     "recycling_partners": (
-        "id",
-        "org_id",
-        "created_at",
-        "updated_at",
-        "name",
-        "materials_accepted",
-        "min_kg_per_month",
-        "indicative_price_kes_per_kg",
-        "contact",
+        "id org_id created_at updated_at name materials_accepted "
+        "min_kg_per_month indicative_price_kes_per_kg contact"
     ),
     "observations": (
-        "id",
-        "org_id",
-        "created_at",
-        "updated_at",
-        "captured_at",
-        "synced_at",
-        "location",
-        "location_source",
-        "bin_id",
-        "collector_id",
-        "image_ref",
-        "image_sha256",
-        "image_quality_flags",
-        "human_fill_tap",
-        "privacy_status",
-        "quarantine_deleted_at",
+        "id org_id created_at updated_at captured_at synced_at location "
+        "location_source bin_id collector_id image_ref image_sha256 "
+        "image_quality_flags human_fill_tap privacy_status "
+        "quarantine_deleted_at"
     ),
     "predictions": (
-        "id",
-        "org_id",
-        "created_at",
-        "updated_at",
-        "observation_id",
-        "model_id",
-        "task",
-        "payload",
-        "review_status",
-        "corrected_payload",
-        "reviewed_by",
+        "id org_id created_at updated_at observation_id model_id task payload "
+        "review_status corrected_payload reviewed_by"
     ),
     "routes": (
-        "id",
-        "org_id",
-        "created_at",
-        "updated_at",
-        "date",
-        "truck_id",
-        "status",
-        "planned_km",
-        "planned_fuel_l",
-        "demand_kg",
-        "bins_served",
-        "started_at",
-        "started_by_user_id",
-        "completed_at",
-        "actual_distance_km",
-        "actual_fuel_l",
-        "actual_weight_kg",
+        "id org_id created_at updated_at date truck_id status planned_km "
+        "planned_fuel_l demand_kg bins_served started_at started_by_user_id "
+        "completed_at actual_distance_km actual_fuel_l actual_weight_kg"
     ),
     "route_stops": (
-        "id",
-        "org_id",
-        "created_at",
-        "updated_at",
-        "route_id",
-        "bin_id",
-        "seq",
-        "collected",
-        "skipped_at",
-        "skip_reason",
+        "id org_id created_at updated_at route_id bin_id seq collected skipped_at skip_reason"
     ),
     "collection_events": (
-        "id",
-        "org_id",
-        "created_at",
-        "updated_at",
-        "bin_id",
-        "occurred_at",
-        "collector_id",
-        "post_observation_id",
-        "route_stop_id",
-        "estimated_weight_kg",
+        "id org_id created_at updated_at bin_id occurred_at collector_id "
+        "post_observation_id route_stop_id estimated_weight_kg"
     ),
     "dumping_sites": (
-        "id",
-        "org_id",
-        "created_at",
-        "updated_at",
-        "location",
-        "area",
-        "first_seen",
-        "last_seen",
-        "event_count",
-        "status",
+        "id org_id created_at updated_at location area first_seen last_seen event_count status"
     ),
     "dumping_candidates": (
-        "id",
-        "org_id",
-        "created_at",
-        "updated_at",
-        "observation_id",
-        "review",
-        "reviewed_by",
-        "dumping_site_id",
+        "id org_id created_at updated_at observation_id review reviewed_by dumping_site_id"
     ),
-    "dumping_events": (
-        "id",
-        "org_id",
-        "created_at",
-        "updated_at",
-        "dumping_site_id",
-        "observation_id",
-        "occurred_at",
-    ),
+    "dumping_events": "id org_id created_at updated_at dumping_site_id observation_id occurred_at",
     "dumping_interventions": (
-        "id",
-        "org_id",
-        "created_at",
-        "updated_at",
-        "dumping_site_id",
-        "kind",
-        "performed_on",
-        "notes",
+        "id org_id created_at updated_at dumping_site_id kind performed_on notes"
     ),
     "volunteer_events": (
-        "id",
-        "org_id",
-        "created_at",
-        "updated_at",
-        "occurred_on",
-        "event_type",
-        "area",
-        "site_id",
-        "organizer",
-        "participant_count",
-        "hours_total",
-        "materials_kg",
-        "notes",
+        "id org_id created_at updated_at occurred_on event_type area site_id "
+        "organizer participant_count hours_total materials_kg notes"
     ),
     "bin_health_daily": (
-        "id",
-        "org_id",
-        "created_at",
-        "updated_at",
-        "bin_id",
-        "date",
-        "fill_pct",
-        "fill_velocity_pct_per_day",
-        "days_to_full",
-        "days_since_collection",
-        "overflow_risk",
-        "recommendation",
+        "id org_id created_at updated_at bin_id date fill_pct "
+        "fill_velocity_pct_per_day days_to_full days_since_collection "
+        "overflow_risk recommendation"
     ),
-    "cleanliness_daily": (
-        "id",
-        "org_id",
-        "created_at",
-        "updated_at",
-        "site_id",
-        "date",
-        "score",
-        "components",
-    ),
+    "cleanliness_daily": "id org_id created_at updated_at site_id date score components",
 }
+COLUMNS = {table: tuple(spec.split()) for table, spec in COLUMN_SPEC.items()}
 
 
 def build_users(org_id: uuid.UUID) -> list[UserRec]:
@@ -1777,9 +1599,7 @@ class Simulation:
                     for route in self.plan_routes(i):
                         key = VEHICLES[route.vehicle].key
                         start = VEHICLES[route.vehicle].start_hour
-                        if not is_today:
-                            self.run_route(route, i, start, limit, collected_today)
-                        elif key == "cart-mathare" and now_hours >= 11:
+                        if not is_today or (key == "cart-mathare" and now_hours >= 11):
                             self.run_route(route, i, start, limit, collected_today)
                         elif key == "tuktuk" and now_hours >= 8:
                             self.run_route(
@@ -2020,9 +1840,7 @@ def build_dumping(
             else:
                 rate = spot.rate * report_dow[world.dates[i].weekday()]
                 if spot.cleanup_day is not None and i >= spot.cleanup_day:
-                    if spot.scenario == "cleaned":
-                        rate = 0.0
-                    elif i < spot.cleanup_day + 5:
+                    if spot.scenario == "cleaned" or i < spot.cleanup_day + 5:
                         rate = 0.0
                     else:
                         rate *= 0.7
@@ -2629,53 +2447,55 @@ def root_ids(org_id: uuid.UUID) -> dict[str, list[uuid.UUID]]:
     }
 
 
+IN_OBS = "IN (SELECT id FROM seed_obs)"
+IN_BINS = "IN (SELECT id FROM seed_bins)"
+IN_DUMPING = "IN (SELECT id FROM seed_dumping_sites)"
 PURGE_STATEMENTS = [
     (
         "predictions",
-        "DELETE FROM predictions WHERE observation_id IN (SELECT id FROM seed_obs) OR model_id IN (SELECT id FROM seed_models)",
+        f"DELETE FROM predictions WHERE observation_id {IN_OBS}"
+        " OR model_id IN (SELECT id FROM seed_models)",
     ),
     (
         "dumping_events",
-        "DELETE FROM dumping_events WHERE observation_id IN (SELECT id FROM seed_obs) OR dumping_site_id IN (SELECT id FROM seed_dumping_sites)",
+        f"DELETE FROM dumping_events WHERE observation_id {IN_OBS} OR dumping_site_id {IN_DUMPING}",
     ),
     (
         None,
-        "UPDATE dumping_candidates SET dumping_site_id = NULL WHERE dumping_site_id IN (SELECT id FROM seed_dumping_sites) AND observation_id NOT IN (SELECT id FROM seed_obs)",
+        f"UPDATE dumping_candidates SET dumping_site_id = NULL WHERE dumping_site_id {IN_DUMPING}"
+        f" AND observation_id NOT {IN_OBS}",
     ),
-    (
-        "dumping_candidates",
-        "DELETE FROM dumping_candidates WHERE observation_id IN (SELECT id FROM seed_obs)",
-    ),
+    ("dumping_candidates", f"DELETE FROM dumping_candidates WHERE observation_id {IN_OBS}"),
     (
         "dumping_interventions",
-        "DELETE FROM dumping_interventions WHERE dumping_site_id IN (SELECT id FROM seed_dumping_sites)",
+        f"DELETE FROM dumping_interventions WHERE dumping_site_id {IN_DUMPING}",
     ),
-    ("dumping_sites", "DELETE FROM dumping_sites WHERE id IN (SELECT id FROM seed_dumping_sites)"),
+    ("dumping_sites", f"DELETE FROM dumping_sites WHERE id {IN_DUMPING}"),
     (
         None,
-        "UPDATE collection_events SET route_stop_id = NULL WHERE route_stop_id IN (SELECT id FROM seed_stops) AND bin_id NOT IN (SELECT id FROM seed_bins)",
+        "UPDATE collection_events SET route_stop_id = NULL"
+        f" WHERE route_stop_id IN (SELECT id FROM seed_stops) AND bin_id NOT {IN_BINS}",
     ),
     (
         None,
-        "UPDATE collection_events SET post_observation_id = NULL WHERE post_observation_id IN (SELECT id FROM seed_obs) AND bin_id NOT IN (SELECT id FROM seed_bins)",
+        "UPDATE collection_events SET post_observation_id = NULL"
+        f" WHERE post_observation_id {IN_OBS} AND bin_id NOT {IN_BINS}",
     ),
-    (
-        "collection_events",
-        "DELETE FROM collection_events WHERE bin_id IN (SELECT id FROM seed_bins)",
-    ),
+    ("collection_events", f"DELETE FROM collection_events WHERE bin_id {IN_BINS}"),
     ("route_stops", "DELETE FROM route_stops WHERE id IN (SELECT id FROM seed_stops)"),
     ("routes", "DELETE FROM routes WHERE truck_id IN (SELECT id FROM seed_trucks)"),
     ("trucks", "DELETE FROM trucks WHERE id IN (SELECT id FROM seed_trucks)"),
-    ("bin_health_daily", "DELETE FROM bin_health_daily WHERE bin_id IN (SELECT id FROM seed_bins)"),
-    ("observations", "DELETE FROM observations WHERE id IN (SELECT id FROM seed_obs)"),
-    ("bins", "DELETE FROM bins WHERE id IN (SELECT id FROM seed_bins)"),
+    ("bin_health_daily", f"DELETE FROM bin_health_daily WHERE bin_id {IN_BINS}"),
+    ("observations", f"DELETE FROM observations WHERE id {IN_OBS}"),
+    ("bins", f"DELETE FROM bins WHERE id {IN_BINS}"),
     (
         "cleanliness_daily",
         "DELETE FROM cleanliness_daily WHERE site_id IN (SELECT id FROM seed_sites)",
     ),
     (
         None,
-        "UPDATE volunteer_events SET site_id = NULL WHERE site_id IN (SELECT id FROM seed_sites) AND id NOT IN (SELECT id FROM seed_volunteer)",
+        "UPDATE volunteer_events SET site_id = NULL WHERE site_id IN (SELECT id FROM seed_sites)"
+        " AND id NOT IN (SELECT id FROM seed_volunteer)",
     ),
     (
         "volunteer_events",
@@ -2699,8 +2519,9 @@ PURGE_STATEMENTS = [
         " AND NOT EXISTS (SELECT 1 FROM dumping_candidates d WHERE d.reviewed_by = u.id)",
     ),
     (
-        "users (retired)",
-        "UPDATE users SET deleted_at = now(), token_version = token_version + 1 WHERE id IN (SELECT id FROM seed_users) AND deleted_at IS NULL",
+        "users retired",
+        "UPDATE users SET deleted_at = now(), token_version = token_version + 1"
+        " WHERE id IN (SELECT id FROM seed_users) AND deleted_at IS NULL",
     ),
 ]
 
@@ -2715,11 +2536,13 @@ def purge(cur: psycopg.Cursor[Any], org_id: uuid.UUID) -> tuple[dict[str, int], 
                     copy.write_row((value,))
     cur.execute("CREATE TEMP TABLE seed_bins (id uuid PRIMARY KEY) ON COMMIT DROP")
     cur.execute(
-        "INSERT INTO seed_bins SELECT id FROM bins WHERE org_id = %(org)s AND site_id IN (SELECT id FROM seed_sites)",
+        "INSERT INTO seed_bins SELECT id FROM bins"
+        " WHERE org_id = %(org)s AND site_id IN (SELECT id FROM seed_sites)",
         {"org": org_id},
     )
     cur.execute(
-        "CREATE TEMP TABLE seed_obs (id uuid PRIMARY KEY, image_ref text, marked bool) ON COMMIT DROP"
+        "CREATE TEMP TABLE seed_obs (id uuid PRIMARY KEY, image_ref text, marked bool)"
+        " ON COMMIT DROP"
     )
     cur.execute(
         "INSERT INTO seed_obs SELECT id, image_ref,"
@@ -2833,7 +2656,8 @@ COUNT_QUERIES = {
     "dumping_candidates": "SELECT count(*) FROM dumping_candidates d"
     " JOIN observations o ON o.id = d.observation_id WHERE o.org_id = %(org)s AND "
     + SEEDED_OBS.format(alias="o."),
-    "dumping_events": "SELECT count(*) FROM dumping_events WHERE dumping_site_id = ANY(%(dumping)s)",
+    "dumping_events": "SELECT count(*) FROM dumping_events"
+    " WHERE dumping_site_id = ANY(%(dumping)s)",
     "dumping_interventions": "SELECT count(*) FROM dumping_interventions"
     " WHERE dumping_site_id = ANY(%(dumping)s)",
     "volunteer_events": "SELECT count(*) FROM volunteer_events WHERE id = ANY(%(volunteer)s)",
@@ -2874,6 +2698,9 @@ def main() -> None:
     parser.add_argument(
         "--org", help="target organization id (default: the OWI_ADMIN_PHONE user's org)"
     )
+    parser.add_argument(
+        "--osrm-url", default=settings.osrm_url, help="OSRM base URL (default: OWI_OSRM_URL)"
+    )
     args = parser.parse_args()
     started = time.monotonic()
     dsn = settings.database_url.replace("postgresql+psycopg://", "postgresql://")
@@ -2898,11 +2725,11 @@ def main() -> None:
             print(f"done in {time.monotonic() - started:.1f}s")
             return
 
-        if not settings.osrm_url:
+        if not args.osrm_url:
             raise SystemExit("OWI_OSRM_URL is unset; bins must be snapped to roads with OSRM")
         check_phones(cur, org_id)
         now = datetime.now(UTC)
-        world = build_world(org_id, now, org_density(cur, org_id), Osrm(settings.osrm_url))
+        world = build_world(org_id, now, org_density(cur, org_id), Osrm(args.osrm_url))
         if args.dry_run:
             for table, rows in world.rows.items():
                 print(f"  {table:24} {len(rows)}")
@@ -2914,13 +2741,15 @@ def main() -> None:
         with conn.transaction():
             counts, stale_images = purge(cur, org_id)
             print(
-                f"  cleared previous seed: {sum(counts.values())} rows ({time.monotonic() - started:.1f}s)"
+                f"  cleared previous seed: {sum(counts.values())} rows"
+                f" ({time.monotonic() - started:.1f}s)"
             )
             upsert_users(cur, world)
             for table in COLUMNS:
                 copy_rows(cur, table, world.rows.get(table, []))
             print(
-                f"  inserted {sum(len(r) for r in world.rows.values())} rows ({time.monotonic() - started:.1f}s)"
+                f"  inserted {sum(len(r) for r in world.rows.values())} rows"
+                f" ({time.monotonic() - started:.1f}s)"
             )
         for key in stale_images - {image.key for image in images}:
             store.delete(key)

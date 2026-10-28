@@ -30,6 +30,7 @@ import {
   ErrorPanel,
   FilterChips,
   GAP,
+  MapFrame,
   Muted,
   PageSkeleton,
   PageStack,
@@ -234,15 +235,17 @@ export default function Dumping() {
           <Stack spacing={GAP}>
             <Grid container spacing={GAP}>
               <Grid size={{ xs: 12, md: 7 }}>
-                <MapView
-                  height={400}
-                  points={sites.map((x) => ({
-                    lat: x.lat,
-                    lng: x.lng,
-                    color: STATUS_HEX[x.status],
-                    label: `${t(`dump_${x.status}` as StringKey)} · ${x.hotspot_score}`,
-                  }))}
-                />
+                <MapFrame>
+                  <MapView
+                    height={400}
+                    points={sites.map((x) => ({
+                      lat: x.lat,
+                      lng: x.lng,
+                      color: STATUS_HEX[x.status],
+                      label: `${t(`dump_${x.status}` as StringKey)} · ${x.hotspot_score}`,
+                    }))}
+                  />
+                </MapFrame>
               </Grid>
               <Grid size={{ xs: 12, md: 5 }}>
                 <SectionCard>

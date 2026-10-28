@@ -68,24 +68,24 @@ export default function Coverage() {
   const highRisk = rows.reduce((sum, row) => sum + row.high_risk_bin_count, 0);
   const num = (v: unknown) => Number(v).toLocaleString();
   const columns: GridColDef<WardCoverage>[] = [
-    { field: "ward", headerName: t("ward"), flex: 1, minWidth: 120, renderCell: (p) => <strong>{p.value as string}</strong> },
-    { field: "site_count", headerName: t("sites"), type: "number", width: 76, valueFormatter: num },
-    { field: "bin_count", headerName: t("bins"), type: "number", width: 80, valueFormatter: num },
-    { field: "assessed_bin_count", headerName: t("assessedBins"), type: "number", width: 100, valueFormatter: num },
-    { field: "high_risk_bin_count", headerName: t("riskHigh"), type: "number", width: 76, valueFormatter: num },
-    { field: "medium_risk_bin_count", headerName: t("riskMedium"), type: "number", width: 88, valueFormatter: num },
-    { field: "sites_without_bins", headerName: t("sitesWithoutBins"), type: "number", width: 100, valueFormatter: num },
+    { field: "ward", headerName: t("ward"), flex: 1, minWidth: 110, renderCell: (p) => <strong>{p.value as string}</strong> },
+    { field: "site_count", headerName: t("sites"), type: "number", width: 68, valueFormatter: num },
+    { field: "bin_count", headerName: t("bins"), type: "number", width: 72, valueFormatter: num },
+    { field: "assessed_bin_count", headerName: t("assessedBins"), type: "number", width: 92, valueFormatter: num },
+    { field: "high_risk_bin_count", headerName: t("riskHigh"), type: "number", width: 68, valueFormatter: num },
+    { field: "medium_risk_bin_count", headerName: t("riskMedium"), type: "number", width: 80, valueFormatter: num },
+    { field: "sites_without_bins", headerName: t("sitesWithoutBins"), type: "number", width: 88, valueFormatter: num },
     {
       field: "health_data_date",
       headerName: t("latestHealthDate"),
-      width: 128,
+      width: 116,
       valueFormatter: (value) => (value ? String(value) : "—"),
       renderCell: (p) => <span style={{ whiteSpace: "nowrap" }}>{p.formattedValue as string}</span>,
     },
     {
       field: "priority",
       headerName: t("coveragePriority"),
-      width: 150,
+      width: 140,
       valueGetter: (_value, row) => priorityLabel(row.priority),
       renderCell: (params) => <Tag tone={PRIORITY_TONE[params.row.priority]}>{params.value as string}</Tag>,
     },
@@ -93,7 +93,7 @@ export default function Coverage() {
       field: "reason",
       headerName: t("coverageReason"),
       flex: 1.6,
-      minWidth: 190,
+      minWidth: 150,
       valueGetter: (_value, row) =>
         t(
           row.reason === "registered_sites_without_bins"

@@ -84,10 +84,11 @@ export default function Overview() {
     const overflow = (observations ?? []).filter((o) => o.fill_tap === "overflowing").map((o) => o.captured_at);
     if (sample.truncated && sample.spanDays < 3) {
       const hours = Math.max(6, Math.ceil(sample.spanDays * 24));
+      const main = bucketHours(stamps, hours, locale);
       return {
         unit: "hour" as const,
-        main: bucketHours(stamps, hours, locale),
-        reports: bucketHours(stamps, hours, locale).values,
+        main,
+        reports: main.values,
         overflow: bucketHours(overflow, hours, locale).values,
       };
     }

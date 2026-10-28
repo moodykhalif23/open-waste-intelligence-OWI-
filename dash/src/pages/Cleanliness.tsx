@@ -1,13 +1,12 @@
 import { useMemo, useState } from "react";
 import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
 import CleaningServicesOutlinedIcon from "@mui/icons-material/CleaningServicesOutlined";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import {
   EmptyState,
   ErrorPanel,
   FilterChips,
-  Note,
+  PageHeader,
   PageSkeleton,
   PageStack,
   SectionCard,
@@ -124,7 +123,10 @@ export default function Cleanliness() {
 
   return (
     <PageStack>
-      <Typography variant="h5">{t("cleanlinessIndex")}</Typography>
+      <PageHeader
+        title={t("cleanlinessIndex")}
+        info={method ? `${method.note} (${t("methodology")}: ${method.version})` : undefined}
+      />
 
       {areas.length === 0 ? (
         <SectionCard>
@@ -155,12 +157,6 @@ export default function Cleanliness() {
             }
           />
         </>
-      )}
-
-      {method && (
-        <Note>
-          {t("methodology")} {method.version}: {method.note}
-        </Note>
       )}
     </PageStack>
   );

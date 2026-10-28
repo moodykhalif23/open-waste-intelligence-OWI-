@@ -5,7 +5,6 @@ import {
   EmptyState,
   ErrorPanel,
   FilterChips,
-  Note,
   PageHeader,
   PageSkeleton,
   PageStack,
@@ -68,24 +67,53 @@ export default function Coverage() {
   const highRisk = rows.reduce((sum, row) => sum + row.high_risk_bin_count, 0);
   const num = (v: unknown) => Number(v).toLocaleString();
   const columns: GridColDef<WardCoverage>[] = [
-    { field: "ward", headerName: t("ward"), flex: 1, minWidth: 110, renderCell: (p) => <strong>{p.value as string}</strong> },
-    { field: "site_count", headerName: t("sites"), type: "number", width: 68, valueFormatter: num },
-    { field: "bin_count", headerName: t("bins"), type: "number", width: 72, valueFormatter: num },
-    { field: "assessed_bin_count", headerName: t("assessedBins"), type: "number", width: 92, valueFormatter: num },
-    { field: "high_risk_bin_count", headerName: t("riskHigh"), type: "number", width: 68, valueFormatter: num },
-    { field: "medium_risk_bin_count", headerName: t("riskMedium"), type: "number", width: 80, valueFormatter: num },
-    { field: "sites_without_bins", headerName: t("sitesWithoutBins"), type: "number", width: 88, valueFormatter: num },
+    { field: "ward", headerName: t("ward"), flex: 1, minWidth: 140, renderCell: (p) => <strong>{p.value as string}</strong> },
+    { field: "site_count", headerName: t("sites"), type: "number", width: 84, valueFormatter: num },
+    {
+      field: "sites_without_bins",
+      headerName: t("withoutBins"),
+      description: t("sitesWithoutBins"),
+      type: "number",
+      width: 120,
+      valueFormatter: num,
+    },
+    { field: "bin_count", headerName: t("bins"), type: "number", width: 80, valueFormatter: num },
+    {
+      field: "assessed_bin_count",
+      headerName: t("assessed"),
+      description: t("assessedBins"),
+      type: "number",
+      width: 120,
+      valueFormatter: num,
+    },
+    {
+      field: "high_risk_bin_count",
+      headerName: t("riskHigh"),
+      description: t("highRiskBins"),
+      type: "number",
+      width: 72,
+      valueFormatter: num,
+    },
+    {
+      field: "medium_risk_bin_count",
+      headerName: t("riskMedium"),
+      description: t("mediumRiskBins"),
+      type: "number",
+      width: 92,
+      valueFormatter: num,
+    },
     {
       field: "health_data_date",
-      headerName: t("latestHealthDate"),
-      width: 116,
+      headerName: t("updated"),
+      description: t("latestHealthDate"),
+      width: 120,
       valueFormatter: (value) => (value ? String(value) : "—"),
       renderCell: (p) => <span style={{ whiteSpace: "nowrap" }}>{p.formattedValue as string}</span>,
     },
     {
       field: "priority",
       headerName: t("coveragePriority"),
-      width: 140,
+      width: 168,
       valueGetter: (_value, row) => priorityLabel(row.priority),
       renderCell: (params) => <Tag tone={PRIORITY_TONE[params.row.priority]}>{params.value as string}</Tag>,
     },
@@ -104,13 +132,13 @@ export default function Coverage() {
                 ? "coverageReasonTooFew"
                 : "coverageReasonMonitor",
         ),
+      renderCell: (p) => <span style={{ color: owi.muted }}>{p.value as string}</span>,
     },
   ];
 
   return (
     <PageStack>
-      <PageHeader title={t("coverageTitle")} description={t("coverageDescription")} />
-      <Note>{t("coverageLimit")}</Note>
+      <PageHeader title={t("coverageTitle")} description={t("coverageDescription")} info={t("coverageLimit")} />
       <StatRow>
         <StatCard label={t("coverageAssess")} value={count("assess").toLocaleString()} caption={`${rows.length.toLocaleString()} ${t("wards").toLowerCase()}`} />
         <StatCard label={t("assessedBins")} value={assessedBins.toLocaleString()} />

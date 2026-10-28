@@ -94,6 +94,9 @@ export function DataTable({
             color: "text.secondary",
             whiteSpace: "normal",
             lineHeight: 1.25,
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
           },
           "& .MuiDataGrid-cell": {
             borderColor: owi.rule,

@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import Accordion from "@mui/material/Accordion";
 import AccordionDetails from "@mui/material/AccordionDetails";
 import AccordionSummary from "@mui/material/AccordionSummary";
@@ -11,6 +11,7 @@ import CardContent from "@mui/material/CardContent";
 import Grid from "@mui/material/Grid";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
+import Popover from "@mui/material/Popover";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
@@ -23,6 +24,7 @@ import CloseOutlined from "@mui/icons-material/CloseOutlined";
 import ExpandMoreOutlined from "@mui/icons-material/ExpandMoreOutlined";
 import InfoOutlined from "@mui/icons-material/InfoOutlined";
 import SearchOutlined from "@mui/icons-material/SearchOutlined";
+import { useI18n } from "../i18n";
 import { owi } from "../theme";
 
 export const GAP = { xs: 2, md: 2.5 } as const;
@@ -31,14 +33,55 @@ export function PageStack({ children }: { children: ReactNode }) {
   return <Stack spacing={GAP}>{children}</Stack>;
 }
 
+export function InfoTip({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  return (
+    <>
+      <IconButton
+        size="small"
+        aria-label={t("moreInfo")}
+        aria-expanded={anchor !== null}
+        onClick={(e) => setAnchor(e.currentTarget)}
+        sx={{ p: 0.25, my: -0.5, color: anchor ? "text.primary" : owi.faint, "&:hover": { color: "text.primary" } }}
+      >
+        <InfoOutlined sx={{ fontSize: 17 }} />
+      </IconButton>
+      <Popover
+        open={anchor !== null}
+        anchorEl={anchor}
+        onClose={() => setAnchor(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        slotProps={{
+          paper: {
+            sx: {
+              mt: 0.75,
+              p: 2,
+              maxWidth: 360,
+              border: `1px solid ${owi.line}`,
+              boxShadow: "0 12px 32px rgba(16,24,40,0.10)",
+            },
+          },
+        }}
+      >
+        <Typography variant="body2" sx={{ color: owi.inkSoft }}>
+          {children}
+        </Typography>
+      </Popover>
+    </>
+  );
+}
+
 export function PageHeader({
   title,
   description,
   action,
+  info,
 }: {
   title?: ReactNode;
   description?: ReactNode;
   action?: ReactNode;
+  info?: ReactNode;
 }) {
   return (
     <Box
@@ -52,7 +95,12 @@ export function PageHeader({
       }}
     >
       <Box sx={{ minWidth: 0, flex: "1 1 320px" }}>
-        {title != null && (typeof title === "string" ? <Typography variant="h5">{title}</Typography> : title)}
+        {title != null && (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+            {typeof title === "string" ? <Typography variant="h5">{title}</Typography> : title}
+            {info && <InfoTip>{info}</InfoTip>}
+          </Box>
+        )}
         {description && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: title != null ? 0.5 : 0, maxWidth: 780 }}>
             {description}
@@ -246,17 +294,22 @@ export function StatCard({
   color,
   spark,
   caption,
+  info,
 }: {
   label: string;
   value: ReactNode;
   color?: string;
   spark?: number[];
   caption?: ReactNode;
+  info?: ReactNode;
 }) {
   return (
     <Card sx={{ height: "100%" }}>
       <CardContent sx={{ display: "flex", flexDirection: "column", height: "100%", boxSizing: "border-box" }}>
-        <Kicker>{label}</Kicker>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, minWidth: 0 }}>
+          <Kicker>{label}</Kicker>
+          {info && <InfoTip>{info}</InfoTip>}
+        </Box>
         <Typography
           sx={{
             fontWeight: 760,
@@ -641,17 +694,6 @@ export function CodeLabel({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-    </Box>
-  );
-}
-
-export function Note({ children }: { children: ReactNode }) {
-  return (
-    <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start", color: "text.secondary" }}>
-      <InfoOutlined sx={{ fontSize: 17, mt: "3px", flexShrink: 0 }} />
-      <Typography variant="body2" sx={{ color: "inherit", fontSize: "0.86rem" }}>
-        {children}
-      </Typography>
     </Box>
   );
 }

@@ -5,7 +5,6 @@ import {
   EmptyState,
   ErrorPanel,
   GAP,
-  Note,
   PageStack,
   RankBars,
   SectionCard,
@@ -57,7 +56,9 @@ export default function Carbon() {
     );
   }
   const label = (m: string) => t(m as StringKey);
-  const range = `${Math.round(data.co2e_low_kg).toLocaleString()}–${Math.round(data.co2e_high_kg).toLocaleString()}`;
+  const range = t("co2eRange")
+    .replace("{low}", Math.round(data.co2e_low_kg).toLocaleString())
+    .replace("{high}", Math.round(data.co2e_high_kg).toLocaleString());
   const ranked = [...data.materials].sort((a, b) => b.co2e_kg - a.co2e_kg);
   const bars = rankWithOther(
     ranked.filter((m) => m.material !== "other_mixed").map((m) => ({ label: label(m.material), value: m.co2e_kg })),
@@ -74,7 +75,17 @@ export default function Carbon() {
   return (
     <PageStack>
       <StatRow>
-        <StatCard label={t("co2eAvoided")} value={range} />
+        <StatCard
+          label={t("co2eAvoided")}
+          value={Math.round(data.co2e_avoided_kg).toLocaleString()}
+          caption={range}
+          info={
+            <>
+              {t("carbonNotOffsets")} ({t("methodology")}: {data.method_version}, ≈{t("carEquiv")}{" "}
+              {data.car_km_equivalent.toLocaleString()} km)
+            </>
+          }
+        />
         <StatCard label={t("landfillSaved")} value={data.landfill_m3_saved.toLocaleString()} />
         <StatCard label={t("plasticDiverted")} value={Math.round(data.plastic_diverted_kg).toLocaleString()} />
         <StatCard label={t("treesEquiv")} value={`≈${data.trees_equivalent.toLocaleString()}`} />
@@ -96,11 +107,6 @@ export default function Carbon() {
           </Grid>
         </Grid>
       )}
-
-      <Note>
-        {t("carbonNotOffsets")} ({t("methodology")}: {data.method_version}, ≈{t("carEquiv")}{" "}
-        {data.car_km_equivalent.toLocaleString()} km)
-      </Note>
     </PageStack>
   );
 }

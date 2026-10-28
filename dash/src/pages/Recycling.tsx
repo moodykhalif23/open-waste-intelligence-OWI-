@@ -18,7 +18,6 @@ import {
   EmptyState,
   ErrorPanel,
   GAP,
-  Note,
   PageSkeleton,
   PageStack,
   RankBars,
@@ -128,7 +127,7 @@ export default function Recycling() {
     <PageStack>
       <StatRow>
         <StatCard label={t("kgCollected30")} value={Math.round(value.total_kg).toLocaleString()} />
-        <StatCard label={t("estValue30")} value={kes(value.total_value_kes)} />
+        <StatCard label={t("estValue30")} value={kes(value.total_value_kes)} info={t("valueMethod")} />
         <StatCard label={t("partnersRegistered")} value={partners.length.toLocaleString()} />
       </StatRow>
 
@@ -148,7 +147,6 @@ export default function Recycling() {
           </Grid>
         </Grid>
       )}
-      <Note>{t("valueMethod")}</Note>
 
       <Grid container spacing={GAP} sx={{ alignItems: "flex-start" }}>
         <Grid size={{ xs: 12, md: 6 }}>

@@ -69,6 +69,7 @@ interface Stop {
   qr_code: string;
   lat: number;
   lng: number;
+  collected: boolean;
 }
 
 interface Route {
@@ -149,6 +150,11 @@ export default function Routes() {
         method: "POST",
         body: JSON.stringify(disableTruckId ? { disable_truck_ids: [disableTruckId] } : {}),
       });
+      if (planned.length === 0) {
+        await reload();
+        setToast(t("routeComplete"));
+        return;
+      }
       setRoutes(planned);
       announce(planned);
     } catch (e) {
@@ -184,6 +190,7 @@ export default function Routes() {
 
   const totalKm = routes.reduce((s, r) => s + r.planned_km, 0);
   const totalFuel = routes.reduce((s, r) => s + r.planned_fuel_l, 0);
+  const hasPendingStops = routes.some((route) => route.stops.some((stop) => !stop.collected));
 
   const routeColor = (i: number) => CATEGORICAL[i % CATEGORICAL.length] ?? "#101828";
   const mapPoints: MapPoint[] = routes.flatMap((r, i) =>
@@ -217,7 +224,7 @@ export default function Routes() {
         variant="contained"
         size="small"
         color="primary"
-        disabled={planning}
+        disabled={planning || !hasPendingStops}
         onClick={() => setPlanOpen(true)}
       >
         {t("planToday")}
@@ -273,11 +280,12 @@ export default function Routes() {
                   <RouteCard
                     route={route}
                     methodLabel={methodLabel(route.method)}
-                    disabled={planning}
+                    disabled={planning || !hasPendingStops}
                     breakdownLabel={t("breakdown")}
                     breakdownHint={t("breakdownHint")}
                     stopsLabel={t("stops")}
                     noStopsLabel={t("noStops")}
+                    completeLabel={t("routeComplete")}
                     onBreakdown={() => void replan(route.truck_id)}
                   />
                 </Grid>
@@ -526,6 +534,7 @@ function RouteCard({
   breakdownHint,
   stopsLabel,
   noStopsLabel,
+  completeLabel,
   onBreakdown,
 }: {
   route: Route;
@@ -535,6 +544,7 @@ function RouteCard({
   breakdownHint: string;
   stopsLabel: string;
   noStopsLabel: string;
+  completeLabel: string;
   onBreakdown: () => void;
 }) {
   const breakdownBtn = (
@@ -567,6 +577,8 @@ function RouteCard({
     );
   }
 
+  const hasPendingStops = route.stops.some((stop) => !stop.collected);
+
   return (
     <Card variant="outlined" sx={{ height: "100%" }}>
       <Box sx={{ p: 2, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1.5 }}>
@@ -583,6 +595,7 @@ function RouteCard({
             )}
             <Chip size="small" variant="outlined" label={`${Math.round(route.demand_kg)} kg`} />
           </Stack>
+          {!hasPendingStops && <Muted>{completeLabel}</Muted>}
         </Box>
         {breakdownBtn}
       </Box>

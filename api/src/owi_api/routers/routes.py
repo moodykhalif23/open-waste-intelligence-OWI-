@@ -425,10 +425,6 @@ def replan_routes(
     still-available trucks, superseding today's existing plan. Collected stops stay done."""
     today = datetime.now(UTC).date()
     disabled = set(body.disable_truck_ids or [])
-    trucks = [t for t in _active_trucks(session, requester.org_id) if t.id not in disabled]
-    if not trucks:
-        raise HTTPException(status_code=400, detail="no trucks left after breakdowns")
-
     existing = session.scalars(
         select(Route).where(
             Route.org_id == requester.org_id,
@@ -442,10 +438,17 @@ def replan_routes(
             select(RouteStop).where(RouteStop.route_id == route.id, RouteStop.collected.is_(False))
         ):
             pending.add(stop.bin_id)
-        route.deleted_at = datetime.now(UTC)  # supersede the old plan; collections are kept
     pending.update(body.add_bin_ids or [])
-    session.commit()
 
     if not pending:
-        raise HTTPException(status_code=400, detail="nothing left to collect")
+        return []
+
+    trucks = [t for t in _active_trucks(session, requester.org_id) if t.id not in disabled]
+    if not trucks:
+        raise HTTPException(status_code=400, detail="no trucks left after breakdowns")
+
+    for route in existing:
+        route.deleted_at = datetime.now(UTC)  # supersede the old plan; collections are kept
+    session.commit()
+
     return _plan_and_persist(session, requester.org_id, list(pending), trucks)

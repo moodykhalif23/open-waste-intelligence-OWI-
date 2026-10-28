@@ -54,7 +54,7 @@ export function PageHeader({
       <Box sx={{ minWidth: 0, flex: "1 1 320px" }}>
         {title != null && (typeof title === "string" ? <Typography variant="h5">{title}</Typography> : title)}
         {description && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: title != null ? 0.5 : 0, maxWidth: 680 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: title != null ? 0.5 : 0, maxWidth: 780 }}>
             {description}
           </Typography>
         )}

@@ -73,7 +73,7 @@ export default function Composition() {
       disableExport: true,
       align: "right",
       renderCell: (p) => (
-        <Button size="small" variant="outlined" onClick={() => navigate(`/records/reports?material=${p.row.material}`)}>
+        <Button size="small" variant="text" onClick={() => navigate(`/records/reports?material=${p.row.material}`)}>
           {t("view")}
         </Button>
       ),

@@ -9,6 +9,7 @@ import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import { ApiError } from "../lib/api";
 import { fieldLogin, type CrewIdentity } from "../lib/auth";
+import SweepArt from "./SweepArt";
 import { t, type Lang, type StringKey } from "../i18n";
 
 const PIN_PATTERN = /^\d{6,12}$/;
@@ -98,11 +99,20 @@ export default function SignIn({
         </ToggleButtonGroup>
       </Stack>
 
-      <Box sx={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", py: 4 }}>
-        <Typography component="h1" sx={{ fontSize: "2rem", fontWeight: 760, letterSpacing: "-0.025em", lineHeight: 1.1 }}>
+      <Box sx={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", py: 3 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", mb: 2.5 }}>
+          <SweepArt />
+        </Box>
+        <Typography
+          component="h1"
+          sx={{ fontSize: "2rem", fontWeight: 760, letterSpacing: "-0.025em", lineHeight: 1.1, textAlign: "center" }}
+        >
           {tr("signInTitle")}
         </Typography>
-        <Typography color="text.secondary" sx={{ mt: 1, mb: 3, lineHeight: 1.55 }}>
+        <Typography
+          color="text.secondary"
+          sx={{ mt: 1, mb: 3, lineHeight: 1.55, textAlign: "center", maxWidth: 340, mx: "auto" }}
+        >
           {mode === "pin" ? tr("signInLede") : tr("deviceToken")}
         </Typography>
 

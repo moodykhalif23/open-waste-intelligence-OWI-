@@ -1,14 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
-import Grid from "@mui/material/Grid";
 import Alert from "@mui/material/Alert";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import PlaylistAddCheckOutlinedIcon from "@mui/icons-material/PlaylistAddCheckOutlined";
 import { api } from "../api";
 import { DataTable, type GridColDef } from "../components/DataTable";
-import { EmptyState, ErrorPanel, PageSkeleton, PageStack, StatCard, TableSection } from "../components/ui";
+import {
+  CodeLabel,
+  EmptyState,
+  ErrorPanel,
+  FilterChips,
+  Meter,
+  PageStack,
+  TableSkeleton,
+  Tag,
+  type Tone,
+} from "../components/ui";
 import { useI18n } from "../i18n";
 
 interface HealthRow {
@@ -24,11 +32,14 @@ interface HealthRow {
   collected: boolean;
 }
 
-const RISK_COLOR = {
-  high: "error",
-  medium: "warning",
-  low: "success",
-} as const;
+type View = "all" | "collect_today" | "schedule_soon" | "high";
+
+const RISK_TONE: Record<HealthRow["overflow_risk"], Tone> = {
+  high: "bad",
+  medium: "warn",
+  low: "ok",
+};
+const RISK_RANK = { high: 0, medium: 1, low: 2 } as const;
 
 export default function BinHealth() {
   const { t } = useI18n();
@@ -38,6 +49,7 @@ export default function BinHealth() {
   const [busyBinId, setBusyBinId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [view, setView] = useState<View>("all");
 
   const reload = useCallback(async () => {
     try {
@@ -94,6 +106,13 @@ export default function BinHealth() {
     };
   }, [rows]);
 
+  const visible = useMemo(() => {
+    const list = rows ?? [];
+    if (view === "all") return list;
+    if (view === "high") return list.filter((r) => r.overflow_risk === "high");
+    return list.filter((r) => r.recommendation === view);
+  }, [rows, view]);
+
   if (error) {
     return (
       <PageStack>
@@ -109,7 +128,13 @@ export default function BinHealth() {
       </PageStack>
     );
   }
-  if (rows === null) return <PageSkeleton />;
+  if (rows === null) {
+    return (
+      <PageStack>
+        <TableSkeleton rows={10} />
+      </PageStack>
+    );
+  }
 
   const refreshAction = (
     <Button
@@ -118,6 +143,7 @@ export default function BinHealth() {
       startIcon={<RefreshIcon />}
       onClick={() => void refresh()}
       disabled={busy}
+      sx={{ height: 36 }}
     >
       {busy ? t("refreshing") : t("refresh")}
     </Button>
@@ -125,42 +151,51 @@ export default function BinHealth() {
 
   const riskLabel = (r: HealthRow["overflow_risk"]) =>
     t(r === "high" ? "riskHigh" : r === "medium" ? "riskMedium" : "riskLow");
+  const days = (v: unknown) => (v == null ? "—" : t("nDays").replace("{n}", Number(v).toFixed(1)));
 
   const columns: GridColDef<HealthRow>[] = [
-    { field: "qr_code", headerName: t("bin"), flex: 1, minWidth: 140, renderCell: (p) => <Box sx={{ fontFamily: "ui-monospace, monospace" }}>{p.value as string}</Box> },
-    { field: "site_name", headerName: t("site"), flex: 1, minWidth: 130 },
-    { field: "fill_pct", headerName: t("fillLevel"), type: "number", width: 120, valueFormatter: (v) => `${Math.round(Number(v))}%` },
-    { field: "days_to_full", headerName: t("daysToFull"), type: "number", width: 130, valueFormatter: (v) => (v == null ? "—" : Number(v).toFixed(1)) },
-    { field: "days_since_collection", headerName: t("sinceCollection"), type: "number", width: 150, valueFormatter: (v) => (v == null ? "—" : Number(v).toFixed(1)) },
+    { field: "qr_code", headerName: t("bin"), minWidth: 120, flex: 0.7, renderCell: (p) => <CodeLabel>{p.value as string}</CodeLabel> },
+    { field: "site_name", headerName: t("site"), flex: 1.2, minWidth: 150 },
+    {
+      field: "fill_pct",
+      headerName: t("fillLevel"),
+      type: "number",
+      width: 150,
+      renderCell: (p) => <Meter value={Number(p.value)} bad={p.row.overflow_risk === "high"} />,
+    },
+    { field: "days_to_full", headerName: t("daysToFull"), type: "number", width: 110, valueFormatter: days },
+    { field: "days_since_collection", headerName: t("sinceCollection"), type: "number", width: 130, valueFormatter: days },
     {
       field: "overflow_risk",
       headerName: t("risk"),
       width: 120,
-      renderCell: (p) => (
-        <Chip
-          size="small"
-          color={RISK_COLOR[p.row.overflow_risk]}
-          label={p.row.collected ? t("collected") : riskLabel(p.row.overflow_risk)}
-        />
-      ),
+      sortComparator: (a, b) => RISK_RANK[a as HealthRow["overflow_risk"]] - RISK_RANK[b as HealthRow["overflow_risk"]],
+      renderCell: (p) =>
+        p.row.collected ? (
+          <Tag tone="ok">{t("collected")}</Tag>
+        ) : (
+          <Tag tone={RISK_TONE[p.row.overflow_risk]}>{riskLabel(p.row.overflow_risk)}</Tag>
+        ),
     },
     {
       field: "recommendation",
       headerName: t("recommendation"),
       flex: 1,
-      minWidth: 150,
+      minWidth: 140,
       valueGetter: (_v, row) =>
         row.recommendation === "collect_today" ? t("collectTodayRec") : row.recommendation === "schedule_soon" ? t("scheduleSoonRec") : "—",
     },
     {
       field: "actions",
       headerName: "",
-      width: 170,
+      width: 160,
       sortable: false,
       filterable: false,
+      disableExport: true,
+      align: "right",
       renderCell: (p) => (
         <Button
-          variant="contained"
+          variant="outlined"
           size="small"
           disabled={busy || busyBinId !== null || p.row.collected}
           onClick={() => void markCollected(p.row)}
@@ -177,30 +212,35 @@ export default function BinHealth() {
 
   return (
     <PageStack>
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard label={t("totalBins")} value={stats.total} />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard label={t("collectToday")} value={stats.collectToday} color="#c0392b" />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard label={t("riskHigh")} value={stats.high} color="#c0392b" />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard label={t("scheduleSoonRec")} value={stats.scheduleSoon} />
-        </Grid>
-      </Grid>
-
-      <TableSection title={t("collectToday")} action={refreshAction}>
-        {actionError && <Alert severity="error" sx={{ mb: 2 }}>{actionError}</Alert>}
-        {actionNotice && <Alert severity="success" sx={{ mb: 2 }}>{actionNotice}</Alert>}
-        {rows.length === 0 ? (
+      {actionError && <Alert severity="error">{actionError}</Alert>}
+      {actionNotice && <Alert severity="success">{actionNotice}</Alert>}
+      {rows.length === 0 ? (
+        <>
+          <Box sx={{ display: "flex", justifyContent: "flex-end" }}>{refreshAction}</Box>
           <EmptyState icon={<PlaylistAddCheckOutlinedIcon />} title={t("noHealthData")} />
-        ) : (
-          <DataTable rows={rows} columns={columns} getRowId={(r) => r.bin_id} pageSize={15} />
-        )}
-      </TableSection>
+        </>
+      ) : (
+        <DataTable
+          rows={visible}
+          columns={columns}
+          getRowId={(r) => r.bin_id}
+          pageSize={25}
+          searchPlaceholder={t("searchBins")}
+          actions={refreshAction}
+          filters={
+            <FilterChips<View>
+              value={view}
+              onChange={setView}
+              options={[
+                { value: "all", label: t("all"), count: stats.total },
+                { value: "collect_today", label: t("collectTodayRec"), count: stats.collectToday },
+                { value: "schedule_soon", label: t("scheduleSoonRec"), count: stats.scheduleSoon },
+                { value: "high", label: t("highRisk"), count: stats.high },
+              ]}
+            />
+          }
+        />
+      )}
     </PageStack>
   );
 }

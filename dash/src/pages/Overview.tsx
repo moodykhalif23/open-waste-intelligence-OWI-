@@ -5,41 +5,65 @@ import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import DeleteOutlineOutlined from "@mui/icons-material/DeleteOutlineOutlined";
-import PhotoCameraOutlined from "@mui/icons-material/PhotoCameraOutlined";
-import WarningAmberOutlined from "@mui/icons-material/WarningAmberOutlined";
 import AltRouteOutlined from "@mui/icons-material/AltRouteOutlined";
-import BarChartOutlined from "@mui/icons-material/BarChartOutlined";
+import ArrowForwardOutlined from "@mui/icons-material/ArrowForwardOutlined";
+import DeleteOutlineOutlined from "@mui/icons-material/DeleteOutlineOutlined";
 import GridOnOutlined from "@mui/icons-material/GridOnOutlined";
+import PhotoCameraOutlined from "@mui/icons-material/PhotoCameraOutlined";
 import ShowChartOutlined from "@mui/icons-material/ShowChartOutlined";
-import { type Bin, type FillBand, type Observation } from "../api";
-import EChart, { barOption, heatmapOption, lineOption } from "../components/EChart";
+import StackedBarChartOutlined from "@mui/icons-material/StackedBarChartOutlined";
+import { type Bin, type FillBand, type Observation, type Site } from "../api";
+import EChart, { areaOption, bucketSeries, heatmapOption, intlLocale } from "../components/EChart";
 import {
+  ChartSkeleton,
+  CodeLabel,
   EmptyState,
   ErrorPanel,
+  GAP,
   PageHeader,
-  PageSkeleton,
   PageStack,
   SectionCard,
+  StackBar,
   StatCard,
+  StatRow,
+  StatRowSkeleton,
+  Tag,
+  type Tone,
 } from "../components/ui";
 import { useApi } from "../useApi";
 import { useI18n, type StringKey } from "../i18n";
+import { owi } from "../theme";
 
 const BANDS: FillBand[] = ["empty", "low", "half", "high", "overflowing"];
+const BAND_COLOR: Record<FillBand, string> = {
+  empty: "#e6e1d5",
+  low: "#c9c3b5",
+  half: owi.faint,
+  high: owi.inkSoft,
+  overflowing: owi.bad,
+};
+const BAND_TONE: Record<FillBand, Tone> = {
+  empty: "ok",
+  low: "ok",
+  half: "neutral",
+  high: "warn",
+  overflowing: "bad",
+};
 const DAY_MS = 24 * 60 * 60 * 1000;
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const HOURS = Array.from({ length: 24 }, (_, i) => String(i));
+const OBS_LIMIT = 1000;
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 
 export default function Overview() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const locale = intlLocale(lang);
   const navigate = useNavigate();
   const {
     data: observations,
     error: observationsError,
     retry: retryObservations,
-  } = useApi<Observation[]>("/api/v1/observations?limit=1000");
+  } = useApi<Observation[]>(`/api/v1/observations?limit=${OBS_LIMIT}`);
   const { data: bins, error: binsError, retry: retryBins } = useApi<Bin[]>("/api/v1/bins");
+  const { data: sites } = useApi<Site[]>("/api/v1/sites");
 
   const week = useMemo(
     () =>
@@ -47,21 +71,27 @@ export default function Overview() {
     [observations],
   );
 
-  const perDay = useMemo(() => {
-    const days = Array.from({ length: 14 }, (_, i) => {
-      const date = new Date(Date.now() - (13 - i) * DAY_MS);
-      return date.toISOString().slice(0, 10);
-    });
-    const counts = new Map(days.map((d) => [d, 0]));
-    for (const o of observations ?? []) {
-      const day = o.captured_at.slice(0, 10);
-      if (counts.has(day)) counts.set(day, (counts.get(day) ?? 0) + 1);
-    }
+  const perDay = useMemo(
+    () => bucketSeries((observations ?? []).map((o) => o.captured_at), 14, locale),
+    [observations, locale],
+  );
+
+  const sparks = useMemo(() => {
+    const list = observations ?? [];
     return {
-      categories: days.map((d) => d.slice(5)),
-      values: days.map((d) => counts.get(d) ?? 0),
+      reports: bucketSeries(list.map((o) => o.captured_at), 7, locale).values,
+      overflow: bucketSeries(
+        list.filter((o) => o.fill_tap === "overflowing").map((o) => o.captured_at),
+        7,
+        locale,
+      ).values,
     };
-  }, [observations]);
+  }, [observations, locale]);
+
+  const weekdays = useMemo(() => {
+    const fmt = new Intl.DateTimeFormat(locale, { weekday: "short" });
+    return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2024, 0, 1 + i)));
+  }, [locale]);
 
   const activity = useMemo(() => {
     const grid = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
@@ -76,24 +106,22 @@ export default function Overview() {
     for (let r = 0; r < 7; r++)
       for (let h = 0; h < 24; h++) {
         const v = grid[r]![h] ?? 0;
-        if (v > 0) {
-          data.push([h, r, v]);
-          if (v > max) max = v;
-        }
+        data.push([h, r, v]);
+        if (v > max) max = v;
       }
     return { data, max };
   }, [observations]);
 
-  const fillDist = useMemo(() => {
+  const fillMix = useMemo(() => {
     const counts = new Map<FillBand, number>(BANDS.map((b) => [b, 0]));
     for (const o of week) {
       if (o.fill_tap) counts.set(o.fill_tap, (counts.get(o.fill_tap) ?? 0) + 1);
     }
-    return {
-      categories: BANDS.map((b) => t(b as StringKey)),
-      values: BANDS.map((b) => counts.get(b) ?? 0),
-    };
+    return BANDS.map((b) => ({ label: t(b as StringKey), value: counts.get(b) ?? 0, color: BAND_COLOR[b] }));
   }, [week, t]);
+
+  const binById = useMemo(() => new Map((bins ?? []).map((b) => [b.id, b])), [bins]);
+  const siteById = useMemo(() => new Map((sites ?? []).map((s) => [s.id, s])), [sites]);
 
   if (observationsError || binsError) {
     return (
@@ -110,7 +138,21 @@ export default function Overview() {
     );
   }
 
-  if (observations === null || bins === null) return <PageSkeleton />;
+  if (observations === null || bins === null) {
+    return (
+      <PageStack>
+        <StatRowSkeleton />
+        <Grid container spacing={GAP}>
+          <Grid size={{ xs: 12, md: 7.5 }}>
+            <ChartSkeleton />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4.5 }}>
+            <ChartSkeleton />
+          </Grid>
+        </Grid>
+      </PageStack>
+    );
+  }
 
   if (bins.length === 0) {
     const steps: { icon: ReactNode; text: string }[] = [
@@ -123,25 +165,14 @@ export default function Overview() {
       <PageStack>
         <PageHeader title={t("gsTitle")} description={t("gsIntro")} />
         <SectionCard>
-          <Stack spacing={1.5} sx={{ mb: 3 }}>
+          <Stack spacing={1.75} sx={{ mb: 3 }}>
             {steps.map((s, i) => (
               <Stack key={i} direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-                <Box
-                  sx={{
-                    width: 28,
-                    height: 28,
-                    flexShrink: 0,
-                    borderRadius: "4px",
-                    bgcolor: "#fbeecf",
-                    color: "#835a09",
-                    display: "grid",
-                    placeItems: "center",
-                    fontWeight: 800,
-                    fontSize: "0.85rem",
-                  }}
+                <Typography
+                  sx={{ width: 20, color: owi.brown, fontWeight: 760, fontVariantNumeric: "tabular-nums" }}
                 >
                   {i + 1}
-                </Box>
+                </Typography>
                 <Typography sx={{ fontWeight: 550 }}>{s.text}</Typography>
               </Stack>
             ))}
@@ -160,55 +191,127 @@ export default function Overview() {
   }
 
   const overflowing = week.filter((o) => o.fill_tap === "overflowing").length;
+  const reportingBins = new Set(week.map((o) => o.bin_id).filter(Boolean)).size;
+  const truncated = observations.length >= OBS_LIMIT;
+  const sample = truncated ? t("basedOnLatest").replace("{n}", OBS_LIMIT.toLocaleString()) : undefined;
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "short" });
+  const ago = (iso: string) => {
+    const s = (Date.now() - Date.parse(iso)) / 1000;
+    if (s < 60) return t("justNow");
+    if (s < 3600) return rtf.format(-Math.round(s / 60), "minute");
+    if (s < 86400) return rtf.format(-Math.round(s / 3600), "hour");
+    return rtf.format(-Math.round(s / 86400), "day");
+  };
 
   return (
     <PageStack>
-      <PageHeader description={t("signInTagline")} />
-      <Grid container spacing={{ xs: 2, md: 2.5 }}>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <StatCard label={t("totalBins")} value={bins.length} icon={<DeleteOutlineOutlined />} />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <StatCard label={t("reports7d")} value={week.length} icon={<PhotoCameraOutlined />} />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <StatCard label={t("overflowing7d")} value={overflowing} color="#c0392b" icon={<WarningAmberOutlined />} />
-        </Grid>
-      </Grid>
-      <Grid container spacing={{ xs: 2, md: 2.5 }}>
-        <Grid size={{ xs: 12, md: 8 }}>
-          <SectionCard title={t("activityHeatmap")}>
-            {activity.data.length > 0 ? (
-              <EChart height={260} option={heatmapOption(HOURS, WEEKDAYS, activity.data, activity.max)} />
+      <StatRow>
+        <StatCard
+          label={t("totalBins")}
+          value={bins.length.toLocaleString()}
+          caption={t("binsReported").replace("{n}", reportingBins.toLocaleString())}
+        />
+        <StatCard label={t("reports7d")} value={week.length.toLocaleString()} spark={sparks.reports} />
+        <StatCard
+          label={t("overflowing7d")}
+          value={overflowing.toLocaleString()}
+          color={overflowing > 0 ? owi.bad : undefined}
+          spark={sparks.overflow}
+        />
+      </StatRow>
+
+      <Grid container spacing={GAP}>
+        <Grid size={{ xs: 12, md: 7.5 }}>
+          <SectionCard
+            title={t("reportsPerDayTitle")}
+            hint={sample ?? t("lastDaysHint").replace("{n}", "14")}
+          >
+            {perDay.values.some((v) => v > 0) ? (
+              <EChart height={236} option={areaOption(perDay.labels, perDay.values)} />
             ) : (
-              <Box sx={{ height: 260, display: "grid", placeItems: "center" }}>
-                <EmptyState icon={<GridOnOutlined />} title={t("noData")} />
-              </Box>
+              <EmptyState icon={<ShowChartOutlined />} title={t("noData")} height={236} />
             )}
           </SectionCard>
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <SectionCard title={t("fillDistribution")}>
-            {week.some((o) => o.fill_tap) ? (
-              <EChart height={260} option={barOption(fillDist.categories, fillDist.values)} />
+        <Grid size={{ xs: 12, md: 4.5 }}>
+          <SectionCard title={t("fillMix")} hint={t("lastDaysHint").replace("{n}", "7")}>
+            {fillMix.some((b) => b.value > 0) ? (
+              <StackBar items={fillMix} />
             ) : (
-              <Box sx={{ height: 260, display: "grid", placeItems: "center" }}>
-                <EmptyState icon={<BarChartOutlined />} title={t("noData")} />
-              </Box>
+              <EmptyState icon={<StackedBarChartOutlined />} title={t("noData")} height={236} />
             )}
           </SectionCard>
         </Grid>
       </Grid>
 
-      <SectionCard title={t("reportsPerDay")}>
-        {perDay.values.some((v) => v > 0) ? (
-          <EChart height={240} option={lineOption(perDay.categories, perDay.values)} />
-        ) : (
-          <Box sx={{ height: 240, display: "grid", placeItems: "center" }}>
-            <EmptyState icon={<ShowChartOutlined />} title={t("noData")} />
-          </Box>
-        )}
-      </SectionCard>
+      <Grid container spacing={GAP}>
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <SectionCard
+            title={t("latestReports")}
+            hint={t("liveFromField")}
+            action={
+              <Button
+                size="small"
+                endIcon={<ArrowForwardOutlined sx={{ fontSize: 16 }} />}
+                onClick={() => navigate("/records/reports")}
+              >
+                {t("viewAll")}
+              </Button>
+            }
+          >
+            {observations.length === 0 ? (
+              <EmptyState icon={<PhotoCameraOutlined />} title={t("noData")} />
+            ) : (
+              <Box sx={{ mt: -0.5 }}>
+                {observations.slice(0, 6).map((o) => {
+                  const bin = o.bin_id ? binById.get(o.bin_id) : undefined;
+                  const site = bin ? siteById.get(bin.site_id) : undefined;
+                  return (
+                    <Box
+                      key={o.id}
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: "minmax(6.5em, auto) minmax(0, 1fr) auto minmax(5.5em, auto)",
+                        alignItems: "center",
+                        columnGap: 2,
+                        py: 1.25,
+                        borderTop: "1px solid",
+                        borderColor: owi.rule,
+                        fontSize: "0.92rem",
+                        color: owi.inkSoft,
+                        "&:first-of-type": { borderTop: 0 },
+                      }}
+                    >
+                      <CodeLabel>{bin?.qr_code ?? t("noBin")}</CodeLabel>
+                      <Typography noWrap sx={{ fontSize: "inherit", color: "inherit" }}>
+                        {site?.name ?? "—"}
+                      </Typography>
+                      {o.fill_tap ? <Tag tone={BAND_TONE[o.fill_tap]}>{t(o.fill_tap as StringKey)}</Tag> : <span />}
+                      <Typography
+                        component="time"
+                        dateTime={o.captured_at}
+                        title={new Date(o.captured_at).toLocaleString()}
+                        sx={{ fontSize: "0.84rem", color: "text.secondary", textAlign: "right", whiteSpace: "nowrap" }}
+                      >
+                        {ago(o.captured_at)}
+                      </Typography>
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
+          </SectionCard>
+        </Grid>
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <SectionCard title={t("activityTitle")} hint={sample ?? t("byDayHour")}>
+            {observations.length > 0 ? (
+              <EChart height={250} option={heatmapOption(HOURS, weekdays, activity.data, activity.max)} />
+            ) : (
+              <EmptyState icon={<GridOnOutlined />} title={t("noData")} height={250} />
+            )}
+          </SectionCard>
+        </Grid>
+      </Grid>
     </PageStack>
   );
 }

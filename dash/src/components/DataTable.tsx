@@ -41,7 +41,7 @@ export function DataTable({
           end={
             <>
               {toolbar && (
-                <SearchField value={search} onChange={onSearch} placeholder={searchPlaceholder ?? t("searchTable")} />
+                <SearchField value={search} onChange={onSearch} placeholder={searchPlaceholder ?? t("search")} />
               )}
               {toolbar && (
                 <Button

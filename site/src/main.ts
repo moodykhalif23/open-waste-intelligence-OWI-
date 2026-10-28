@@ -3,6 +3,8 @@ import "@fortawesome/fontawesome-free/css/fontawesome.min.css";
 import "@fortawesome/fontawesome-free/css/solid.min.css";
 import "@fortawesome/fontawesome-free/css/brands.min.css";
 import "./style.css";
+import "./showcase.css";
+import { mountShowcase } from "./showcase";
 
 // One motion pattern for the whole page: sections rise 8px and fade in, once.
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -23,6 +25,8 @@ if (reduced) {
   );
   targets.forEach((el) => observer.observe(el));
 }
+
+mountShowcase();
 
 const year = document.getElementById("year");
 if (year) year.textContent = String(new Date().getFullYear());

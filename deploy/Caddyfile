@@ -35,6 +35,12 @@
 	}
 }
 
+(tiles) {
+	handle_path /tiles/* {
+		reverse_proxy tiles:8080
+	}
+}
+
 {$OWI_APP_DOMAIN} {
 	import api
 	import static /srv/app
@@ -42,6 +48,7 @@
 
 {$OWI_DASH_DOMAIN} {
 	import api
+	import tiles
 	import static /srv/dash
 }
 

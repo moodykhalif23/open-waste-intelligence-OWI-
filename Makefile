@@ -2,7 +2,7 @@
 COMPOSE := docker compose --profile prod
 ADMIN_PHONE ?= +254700000000
 
-.PHONY: help web front up down restart logs ps status smoke seed bootstrap dev dash app site build clean backup restore ml-setup ml-data ml-train ml-register ml-export ml-retrain
+.PHONY: help web front up down restart logs ps status smoke seed bootstrap dev dash app site build clean backup restore tiles ml-setup ml-data ml-train ml-register ml-export ml-retrain
 
 # make runs these through cmd.exe or sh depending on where it was invoked. Only
 # plain text survives both — no parens, ampersands or pipes — and sh's echo eats
@@ -25,6 +25,7 @@ help: ## Show available targets
 	@echo bootstrap - Sync the admin login from .env
 	@echo backup - Run an immediate backup, db dump plus image mirror
 	@echo restore - Restore the latest db dump. DESTRUCTIVE, needs CONFIRM=yes
+	@echo tiles - Download the Nairobi basemap extract into var/tiles
 	@echo dev - Print source dev-server commands
 	@echo clean - Stop and remove volumes. DESTROYS local data
 
@@ -81,6 +82,9 @@ backup: ## Run an immediate backup (db dump + image mirror)
 restore: ## Restore the latest db dump (DESTRUCTIVE; requires CONFIRM=yes)
 	@if [ "$(CONFIRM)" != "yes" ]; then echo "Run: make restore CONFIRM=yes"; exit 1; fi
 	sh deploy/restore.sh --yes
+
+tiles: ## Download the basemap extract into var/tiles (TILES_BBOX overrides the area)
+	sh scripts/tiles.sh
 
 dev: ## Print source dev-server commands
 	@echo api        cd api, then uv run uvicorn owi_api.main:app --reload

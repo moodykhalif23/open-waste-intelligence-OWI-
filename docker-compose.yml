@@ -244,6 +244,20 @@ services:
       osrm-prepare:
         condition: service_completed_successfully
 
+  tiles:
+    image: protomaps/go-pmtiles:v1.31.2@sha256:06574f01f55a78f78f887bc7ebf729a5c093c0d6e17d9876300cfcb0758b59d3
+    profiles: [prod]
+    restart: unless-stopped
+    command: ["serve", "/data"]
+    read_only: true
+    ports:
+      - "127.0.0.1:8081:8080"
+    volumes:
+      - ./var/tiles:/data:ro
+    networks:
+      - default
+      - edge
+
   caddy:
     image: caddy:2.11.7-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
     profiles: [edge]

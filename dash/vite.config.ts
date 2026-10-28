@@ -8,6 +8,11 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, "..", "");
   const proxy = {
     "/api": { target: env.OWI_API_PROXY || "http://127.0.0.1:8000", changeOrigin: true },
+    "/tiles": {
+      target: env.OWI_TILES_PROXY || "http://127.0.0.1:8081",
+      changeOrigin: true,
+      rewrite: (path: string) => path.replace(/^\/tiles/, ""),
+    },
   };
   return {
     envDir: "..",

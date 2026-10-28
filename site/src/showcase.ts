@@ -909,6 +909,56 @@ class Player {
   }
 }
 
+function fitRig(scene: HTMLElement, rig: HTMLElement): void {
+  const parts = [...rig.querySelectorAll<HTMLElement>(".phone, .lid, .base")];
+  const bounds = () => {
+    let top = Infinity;
+    let bottom = -Infinity;
+    let left = Infinity;
+    let right = -Infinity;
+    for (const el of parts) {
+      const r = el.getBoundingClientRect();
+      top = Math.min(top, r.top);
+      bottom = Math.max(bottom, r.bottom);
+      left = Math.min(left, r.left);
+      right = Math.max(right, r.right);
+    }
+    return { top, bottom, left, right };
+  };
+  const measure = () => {
+    rig.style.translate = "";
+    rig.style.setProperty("--fit", "1");
+    const box = scene.getBoundingClientRect();
+    const stage = scene.parentElement?.getBoundingClientRect() ?? box;
+    const outerLeft = box.left + box.width / 2 < stage.left + stage.width / 2;
+    const spare = Math.min(200, Math.max(0, outerLeft ? box.left - 16 : window.innerWidth - box.right - 16));
+    const minX = outerLeft ? box.left - spare : box.left;
+    const maxX = outerLeft ? box.right : box.right + spare;
+    const pinned = getComputedStyle(scene).position === "sticky";
+    let fit = 1;
+    for (let pass = 0; pass < 2; pass++) {
+      const b = bounds();
+      const byWidth = (maxX - minX) / (b.right - b.left);
+      const byHeight = pinned ? (box.height * 0.9) / (b.bottom - b.top) : Infinity;
+      fit = Math.min(1, fit * Math.min(byWidth, byHeight));
+      rig.style.setProperty("--fit", fit.toFixed(3));
+    }
+    const b = bounds();
+    const dx = Math.max(minX - b.left, Math.min(0, maxX - b.right));
+    const dy = pinned ? (box.top + box.bottom) / 2 - (b.top + b.bottom) / 2 : 0;
+    rig.style.translate = `${Math.round(dx)}px ${Math.round(dy)}px`;
+  };
+  let frame = 0;
+  const schedule = () => {
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(measure);
+  };
+  schedule();
+  window.addEventListener("resize", schedule);
+  window.matchMedia("(min-width: 1000px)").addEventListener("change", schedule);
+  void document.fonts?.ready.then(schedule);
+}
+
 function tilt(scene: HTMLElement, rig: HTMLElement): void {
   if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
   scene.addEventListener("pointermove", (e) => {
@@ -944,6 +994,7 @@ export function mountShowcase(): void {
     const wide = window.matchMedia("(min-width: 1000px)");
     player.setFollow(wide.matches);
     wide.addEventListener("change", (e) => player.setFollow(e.matches));
+    fitRig(mount, rig);
     if (!reduced) tilt(mount, rig);
   });
 

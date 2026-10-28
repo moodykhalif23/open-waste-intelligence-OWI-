@@ -212,8 +212,8 @@
   place-items: center;
   min-width: 0;
   padding-block: clamp(12px, 3vw, 36px) clamp(28px, 5vw, 64px);
-  perspective: 1700px;
-  perspective-origin: 50% 30%;
+  perspective: 2200px;
+  perspective-origin: 50% 40%;
 }
 
 .bob,
@@ -394,7 +394,7 @@
 }
 
 .rig-phone {
-  --W: clamp(230px, 64cqw, 300px);
+  --W: calc(clamp(230px, 64cqw, 300px) * var(--fit, 1));
   --em: calc(var(--W) * 0.92 / 36);
   --r: calc(var(--W) * 0.13);
   width: var(--W);
@@ -1318,7 +1318,7 @@
 }
 
 .rig-laptop {
-  --W: min(97cqw, 900px);
+  --W: calc(min(97cqw, 900px) * var(--fit, 1));
   --em: calc(var(--W) * 0.94 / 84);
   width: var(--W);
   height: calc(var(--W) * 0.65);
@@ -2858,10 +2858,10 @@
     box-shadow: 0 10px 30px rgb(16 24 40 / 8%);
   }
   .rig-phone {
-    --W: clamp(230px, min(64cqw, 38vh), 300px);
+    --W: calc(clamp(230px, min(64cqw, 38vh), 300px) * var(--fit, 1));
   }
   .rig-laptop {
-    --W: min(97cqw, 900px, 84vh);
+    --W: calc(min(97cqw, 900px, 84vh) * var(--fit, 1));
   }
 }
 

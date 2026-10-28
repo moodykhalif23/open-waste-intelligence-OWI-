@@ -193,13 +193,11 @@ export default function Overview() {
           label={t("reports7d")}
           value={week.reports.toLocaleString()}
           caption={change}
-          spark={week.per_day.map((d) => d.reports)}
         />
         <StatCard
           label={t("overflowing7d")}
           value={week.overflowing.toLocaleString()}
           color={week.overflowing > 0 ? owi.bad : undefined}
-          spark={week.per_day.map((d) => d.overflowing)}
         />
       </StatRow>
 

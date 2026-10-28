@@ -329,12 +329,16 @@ const HILLS = svgUrl(
   "none",
 );
 
-const MEADOW = {
-  backgroundImage: `${TUFTS}, ${HILLS}`,
-  backgroundRepeat: "repeat-x, no-repeat",
-  backgroundPosition: "left bottom, left bottom",
-  backgroundSize: "120px 18px, 100% 18px",
-};
+export function meadow(height: number) {
+  return {
+    backgroundImage: `${TUFTS}, ${HILLS}`,
+    backgroundRepeat: "repeat-x, no-repeat",
+    backgroundPosition: "left bottom, left bottom",
+    backgroundSize: `${(120 * height) / 18}px ${height}px, 100% ${height}px`,
+  };
+}
+
+const MEADOW = meadow(18);
 
 const VEGETATION = {
   backgroundImage: `${SPRIG}, ${MEADOW.backgroundImage}`,

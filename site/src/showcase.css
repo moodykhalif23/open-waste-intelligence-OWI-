@@ -22,6 +22,10 @@
   gap: clamp(28px, 4vw, 52px);
 }
 
+#app {
+  overflow: clip;
+}
+
 #app .wrap {
   max-width: 1280px;
 }
@@ -2857,7 +2861,7 @@
     --W: clamp(230px, min(64cqw, 38vh), 300px);
   }
   .rig-laptop {
-    --W: min(97cqw, 900px, 92vh);
+    --W: min(97cqw, 900px, 84vh);
   }
 }
 

@@ -51,6 +51,8 @@ type Load =
   | { kind: "routes"; routes: Route[]; notice: StringKey | null }
   | { kind: "list"; bins: BinHealth[] };
 
+const BIN_PAGE = 20;
+
 export default function CollectList({
   lang,
   token,
@@ -64,6 +66,7 @@ export default function CollectList({
 }) {
   const tr = (key: StringKey, vars?: Record<string, string | number>) => t(lang, key, vars);
   const [state, setState] = useState<Load>({ kind: "loading" });
+  const [shownBins, setShownBins] = useState(BIN_PAGE);
   const [trackingRouteId, setTrackingRouteId] = useState<string | null>(() => {
     try {
       return window.localStorage.getItem(TRACKING_ROUTE_KEY);
@@ -305,7 +308,7 @@ export default function CollectList({
     return (
       <Stack divider={<Divider />}>
         {actionError && <Alert severity="error">{tr("routeActionFailed")}</Alert>}
-        {state.bins.map((bin) => (
+        {state.bins.slice(0, shownBins).map((bin) => (
           <Stack
             key={bin.bin_id}
             direction="row"
@@ -332,6 +335,11 @@ export default function CollectList({
             </Button>
           </Stack>
         ))}
+        {state.bins.length > shownBins && (
+          <Button variant="outlined" onClick={() => setShownBins((n) => n + BIN_PAGE)} sx={{ mt: 1.5 }}>
+            {tr("insightsShowMore", { n: Math.min(BIN_PAGE, state.bins.length - shownBins) })}
+          </Button>
+        )}
       </Stack>
     );
   }

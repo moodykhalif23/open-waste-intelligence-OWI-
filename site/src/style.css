@@ -97,7 +97,7 @@ section {
 .wave::after {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: 0 0 -1px;
   background-color: var(--to);
   -webkit-mask: var(--wave-mask) center / 100% 100% no-repeat;
   mask: var(--wave-mask) center / 100% 100% no-repeat;
@@ -483,9 +483,18 @@ img {
 
 .problem-icon {
   display: block;
-  margin-bottom: 12px;
+  margin: 0 auto 12px;
   color: var(--brown);
   font-size: 1.4rem;
+}
+
+.problem-grid .field-item {
+  text-align: center;
+}
+
+.problem-grid .field-item p {
+  max-width: 34ch;
+  margin-inline: auto;
 }
 
 .field-item p {

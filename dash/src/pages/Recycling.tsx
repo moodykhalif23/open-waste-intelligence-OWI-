@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import FormGroup from "@mui/material/FormGroup";
 import FormLabel from "@mui/material/FormLabel";
@@ -67,6 +73,7 @@ export default function Recycling() {
   const [prices, setPrices] = useState<Price[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<"price" | "partner" | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -131,6 +138,15 @@ export default function Recycling() {
         <StatCard label={t("partnersRegistered")} value={partners.length.toLocaleString()} />
       </StatRow>
 
+      <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1.5 }}>
+        <Button variant="contained" startIcon={<SellOutlined />} onClick={() => setDialog("price")}>
+          {t("setPrice")}
+        </Button>
+        <Button variant="outlined" startIcon={<HandshakeOutlined />} onClick={() => setDialog("partner")}>
+          {t("addPartner")}
+        </Button>
+      </Stack>
+
       {value.materials.length === 0 ? (
         <SectionCard title={t("recoverableValue")}>
           <EmptyState icon={<RecyclingOutlined />} title={t("noValueYet")} />
@@ -173,154 +189,177 @@ export default function Recycling() {
         </Grid>
       </Grid>
 
-      <Grid container spacing={GAP} sx={{ alignItems: "flex-start" }}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <PriceForm onSaved={reload} />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <PartnerForm onSaved={reload} />
-        </Grid>
-      </Grid>
+      <PriceDialog open={dialog === "price"} onClose={() => setDialog(null)} onSaved={reload} />
+      <PartnerDialog open={dialog === "partner"} onClose={() => setDialog(null)} onSaved={reload} />
     </PageStack>
   );
 }
 
-function PriceForm({ onSaved }: { onSaved: () => Promise<void> }) {
+interface DialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}
+
+function PriceDialog({ open, onClose, onSaved }: DialogProps) {
   const { t } = useI18n();
   const [material, setMaterial] = useState<string>("plastic");
   const [price, setPrice] = useState("");
   const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().slice(0, 10));
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    await api("/api/v1/recycling/prices", {
-      method: "POST",
-      body: JSON.stringify({
-        material,
-        kes_per_kg: Number(price),
-        effective_date: effectiveDate,
-      }),
-    });
+  useEffect(() => {
+    if (!open) return;
     setPrice("");
-    await onSaved();
+    setErr(null);
+  }, [open]);
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setErr(null);
+    try {
+      await api("/api/v1/recycling/prices", {
+        method: "POST",
+        body: JSON.stringify({ material, kes_per_kg: Number(price), effective_date: effectiveDate }),
+      });
+      await onSaved();
+      onClose();
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
-    <SectionCard collapsible title={t("setPrice")}>
-      <form onSubmit={(e) => void onSubmit(e)}>
-        <Stack spacing={2}>
-          <TextField
-            select
-            label={t("material")}
-            value={material}
-            onChange={(e) => setMaterial(e.target.value)}
-          >
-            {MATERIALS.map((m) => (
-              <MenuItem key={m} value={m}>
-                {t(m as StringKey)}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            type="number"
-            label={t("pricePerKg")}
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            required
-            slotProps={{ htmlInput: { min: 0, step: 0.5 } }}
-          />
-          <TextField
-            type="date"
-            label={t("effectiveDate")}
-            value={effectiveDate}
-            onChange={(e) => setEffectiveDate(e.target.value)}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-          <Button variant="contained" type="submit">
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
+      <Box component="form" onSubmit={(e) => void save(e)}>
+        <DialogTitle>{t("setPrice")}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 0.5 }}>
+            <TextField select label={t("material")} value={material} onChange={(e) => setMaterial(e.target.value)}>
+              {MATERIALS.map((m) => (
+                <MenuItem key={m} value={m}>
+                  {t(m as StringKey)}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              autoFocus
+              type="number"
+              label={t("pricePerKg")}
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              required
+              slotProps={{ htmlInput: { min: 0, step: 0.5 } }}
+            />
+            <TextField
+              type="date"
+              label={t("effectiveDate")}
+              value={effectiveDate}
+              onChange={(e) => setEffectiveDate(e.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+            {err && <Alert severity="error">{err}</Alert>}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>{t("cancel")}</Button>
+          <Button type="submit" variant="contained" disabled={busy || price === ""}>
             {t("setPrice")}
           </Button>
-        </Stack>
-      </form>
-    </SectionCard>
+        </DialogActions>
+      </Box>
+    </Dialog>
   );
 }
 
-function PartnerForm({ onSaved }: { onSaved: () => Promise<void> }) {
+function PartnerDialog({ open, onClose, onSaved }: DialogProps) {
   const { t } = useI18n();
   const [name, setName] = useState("");
   const [accepts, setAccepts] = useState<string[]>([]);
   const [minKg, setMinKg] = useState("0");
   const [contact, setContact] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setName("");
+    setAccepts([]);
+    setMinKg("0");
+    setContact("");
+    setErr(null);
+  }, [open]);
 
   function toggle(m: string) {
     setAccepts((prev) => (prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]));
   }
 
-  async function onSubmit(e: FormEvent) {
+  async function save(e: FormEvent) {
     e.preventDefault();
-    await api("/api/v1/recycling/partners", {
-      method: "POST",
-      body: JSON.stringify({
-        name,
-        materials_accepted: accepts,
-        min_kg_per_month: Number(minKg),
-        contact: contact || null,
-      }),
-    });
-    setName("");
-    setAccepts([]);
-    setMinKg("0");
-    setContact("");
-    await onSaved();
+    setBusy(true);
+    setErr(null);
+    try {
+      await api("/api/v1/recycling/partners", {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          materials_accepted: accepts,
+          min_kg_per_month: Number(minKg),
+          contact: contact || null,
+        }),
+      });
+      await onSaved();
+      onClose();
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
-    <SectionCard collapsible title={t("addPartner")}>
-      <form onSubmit={(e) => void onSubmit(e)}>
-        <Stack spacing={2}>
-          <TextField
-            label={t("name")}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-          <div>
-            <FormLabel component="legend" sx={{ mb: 1 }}>
-              {t("accepts")}
-            </FormLabel>
-            <FormGroup row>
-              {MATERIALS.map((m) => (
-                <FormControlLabel
-                  key={m}
-                  control={
-                    <Checkbox
-                      color="primary"
-                      checked={accepts.includes(m)}
-                      onChange={() => toggle(m)}
-                    />
-                  }
-                  label={t(m as StringKey)}
-                />
-              ))}
-            </FormGroup>
-          </div>
-          <TextField
-            type="number"
-            label={t("minKg")}
-            value={minKg}
-            onChange={(e) => setMinKg(e.target.value)}
-            slotProps={{ htmlInput: { min: 0 } }}
-          />
-          <TextField
-            label={t("contact")}
-            value={contact}
-            onChange={(e) => setContact(e.target.value)}
-          />
-          <Button variant="contained" type="submit">
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+      <Box component="form" onSubmit={(e) => void save(e)}>
+        <DialogTitle>{t("addPartner")}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 0.5 }}>
+            <TextField autoFocus label={t("name")} value={name} onChange={(e) => setName(e.target.value)} required />
+            <div>
+              <FormLabel component="legend" sx={{ mb: 1 }}>
+                {t("accepts")}
+              </FormLabel>
+              <FormGroup row>
+                {MATERIALS.map((m) => (
+                  <FormControlLabel
+                    key={m}
+                    control={<Checkbox color="primary" checked={accepts.includes(m)} onChange={() => toggle(m)} />}
+                    label={t(m as StringKey)}
+                  />
+                ))}
+              </FormGroup>
+            </div>
+            <TextField
+              type="number"
+              label={t("minKg")}
+              value={minKg}
+              onChange={(e) => setMinKg(e.target.value)}
+              slotProps={{ htmlInput: { min: 0 } }}
+            />
+            <TextField label={t("contact")} value={contact} onChange={(e) => setContact(e.target.value)} />
+            {err && <Alert severity="error">{err}</Alert>}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>{t("cancel")}</Button>
+          <Button type="submit" variant="contained" disabled={busy || name.trim() === ""}>
             {t("addPartner")}
           </Button>
-        </Stack>
-      </form>
-    </SectionCard>
+        </DialogActions>
+      </Box>
+    </Dialog>
   );
 }

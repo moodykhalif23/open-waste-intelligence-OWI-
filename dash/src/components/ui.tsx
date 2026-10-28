@@ -288,6 +288,62 @@ export function Sparkline({ values, height = 34 }: { values: number[]; height?: 
   );
 }
 
+const svgUrl = (w: number, h: number, body: string, aspect = "xMidYMid meet") =>
+  `url("data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}' preserveAspectRatio='${aspect}'>${body}</svg>`,
+  )}")`;
+
+const leaf = (x: number, y: number, angle: number, scale: number, fill: string) =>
+  `<g transform='translate(${x} ${y}) rotate(${angle}) scale(${scale})'>` +
+  `<path d='M0 0C6-6 16-6 22 0C16 6 6 6 0 0Z' fill='${fill}'/>` +
+  `<path d='M2 0H19' stroke='#f3f9ee' stroke-width='0.8' stroke-linecap='round' opacity='0.7'/></g>`;
+
+const SPRIG = svgUrl(
+  96,
+  88,
+  `<path d='M98-4C80 10 62 30 46 64' fill='none' stroke='#9cc985' stroke-width='1.6' stroke-linecap='round'/>` +
+    leaf(87, 5, 178, 0.85, "#d3eac4") +
+    leaf(77, 16, 78, 0.95, "#bfe0ad") +
+    leaf(66, 29, 176, 1.05, "#abd596") +
+    leaf(56, 45, 80, 1, "#96ca7e") +
+    leaf(46, 64, 122, 0.9, "#86c06e"),
+);
+
+const TUFTS = svgUrl(
+  120,
+  18,
+  `<g fill='none' stroke-width='1.3' stroke-linecap='round'>` +
+    `<path d='M8 18C8 12 6 8 3 6' stroke='#93c47c'/><path d='M10 18C10 11 12 7 15 5' stroke='#7db767'/>` +
+    `<path d='M9 18C9 13 9 9 8 3' stroke='#a9d293'/><path d='M41 18C41 14 39 11 37 10' stroke='#a9d293'/>` +
+    `<path d='M43 18C43 13 45 10 47 9' stroke='#93c47c'/><path d='M74 18C74 11 72 7 69 4' stroke='#7db767'/>` +
+    `<path d='M76 18C76 12 78 8 82 6' stroke='#93c47c'/><path d='M75 18C75 12 76 8 76 2' stroke='#a9d293'/>` +
+    `<path d='M103 18C103 14 101 12 99 11' stroke='#93c47c'/><path d='M105 18C105 14 106 11 109 10' stroke='#7db767'/>` +
+    `</g>`,
+);
+
+const HILLS = svgUrl(
+  400,
+  18,
+  `<path d='M0 10C60 5 120 5 190 9S320 14 400 8V18H0Z' fill='#e6f1dc'/>` +
+    `<path d='M0 13C80 10 150 11 230 14S350 16 400 12V18H0Z' fill='#d4e8c6'/>`,
+  "none",
+);
+
+const MEADOW = {
+  backgroundImage: `${TUFTS}, ${HILLS}`,
+  backgroundRepeat: "repeat-x, no-repeat",
+  backgroundPosition: "left bottom, left bottom",
+  backgroundSize: "120px 18px, 100% 18px",
+};
+
+const VEGETATION = {
+  backgroundImage: `${SPRIG}, ${MEADOW.backgroundImage}`,
+  backgroundRepeat: `no-repeat, ${MEADOW.backgroundRepeat}`,
+  backgroundPosition: `right top, ${MEADOW.backgroundPosition}`,
+  backgroundSize: `96px 88px, ${MEADOW.backgroundSize}`,
+  "@container (max-width: 260px)": MEADOW,
+};
+
 export function StatCard({
   label,
   value,
@@ -304,8 +360,10 @@ export function StatCard({
   info?: ReactNode;
 }) {
   return (
-    <Card sx={{ height: "100%" }}>
-      <CardContent sx={{ display: "flex", flexDirection: "column", height: "100%", boxSizing: "border-box" }}>
+    <Card sx={{ height: "100%", containerType: "inline-size" }}>
+      <CardContent
+        sx={{ display: "flex", flexDirection: "column", height: "100%", boxSizing: "border-box", ...VEGETATION }}
+      >
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, minWidth: 0 }}>
           <Kicker>{label}</Kicker>
           {info && <InfoTip>{info}</InfoTip>}

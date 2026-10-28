@@ -91,12 +91,7 @@ export default function Layout() {
 
   const drawer = (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <Toolbar sx={{ gap: 1.25, px: 2.75, minHeight: { xs: 64 } }} disableGutters>
-        <BinMark />
-        <Typography sx={{ fontWeight: 760, fontSize: "1.2rem", letterSpacing: "-0.02em" }}>
-          OpenWaste
-        </Typography>
-      </Toolbar>
+      <Toolbar sx={{ minHeight: { xs: 64 } }} />
       <List sx={{ flex: 1, pt: 1.5, pb: 1 }}>
         {NAV.map((entry) => (
           <ListItemButton
@@ -176,8 +171,8 @@ export default function Layout() {
 
   return (
     <Box sx={{ display: "flex", minHeight: "100dvh", bgcolor: "background.default" }}>
-      <AppBar position="fixed" sx={{ width: { md: `calc(100% - ${DRAWER_WIDTH}px)` }, ml: { md: `${DRAWER_WIDTH}px` } }}>
-        <Toolbar sx={{ gap: { xs: 1, sm: 1.5 }, minHeight: { xs: 64 }, px: { md: 3.5 } }}>
+      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+        <Toolbar sx={{ gap: { xs: 1, sm: 1.5 }, minHeight: { xs: 64 }, pl: { md: 2.75 }, pr: { md: 3.5 } }}>
           <IconButton
             edge="start"
             onClick={() => setMobileOpen((v) => !v)}
@@ -186,12 +181,14 @@ export default function Layout() {
           >
             <MenuOutlined />
           </IconButton>
-          <Typography
-            sx={{ display: { xs: "none", sm: "block" }, fontWeight: 740, fontSize: "1.2rem", letterSpacing: "-0.015em", minWidth: 0 }}
-            noWrap
-          >
-            {sectionTitle}
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, minWidth: 0 }}>
+            <BinMark />
+            <Typography
+              sx={{ display: { xs: "none", sm: "block" }, fontWeight: 760, fontSize: "1.2rem", letterSpacing: "-0.02em" }}
+            >
+              OpenWaste
+            </Typography>
+          </Box>
           <Box sx={{ flexGrow: 1 }} />
           <NavSearch />
           <Tooltip title={t("notifications")}>

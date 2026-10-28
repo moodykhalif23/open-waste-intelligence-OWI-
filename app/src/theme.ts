@@ -7,6 +7,7 @@ const ink = { 500: "#3a4256", 600: "#101828", 700: "#05070c" };
 const EASE = "cubic-bezier(0.2, 0, 0, 1)";
 const SPRING = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 const HOVER = `background-color 120ms ${EASE}, border-color 120ms ${EASE}, color 120ms ${EASE}`;
+const RADIUS = 6;
 
 const theme = createTheme({
   palette: {
@@ -20,7 +21,7 @@ const theme = createTheme({
     text: { primary: "#201a10", secondary: "#6b6456" },
     divider: "#eae6dd",
   },
-  shape: { borderRadius: 14 },
+  shape: { borderRadius: RADIUS },
   typography: {
     fontFamily: '"Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
     fontSize: 15,
@@ -62,13 +63,13 @@ const theme = createTheme({
     },
     MuiCard: {
       defaultProps: { elevation: 0 },
-      styleOverrides: { root: { border: "1px solid #eae6dd", borderRadius: 18 } },
+      styleOverrides: { root: { border: "1px solid #eae6dd", borderRadius: RADIUS } },
     },
     MuiButton: {
       defaultProps: { disableElevation: true },
       styleOverrides: {
         root: {
-          borderRadius: 14,
+          borderRadius: RADIUS,
           minHeight: 50,
           paddingInline: 18,
           transition: `${HOVER}, transform 180ms ${SPRING}`,
@@ -82,11 +83,11 @@ const theme = createTheme({
         root: { backgroundColor: "#ffffff", borderBottom: "1px solid #eae6dd", color: "#201a10" },
       },
     },
-    MuiOutlinedInput: { styleOverrides: { root: { borderRadius: 12 } } },
+    MuiOutlinedInput: { styleOverrides: { root: { borderRadius: RADIUS } } },
     MuiToggleButton: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
+          borderRadius: RADIUS,
           textTransform: "none",
           fontWeight: 550,
           transition: `${HOVER}, transform 180ms ${SPRING}`,
@@ -101,7 +102,7 @@ const theme = createTheme({
     },
     MuiPaper: {
       defaultProps: { elevation: 0 },
-      styleOverrides: { rounded: { borderRadius: 18 } },
+      styleOverrides: { rounded: { borderRadius: RADIUS } },
     },
     MuiChip: { styleOverrides: { root: { fontWeight: 600 } } },
     MuiIconButton: {

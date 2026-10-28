@@ -407,7 +407,7 @@ export default function App() {
             <MenuItem value="en">English</MenuItem>
             <MenuItem value="sw">Kiswahili</MenuItem>
           </TextField>
-          <Accordion disableGutters elevation={0} sx={{ border: "1px solid", borderColor: "divider", "&:before": { display: "none" } }}>
+          <Accordion disableGutters square elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, "&:before": { display: "none" } }}>
             <AccordionSummary expandIcon={<ExpandMoreOutlined />}>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
                 {tr("advanced")}
@@ -436,7 +436,7 @@ export default function App() {
             mt: 2,
             px: 2,
             py: 1.25,
-            borderRadius: "14px",
+            borderRadius: 1,
             bgcolor: "#fbeecf",
             color: "#835a09",
             fontSize: "0.9rem",
@@ -519,7 +519,7 @@ export default function App() {
                   fullWidth
                   variant="contained"
                   onClick={() => fileInput.current?.click()}
-                  sx={{ minHeight: 188, borderRadius: "16px", flexDirection: "column", gap: 1.25, px: 2 }}
+                  sx={{ minHeight: 188, flexDirection: "column", gap: 1.25, px: 2 }}
                 >
                   <Box
                     sx={{
@@ -561,7 +561,7 @@ export default function App() {
                   component="img"
                   src={previewUrl ?? undefined}
                   alt=""
-                  sx={{ width: "100%", borderRadius: "18px", display: "block" }}
+                  sx={{ width: "100%", borderRadius: 1, display: "block" }}
                 />
                 {qualityText && <Alert severity="warning">{qualityText}</Alert>}
                 <Typography variant="body2" color="text.secondary">
@@ -580,7 +580,7 @@ export default function App() {
                   exclusive
                   value={fillTap}
                   onChange={(_, val: FillBand | null) => val && setFillTap(val)}
-                  sx={{ gap: 1, "& .MuiToggleButtonGroup-grouped": { border: "1px solid", borderColor: "divider", borderRadius: "12px !important", minHeight: 56 } }}
+                  sx={{ gap: 1, "& .MuiToggleButtonGroup-grouped": { border: "1px solid", borderColor: "divider", borderRadius: "6px !important", minHeight: 56 } }}
                 >
                   {FILL_BANDS.map((band) => (
                     <ToggleButton key={band} value={band}>
@@ -716,8 +716,8 @@ export default function App() {
           borderLeft: "1px solid",
           borderRight: "1px solid",
           borderColor: "divider",
-          borderTopLeftRadius: "20px",
-          borderTopRightRadius: "20px",
+          borderTopLeftRadius: "6px",
+          borderTopRightRadius: "6px",
           borderBottomLeftRadius: 0,
           borderBottomRightRadius: 0,
           overflow: "hidden",

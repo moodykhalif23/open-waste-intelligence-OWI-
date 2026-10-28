@@ -174,7 +174,7 @@ export default function Insights({ lang, token }: { lang: Lang; token: string })
           </Typography>
           <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, mt: 1.5 }}>
             {RISK_ORDER.map((r) => (
-              <Box key={r} sx={{ p: 1.25, borderRadius: "12px", bgcolor: "background.default" }}>
+              <Box key={r} sx={{ p: 1.25, borderRadius: "4px", bgcolor: "background.default" }}>
                 <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
                   <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: RISK_HUE[r] }} />
                   <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>

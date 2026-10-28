@@ -32,6 +32,7 @@ def compute_health(
     now: datetime,
 ) -> BinHealth | None:
     """The v1 bin-health formula — a published number, so keep it reproducible and tested."""
+    days_since: float | None = None
     if not fill_series:
         if last_collection is None:
             return None
@@ -48,11 +49,10 @@ def compute_health(
     fill_pct = series[-1][1]
 
     velocity = _velocity(series)
-    days_to_full = None
+    days_to_full: float | None = None
     if velocity is not None and velocity > EPSILON:
         days_to_full = max(0.0, (100.0 - fill_pct) / velocity)
 
-    days_since = None
     if last_collection is not None:
         days_since = max(0.0, (now - last_collection).total_seconds() / 86400)
 

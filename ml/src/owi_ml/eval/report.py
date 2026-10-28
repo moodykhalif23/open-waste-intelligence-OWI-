@@ -176,7 +176,7 @@ def main() -> None:
         if not path.exists():
             raise SystemExit(f"required evaluation input does not exist: {path}")
 
-    import numpy as np
+    import numpy as np  # type: ignore[import-not-found]
     import onnxruntime  # type: ignore[import-not-found]
     from owi_api.ml_infer import preprocess  # type: ignore[import-not-found]
 

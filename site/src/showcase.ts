@@ -154,6 +154,7 @@ function phoneScreen(): string {
     ["BIN-0213", "Estate block C", true],
     ["BIN-0031", "Bus stage", false],
     ["BIN-0064", "Clinic road", false],
+    ["BIN-0118", "Stage 2 kiosk", false],
   ];
   const stopRows = stops
     .map(

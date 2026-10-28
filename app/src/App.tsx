@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import Accordion from "@mui/material/Accordion";
+import AccordionDetails from "@mui/material/AccordionDetails";
+import AccordionSummary from "@mui/material/AccordionSummary";
 import Alert from "@mui/material/Alert";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
@@ -31,13 +34,17 @@ import QrCodeScannerOutlined from "@mui/icons-material/QrCodeScannerOutlined";
 import InsightsOutlined from "@mui/icons-material/InsightsOutlined";
 import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
 import DeleteOutlineOutlined from "@mui/icons-material/DeleteOutlineOutlined";
+import ExpandMoreOutlined from "@mui/icons-material/ExpandMoreOutlined";
 import CollectList from "./components/CollectList";
 import Insights from "./components/Insights";
 import QrScan from "./components/QrScan";
+import SignIn from "./components/SignIn";
+import { UNAUTHORIZED_EVENT } from "./lib/api";
+import { fetchIdentity } from "./lib/auth";
 import { t, type Lang, type StringKey } from "./i18n";
 import { compressImage, type QualityWarning } from "./lib/compress";
 import { getFix, type GpsFix } from "./lib/gps";
-import { FILL_BANDS, enqueue, listQueued, type FillBand } from "./lib/queue";
+import { FILL_BANDS, enqueue, listQueued, listRouteActions, type FillBand } from "./lib/queue";
 import { loadSettings, saveSettings, type AppSettings } from "./lib/settings";
 import {
   SyncError,
@@ -78,6 +85,8 @@ export default function App() {
   const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null);
   const [tab, setTab] = useState<"report" | "collect" | "insights">("report");
   const [routeRevision, setRouteRevision] = useState(0);
+  const [expired, setExpired] = useState(false);
+  const [pendingRouteActions, setPendingRouteActions] = useState(0);
   const startedAt = useRef<number>(0);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -93,8 +102,22 @@ export default function App() {
     setUnlocatable(queued.filter((r) => !isLocatable(r)).length);
   }, []);
 
+  const updateSettings = useCallback((patch: Partial<AppSettings>) => {
+    setSettings((prev) => {
+      const next = { ...prev, ...patch };
+      saveSettings(next);
+      return next;
+    });
+  }, []);
+
+  const expireSession = useCallback(() => {
+    updateSettings({ token: "", crew: null });
+    setShowSettings(false);
+    setExpired(true);
+  }, [updateSettings]);
+
   const runSync = useCallback(async () => {
-    if (!navigator.onLine || (await listQueued()).length === 0) return;
+    if (!settings.token || !navigator.onLine || (await listQueued()).length === 0) return;
     setToast(tr("syncing"));
     try {
       const outcome = await syncQueue(settings.token);
@@ -106,24 +129,25 @@ export default function App() {
         setToast(outcome.remaining === 0 ? tr("syncDone") : null);
       }
     } catch (error) {
-      const unauthorized = error instanceof SyncError && error.status === 401;
-      setToast(unauthorized ? tr("tokenInvalid") : tr("syncFailed"));
+      if (error instanceof SyncError && error.status === 401) expireSession();
+      else setToast(tr("syncFailed"));
     }
     await refreshCount();
     setRecent(recentSynced());
-  }, [settings, tr, refreshCount]);
+  }, [settings, tr, refreshCount, expireSession]);
 
   const runRouteSync = useCallback(async () => {
-    if (!navigator.onLine) return;
+    if (!settings.token || !navigator.onLine) return;
     try {
       const outcome = await syncRouteActions(settings.token);
-      if (outcome.rejected > 0) setToast(tr("routeActionsRejected", { n: outcome.rejected }));
-      else if (outcome.unauthorized) setToast(tr("tokenInvalid"));
+      if (outcome.unauthorized) expireSession();
+      else if (outcome.rejected > 0) setToast(tr("routeActionsRejected", { n: outcome.rejected }));
       if (outcome.sent > 0 || outcome.rejected > 0) setRouteRevision((n) => n + 1);
     } catch {
       setToast(tr("syncFailed"));
     }
-  }, [settings, tr]);
+    setPendingRouteActions((await listRouteActions().catch(() => [])).length);
+  }, [settings, tr, expireSession]);
 
   async function doErase(id: string) {
     try {
@@ -134,6 +158,32 @@ export default function App() {
       setToast(tr("syncFailed"));
     }
   }
+
+  useEffect(() => {
+    window.addEventListener(UNAUTHORIZED_EVENT, expireSession);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, expireSession);
+  }, [expireSession]);
+
+  useEffect(() => {
+    if (!settings.token || !online) return;
+    let live = true;
+    fetchIdentity(settings.token)
+      .then((crew) => {
+        if (live) updateSettings({ crew });
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [settings.token, online, updateSettings]);
+
+  useEffect(() => {
+    if (!showSettings) return;
+    void refreshCount();
+    void listRouteActions()
+      .then((actions) => setPendingRouteActions(actions.length))
+      .catch(() => undefined);
+  }, [showSettings, refreshCount]);
 
   useEffect(() => {
     if (!toast) return;
@@ -213,10 +263,20 @@ export default function App() {
     void runSync();
   }
 
-  function updateSettings(patch: Partial<AppSettings>) {
-    const next = { ...settings, ...patch };
-    setSettings(next);
-    saveSettings(next);
+  const unsent = queueCount + pendingRouteActions;
+
+  async function sendEverything() {
+    await runSync();
+    await runRouteSync();
+    await refreshCount();
+  }
+
+  function signOut() {
+    if (unsent > 0) return;
+    updateSettings({ token: "", crew: null });
+    setShowSettings(false);
+    setExpired(false);
+    setTab("report");
   }
 
   const sentToday = recent.filter((r) => isToday(r.at)).length;
@@ -231,6 +291,20 @@ export default function App() {
         : warning === "blurry"
           ? tr("qualityBlurry")
           : null;
+
+  if (!settings.token) {
+    return (
+      <SignIn
+        lang={lang}
+        expired={expired}
+        onLang={(next) => updateSettings({ lang: next })}
+        onSignedIn={(token, crew) => {
+          updateSettings({ token, crew });
+          setExpired(false);
+        }}
+      />
+    );
+  }
 
   return (
     <Box
@@ -248,9 +322,16 @@ export default function App() {
       <AppBar position="sticky">
         <Toolbar sx={{ gap: 1, minHeight: { xs: 56 } }}>
           <Box component="img" src="/icon.svg" alt="" sx={{ width: 28, height: 28, borderRadius: "8px" }} />
-          <Typography sx={{ flexGrow: 1, fontWeight: 680, fontSize: "1rem", letterSpacing: "-0.01em" }}>
-            {tr("title")}
-          </Typography>
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 680, fontSize: "1rem", letterSpacing: "-0.01em", lineHeight: 1.2 }} noWrap>
+              {tr("title")}
+            </Typography>
+            {settings.crew && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1.3 }} noWrap>
+                {settings.crew.name} · {settings.crew.vehicle?.name ?? tr("noVehicle")}
+              </Typography>
+            )}
+          </Box>
           <Chip
             size="small"
             variant="outlined"
@@ -281,13 +362,40 @@ export default function App() {
       >
         <Stack spacing={2}>
           <Typography variant="h6">{tr("settings")}</Typography>
-          <TextField
-            size="small"
-            fullWidth
-            label={tr("deviceToken")}
-            value={settings.token}
-            onChange={(e) => updateSettings({ token: e.target.value })}
-          />
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+              {tr("signedInAs")}
+            </Typography>
+            <Typography sx={{ fontWeight: 700, mt: 0.25 }}>{settings.crew?.name || "—"}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {settings.crew?.vehicle?.name ?? tr("noVehicle")}
+            </Typography>
+            {unsent > 0 && (
+              <Alert
+                severity="warning"
+                sx={{ mt: 1.5 }}
+                action={
+                  online ? (
+                    <Button color="inherit" size="small" onClick={() => void sendEverything()}>
+                      {tr("syncNow")}
+                    </Button>
+                  ) : undefined
+                }
+              >
+                {tr("signOutBlocked", { n: unsent })}
+              </Alert>
+            )}
+            <Button
+              fullWidth
+              variant="outlined"
+              color="error"
+              disabled={unsent > 0}
+              onClick={signOut}
+              sx={{ mt: 1.5 }}
+            >
+              {tr("signOut")}
+            </Button>
+          </Paper>
           <TextField
             select
             size="small"
@@ -299,6 +407,22 @@ export default function App() {
             <MenuItem value="en">English</MenuItem>
             <MenuItem value="sw">Kiswahili</MenuItem>
           </TextField>
+          <Accordion disableGutters elevation={0} sx={{ border: "1px solid", borderColor: "divider", "&:before": { display: "none" } }}>
+            <AccordionSummary expandIcon={<ExpandMoreOutlined />}>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {tr("advanced")}
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <TextField
+                size="small"
+                fullWidth
+                label={tr("deviceToken")}
+                value={settings.token}
+                onChange={(e) => updateSettings({ token: e.target.value, crew: null })}
+              />
+            </AccordionDetails>
+          </Accordion>
         </Stack>
       </Drawer>
 
@@ -338,6 +462,7 @@ export default function App() {
           <CollectList
             lang={lang}
             token={settings.token}
+            crew={settings.crew}
             revision={routeRevision}
             onRouteAction={() => void runRouteSync()}
           />

@@ -83,6 +83,8 @@ export interface User {
   name: string;
   phone: string | null;
   role: Role;
+  vehicle_id?: string | null;
+  vehicle_name?: string | null;
 }
 
 export interface Observation {

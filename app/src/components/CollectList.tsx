@@ -13,6 +13,7 @@ import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import CheckCircle from "@mui/icons-material/CheckCircle";
+import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
 import EChart, { RISK_HUE, ringOption } from "./EChart";
 import { t, type Lang, type StringKey } from "../i18n";
 import {
@@ -29,6 +30,7 @@ import {
   type SkipReason,
 } from "../lib/collect";
 import { ApiError } from "../lib/api";
+import type { CrewIdentity } from "../lib/auth";
 import { distanceKm } from "../lib/gps";
 import { enqueueRouteAction, listRouteActions } from "../lib/queue";
 import { clearRejectedRouteActions, rejectedRouteActions } from "../lib/sync";
@@ -49,7 +51,8 @@ type Load =
   | { kind: "loading" }
   | { kind: "error"; message: StringKey }
   | { kind: "routes"; routes: Route[]; notice: StringKey | null }
-  | { kind: "list"; bins: BinHealth[] };
+  | { kind: "list"; bins: BinHealth[] }
+  | { kind: "empty" };
 
 const BIN_PAGE = 20;
 
@@ -58,13 +61,16 @@ export default function CollectList({
   token,
   revision,
   onRouteAction,
+  crew,
 }: {
   lang: Lang;
   token: string;
   revision: number;
   onRouteAction: () => void;
+  crew: CrewIdentity | null;
 }) {
   const tr = (key: StringKey, vars?: Record<string, string | number>) => t(lang, key, vars);
+  const hasCrew = crew !== null;
   const [state, setState] = useState<Load>({ kind: "loading" });
   const [shownBins, setShownBins] = useState(BIN_PAGE);
   const [trackingRouteId, setTrackingRouteId] = useState<string | null>(() => {
@@ -116,6 +122,10 @@ export default function CollectList({
       snapshot.current = routes;
       cacheRoutes(routes);
       if (show(actions, null)) return;
+      if (hasCrew) {
+        if (seq === loadSeq.current) setState({ kind: "empty" });
+        return;
+      }
       // No route planned yet — fall back to the raw collect-today list.
       const bins = await fetchCollectList(token);
       if (seq === loadSeq.current) setState({ kind: "list", bins });
@@ -133,7 +143,7 @@ export default function CollectList({
         setState({ kind: "error", message });
       }
     }
-  }, [token, show]);
+  }, [token, show, hasCrew]);
 
   useEffect(() => {
     void reload();
@@ -301,6 +311,20 @@ export default function CollectList({
         {tr(state.message)}
       </Alert>
     );
+
+  if (state.kind === "empty") {
+    return (
+      <Stack spacing={1} sx={{ alignItems: "center", textAlign: "center", py: 6, px: 2 }}>
+        <LocalShippingOutlined sx={{ fontSize: 44, color: "#835a09" }} />
+        <Typography sx={{ fontWeight: 680 }}>
+          {crew?.vehicle ? tr("noRouteToday", { vehicle: crew.vehicle.name }) : tr("askForVehicle")}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {crew?.vehicle ? tr("collectNone") : crew?.name}
+        </Typography>
+      </Stack>
+    );
+  }
 
   if (state.kind === "list") {
     if (state.bins.length === 0)

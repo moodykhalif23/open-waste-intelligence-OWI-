@@ -7,3 +7,9 @@ export class ApiError extends Error {
     this.name = "ApiError";
   }
 }
+
+export const UNAUTHORIZED_EVENT = "owi:unauthorized";
+
+export function signalUnauthorized(): void {
+  window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+}

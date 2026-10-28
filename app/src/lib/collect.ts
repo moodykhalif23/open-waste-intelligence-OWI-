@@ -1,4 +1,4 @@
-import { ApiError, apiUrl } from "./api";
+import { ApiError, apiUrl, signalUnauthorized } from "./api";
 
 export interface BinHealth {
   bin_id: string;
@@ -60,6 +60,7 @@ async function authed(path: string, token: string, init?: RequestInit): Promise<
       ...(typeof init?.body === "string" ? { "Content-Type": "application/json" } : {}),
     },
   });
+  if (response.status === 401) signalUnauthorized();
   if (!response.ok) throw new ApiError(response.status);
   return response;
 }

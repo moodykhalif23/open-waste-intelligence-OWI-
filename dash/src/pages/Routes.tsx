@@ -20,7 +20,7 @@ import Typography from "@mui/material/Typography";
 import AltRouteOutlined from "@mui/icons-material/AltRouteOutlined";
 import ExpandMoreOutlined from "@mui/icons-material/ExpandMoreOutlined";
 import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
-import { api } from "../api";
+import { api, type User } from "../api";
 import { SERIES } from "../components/EChart";
 import { DataTable, type GridColDef } from "../components/DataTable";
 import MapView, { type MapLine, type MapPoint } from "../components/MapView";
@@ -43,12 +43,19 @@ import {
 } from "../components/ui";
 import { useI18n, type StringKey } from "../i18n";
 import { owi } from "../theme";
+interface CrewMember {
+  id: string;
+  name: string;
+  phone: string | null;
+}
+
 interface Truck {
   id: string;
   name: string;
   method: string;
   capacity_kg: number;
   fuel_l_per_100km: number;
+  crew: CrewMember[];
 }
 
 interface MethodSpec {
@@ -119,6 +126,7 @@ export default function Routes() {
   const [planOpen, setPlanOpen] = useState(false);
   const [truckOpen, setTruckOpen] = useState(false);
   const [openRoute, setOpenRoute] = useState<string | null>(null);
+  const [crewTruck, setCrewTruck] = useState<Truck | null>(null);
 
   const announce = (planned: Route[]) => {
     const stops = planned.reduce((s, r) => s + r.stops.length, 0);
@@ -222,6 +230,36 @@ export default function Routes() {
     { field: "method", headerName: t("method"), minWidth: 100, flex: 0.8, valueFormatter: (v) => methodLabel(v) },
     { field: "capacity_kg", headerName: t("capacityKg"), type: "number", width: 120, valueFormatter: (v) => Number(v).toLocaleString() },
     { field: "fuel_l_per_100km", headerName: t("fuelUse"), type: "number", width: 130, valueFormatter: (v) => (v > 0 ? `${v} L/100km` : "—") },
+    {
+      field: "crew",
+      headerName: t("crew"),
+      flex: 1.6,
+      minWidth: 200,
+      sortable: false,
+      valueGetter: (_v, row) => row.crew.map((c) => c.name).join(", "),
+      renderCell: (p) =>
+        p.row.crew.length > 0 ? (
+          <Typography noWrap sx={{ fontSize: "0.88rem", color: owi.inkSoft, lineHeight: "inherit" }} title={p.value as string}>
+            {p.value as string}
+          </Typography>
+        ) : (
+          <Typography sx={{ fontSize: "0.88rem", color: "text.secondary", lineHeight: "inherit" }}>{t("noCrew")}</Typography>
+        ),
+    },
+    {
+      field: "assign",
+      headerName: "",
+      width: 140,
+      sortable: false,
+      filterable: false,
+      disableExport: true,
+      align: "right",
+      renderCell: (p) => (
+        <Button variant="text" size="small" onClick={() => setCrewTruck(p.row)}>
+          {t("assignCrew")}
+        </Button>
+      ),
+    },
   ];
 
   const routesAction = (
@@ -301,7 +339,7 @@ export default function Routes() {
       )}
 
       <Grid container spacing={GAP} sx={{ alignItems: "flex-start" }}>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12 }}>
           <SectionCard title={t("savingsTitle")} action={savingsAction}>
             {savings === null ? (
               <Muted>{t("savingsHint")}</Muted>
@@ -357,7 +395,7 @@ export default function Routes() {
             )}
           </SectionCard>
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12 }}>
           <TableSection
             title={t("trucks")}
             hint={trucks.length > 0 ? `${trucks.length}` : undefined}
@@ -372,11 +410,21 @@ export default function Routes() {
                 <EmptyState icon={<LocalShippingOutlined />} title={t("noTrucks")} />
               </SectionCard>
             ) : (
-              <DataTable rows={trucks} columns={truckCols} toolbar={false} pageSize={5} />
+              <DataTable rows={trucks} columns={truckCols} toolbar={false} pageSize={10} />
             )}
           </TableSection>
         </Grid>
       </Grid>
+
+      <CrewDialog
+        truck={crewTruck}
+        trucks={trucks}
+        onClose={() => setCrewTruck(null)}
+        onSaved={async () => {
+          await reload();
+          setToast(t("crewSaved"));
+        }}
+      />
 
       <TruckForm
         open={truckOpen}
@@ -748,6 +796,128 @@ function RouteRow({
         </Box>
       </Collapse>
     </Box>
+  );
+}
+
+function CrewDialog({
+  truck,
+  trucks,
+  onClose,
+  onSaved,
+}: {
+  truck: Truck | null;
+  trucks: Truck[];
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const { t } = useI18n();
+  const [collectors, setCollectors] = useState<User[] | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [query, setQuery] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!truck) return;
+    setSelected(new Set(truck.crew.map((c) => c.id)));
+    setQuery("");
+    setErr(null);
+    setCollectors(null);
+    api<User[]>("/api/v1/users")
+      .then((users) => setCollectors(users.filter((u) => u.role === "collector")))
+      .catch((e: unknown) => setErr(e instanceof Error ? e.message : String(e)));
+  }, [truck]);
+
+  const vehicleOf = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const tk of trucks) for (const member of tk.crew) map.set(member.id, tk.name);
+    return map;
+  }, [trucks]);
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const onTruck = new Set((truck?.crew ?? []).map((c) => c.id));
+    return (collectors ?? [])
+      .filter((u) => !q || u.name.toLowerCase().includes(q) || (u.phone ?? "").includes(q))
+      .sort((a, b) => Number(onTruck.has(b.id)) - Number(onTruck.has(a.id)) || a.name.localeCompare(b.name));
+  }, [collectors, query, truck]);
+
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  async function save() {
+    if (!truck) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await api(`/api/v1/trucks/${truck.id}/crew`, {
+        method: "PUT",
+        body: JSON.stringify({ user_ids: [...selected] }),
+      });
+      await onSaved();
+      onClose();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={truck !== null} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>
+        {t("assignCrew")}
+        {truck && (
+          <Typography component="span" sx={{ display: "block", color: "text.secondary", fontWeight: 500, fontSize: "0.92rem", mt: 0.25 }}>
+            {truck.name}
+          </Typography>
+        )}
+      </DialogTitle>
+      <DialogContent>
+        <Stack spacing={1.5}>
+          <Muted>{t("crewHint")}</Muted>
+          <SearchField value={query} onChange={setQuery} placeholder={t("searchCrew")} width="100%" />
+          {err && <Alert severity="error">{err}</Alert>}
+          {collectors === null ? (
+            <Muted>{t("loading")}</Muted>
+          ) : shown.length === 0 ? (
+            <Muted>{t("noCollectors")}</Muted>
+          ) : (
+            <Box sx={{ maxHeight: 360, overflowY: "auto", mx: -1 }}>
+              {shown.map((u) => {
+                const current = vehicleOf.get(u.id);
+                const elsewhere = current !== undefined && current !== truck?.name;
+                return (
+                  <ListItemButton key={u.id} onClick={() => toggle(u.id)} sx={{ gap: 1.25, py: 0.75 }}>
+                    <Checkbox edge="start" checked={selected.has(u.id)} tabIndex={-1} disableRipple sx={{ p: 0.5 }} />
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography noWrap sx={{ fontSize: "0.92rem", fontWeight: 600 }}>
+                        {u.name}
+                      </Typography>
+                      <Typography noWrap sx={{ fontSize: "0.82rem", color: "text.secondary" }}>
+                        {u.phone ?? "—"}
+                      </Typography>
+                    </Box>
+                    {elsewhere && <Tag tone={selected.has(u.id) ? "warn" : "neutral"}>{t("crewOnVehicle").replace("{vehicle}", current)}</Tag>}
+                  </ListItemButton>
+                );
+              })}
+            </Box>
+          )}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t("cancel")}</Button>
+        <Button variant="contained" disabled={busy || collectors === null} onClick={() => void save()}>
+          {t("saveCrew").replace("{n}", String(selected.size))}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 

@@ -42,6 +42,8 @@ export default function Users() {
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [roleView, setRoleView] = useState<"all" | Role>("all");
+  const [pinUser, setPinUser] = useState<User | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const shown = useMemo(
     () => (roleView === "all" ? (users ?? []) : (users ?? []).filter((u) => u.role === roleView)),
     [users, roleView],
@@ -152,15 +154,28 @@ export default function Users() {
       renderCell: (p) => <Tag tone={p.value === "admin" ? "warn" : "neutral"}>{p.value as string}</Tag>,
     },
     {
+      field: "vehicle_name",
+      headerName: t("vehicle"),
+      flex: 1,
+      minWidth: 170,
+      valueGetter: (_v, row) => (row.role === "collector" ? (row.vehicle_name ?? null) : null),
+      valueFormatter: (v: string | null) => v ?? "—",
+    },
+    {
       field: "actions",
       headerName: "",
-      width: 300,
+      width: 380,
       sortable: false,
       filterable: false,
       disableExport: true,
       align: "right",
       renderCell: (p) => (
         <Stack direction="row" spacing={0.5} sx={{ height: "100%", alignItems: "center", justifyContent: "flex-end", width: "100%" }}>
+          {p.row.role === "collector" && (
+            <Button variant="text" size="small" onClick={() => setPinUser(p.row)}>
+              {t("setPin")}
+            </Button>
+          )}
           {p.row.role === "collector" && (
             <Button
               variant="text"
@@ -230,6 +245,12 @@ export default function Users() {
           </Alert>
         )}
 
+        {notice && (
+          <Alert severity="success" sx={{ mt: 2.5 }} onClose={() => setNotice(null)}>
+            {notice}
+          </Alert>
+        )}
+
         {issued && (
           <Alert severity="success" icon={false} sx={{ mt: 2.5 }}>
             <Stack spacing={1.5}>
@@ -262,6 +283,12 @@ export default function Users() {
         )}
       </TableSection>
 
+      <PinDialog
+        user={pinUser}
+        onClose={() => setPinUser(null)}
+        onSaved={(user) => setNotice(t("pinSaved").replace("{name}", user.name))}
+      />
+
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{t("newUser")}</DialogTitle>
         <DialogContent dividers>
@@ -272,6 +299,75 @@ export default function Users() {
         </DialogActions>
       </Dialog>
     </PageStack>
+  );
+}
+
+const PIN_PATTERN = /^\d{6,12}$/;
+
+function PinDialog({
+  user,
+  onClose,
+  onSaved,
+}: {
+  user: User | null;
+  onClose: () => void;
+  onSaved: (user: User) => void;
+}) {
+  const { t } = useI18n();
+  const [pin, setPin] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPin("");
+    setErr(null);
+  }, [user]);
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    if (!user || !PIN_PATTERN.test(pin)) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await api(`/api/v1/users/${user.id}/pin`, { method: "PUT", body: JSON.stringify({ pin }) });
+      onSaved(user);
+      onClose();
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={user !== null} onClose={onClose} fullWidth maxWidth="xs">
+      <Box component="form" onSubmit={(e) => void save(e)}>
+        <DialogTitle>{user ? t("setPinFor").replace("{name}", user.name) : t("setPin")}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 0.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              {t("pinHelp")}
+            </Typography>
+            <TextField
+              autoFocus
+              fullWidth
+              label={t("pin")}
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 12))}
+              helperText={t("pinDigits")}
+              slotProps={{ htmlInput: { inputMode: "numeric", pattern: "[0-9]*", maxLength: 12, autoComplete: "off" } }}
+            />
+            {err && <Alert severity="error">{err}</Alert>}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>{t("cancel")}</Button>
+          <Button type="submit" variant="contained" disabled={busy || !PIN_PATTERN.test(pin)}>
+            {t("setPin")}
+          </Button>
+        </DialogActions>
+      </Box>
+    </Dialog>
   );
 }
 

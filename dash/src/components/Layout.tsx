@@ -40,7 +40,7 @@ const DRAWER_WIDTH = 232;
 
 function BinMark() {
   // Same mark as the favicon (public/icon.svg) so the brand reads consistently.
-  return <Box component="img" src="/icon.svg" alt="OpenWaste" sx={{ width: 36, height: 36, display: "block" }} />;
+  return <Box component="img" src="/icon.svg" alt="OpenWaste" sx={{ width: 30, height: 30, display: "block" }} />;
 }
 
 export default function Layout() {
@@ -63,7 +63,7 @@ export default function Layout() {
   }, [sectionTitle, leafTitle]);
 
   useEffect(() => {
-    void api<{ unreviewed: number }>("/api/v1/predictions")
+    void api<{ unreviewed: number }>("/api/v1/predictions?limit=1")
       .then((r) => setAlerts(r.unreviewed ?? 0))
       .catch(() => setAlerts(0));
     void api<{ recommendation: string }[]>("/api/v1/bins/health")
@@ -72,8 +72,8 @@ export default function Layout() {
   }, [location.pathname]);
 
   const ops = [
-    { count: collectCount, label: t("toCollect"), to: "/collect", bg: "#fef2f2", fg: "#c0392b" },
-    { count: alerts, label: t("toReview"), to: "/records/review", bg: "#eceef1", fg: "#05070c" },
+    { count: collectCount, label: t("toCollect"), to: "/collect" },
+    { count: alerts, label: t("toReview"), to: "/records/review" },
   ];
 
   const isActive = (path: string) =>
@@ -86,13 +86,13 @@ export default function Layout() {
 
   const drawer = (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <Toolbar sx={{ gap: 1.5, px: 2.5, minHeight: { xs: 72 } }} disableGutters>
+      <Toolbar sx={{ gap: 1.25, px: 2.75, minHeight: { xs: 64 } }} disableGutters>
         <BinMark />
-        <Typography sx={{ fontWeight: 760, fontSize: "1.28rem", letterSpacing: "-0.02em" }}>
+        <Typography sx={{ fontWeight: 760, fontSize: "1.2rem", letterSpacing: "-0.02em" }}>
           OpenWaste
         </Typography>
       </Toolbar>
-      <List sx={{ flex: 1, py: 1 }}>
+      <List sx={{ flex: 1, pt: 1.5, pb: 1 }}>
         {NAV.map((entry) => (
           <ListItemButton
             key={entry.path}
@@ -100,19 +100,19 @@ export default function Layout() {
             to={entry.path}
             selected={isActive(entry.path)}
             onClick={() => setMobileOpen(false)}
-            sx={{ mb: 0.5 }}
+            sx={{ mb: 0.25, py: 0.9, color: "#3a4256" }}
           >
-            <ListItemIcon sx={{ "& svg": { fontSize: 23 } }}>{entry.icon}</ListItemIcon>
+            <ListItemIcon sx={{ minWidth: 34, "& svg": { fontSize: 21 } }}>{entry.icon}</ListItemIcon>
             <ListItemText
               primary={t(entry.key)}
-              slotProps={{ primary: { sx: { fontSize: "1rem", fontWeight: 600 } } }}
+              slotProps={{ primary: { sx: { fontSize: "0.96rem", fontWeight: 600 } } }}
             />
           </ListItemButton>
         ))}
       </List>
 
-      <Box sx={{ p: 1.5, borderTop: "1px solid", borderColor: "divider" }}>
-        <Typography variant="overline" sx={{ display: "block", px: 1, mb: 0.5, color: "text.secondary", fontSize: "0.68rem" }}>
+      <Box sx={{ px: 1.5, pt: 2, pb: 2, mx: 1, borderTop: "1px solid", borderColor: "divider" }}>
+        <Typography variant="overline" sx={{ display: "block", px: 1, mb: 0.75, color: "text.secondary" }}>
           {t("today")}
         </Typography>
         {ops.map((row) => {
@@ -133,31 +133,32 @@ export default function Layout() {
                 border: "none",
                 bgcolor: "transparent",
                 cursor: "pointer",
-                borderRadius: "4px",
+                borderRadius: "10px",
                 px: 1,
-                py: 0.75,
+                py: 0.6,
+                fontFamily: "inherit",
                 transition: "background-color 120ms cubic-bezier(0.2, 0, 0, 1)",
                 "&:hover": { bgcolor: "#f6f4ee" },
               }}
             >
               <Box
                 sx={{
-                  minWidth: 32,
-                  height: 28,
-                  px: 1,
+                  minWidth: 36,
+                  height: 26,
+                  px: 0.75,
                   display: "grid",
                   placeItems: "center",
-                  borderRadius: "4px",
+                  borderRadius: "8px",
                   fontVariantNumeric: "tabular-nums",
-                  fontWeight: 800,
-                  fontSize: "1rem",
-                  bgcolor: zero ? "#f6f4ee" : row.bg,
-                  color: zero ? "text.secondary" : row.fg,
+                  fontWeight: 740,
+                  fontSize: "0.9rem",
+                  bgcolor: "#f6f4ee",
+                  color: zero ? "text.secondary" : "text.primary",
                 }}
               >
-                {row.count}
+                {row.count.toLocaleString()}
               </Box>
-              <Typography sx={{ flex: 1, textAlign: "left", fontWeight: 570, fontSize: "0.92rem" }}>
+              <Typography sx={{ flex: 1, textAlign: "left", fontWeight: 580, fontSize: "0.92rem", color: "#3a4256" }}>
                 {row.label}
               </Typography>
               <ChevronRightOutlined sx={{ fontSize: 18, color: "text.secondary" }} />
@@ -171,7 +172,7 @@ export default function Layout() {
   return (
     <Box sx={{ display: "flex", minHeight: "100dvh", bgcolor: "background.default" }}>
       <AppBar position="fixed" sx={{ width: { md: `calc(100% - ${DRAWER_WIDTH}px)` }, ml: { md: `${DRAWER_WIDTH}px` } }}>
-        <Toolbar sx={{ gap: { xs: 1, sm: 2 } }}>
+        <Toolbar sx={{ gap: { xs: 1, sm: 1.5 }, minHeight: { xs: 64 }, px: { md: 3.5 } }}>
           <IconButton
             edge="start"
             onClick={() => setMobileOpen((v) => !v)}
@@ -180,34 +181,23 @@ export default function Layout() {
           >
             <MenuOutlined />
           </IconButton>
-          <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center", gap: 0.5, minWidth: 0 }}>
-            <Typography
-              sx={{ fontWeight: leafTitle ? 480 : 680, fontSize: "1.05rem", color: leafTitle ? "text.secondary" : "text.primary" }}
-              noWrap
-            >
-              {sectionTitle}
-            </Typography>
-            {leafTitle && (
-              <>
-                <ChevronRightOutlined sx={{ fontSize: 17, color: "text.secondary" }} />
-                <Typography sx={{ fontWeight: 680, fontSize: "1.05rem" }} noWrap>
-                  {leafTitle}
-                </Typography>
-              </>
-            )}
-          </Box>
+          <Typography
+            sx={{ display: { xs: "none", sm: "block" }, fontWeight: 740, fontSize: "1.2rem", letterSpacing: "-0.015em", minWidth: 0 }}
+            noWrap
+          >
+            {sectionTitle}
+          </Typography>
           <Box sx={{ flexGrow: 1 }} />
           <NavSearch />
-          <Box sx={{ flexGrow: 1 }} />
           <Tooltip title={t("notifications")}>
-            <IconButton onClick={() => navigate("/records/review")} aria-label={t("notifications")}>
-              <Badge badgeContent={alerts} color="error" max={99}>
+            <IconButton onClick={() => navigate("/records/review")} aria-label={t("notifications")} sx={{ color: "text.secondary" }}>
+              <Badge badgeContent={alerts} color="secondary" max={99}>
                 <NotificationsNoneOutlined />
               </Badge>
             </IconButton>
           </Tooltip>
           <Tooltip title={t("account")}>
-            <IconButton edge="end" onClick={(e) => setAcct(e.currentTarget)} aria-label={t("account")}>
+            <IconButton edge="end" onClick={(e) => setAcct(e.currentTarget)} aria-label={t("account")} sx={{ color: "text.secondary" }}>
               <AccountCircleOutlined />
             </IconButton>
           </Tooltip>
@@ -282,8 +272,8 @@ export default function Layout() {
       </Box>
 
       <Box component="main" sx={{ flexGrow: 1, width: { md: `calc(100% - ${DRAWER_WIDTH}px)` }, minWidth: 0 }}>
-        <Toolbar />
-        <Container maxWidth="xl" sx={{ py: { xs: 2.5, md: 3.5 }, px: { xs: 2, md: 3.5 } }}>
+        <Toolbar sx={{ minHeight: { xs: 64 } }} />
+        <Container maxWidth="xl" sx={{ py: { xs: 2.5, md: 3 }, px: { xs: 2, md: 3.5 } }}>
           <Box
             key={location.pathname}
             sx={{ animation: "owiPageIn 200ms cubic-bezier(0, 0, 0.2, 1)" }}

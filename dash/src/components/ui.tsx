@@ -753,19 +753,7 @@ export function EmptyState({
       sx={{ alignItems: "center", justifyContent: "center", textAlign: "center", py: 4, px: 2, minHeight: height }}
     >
       {icon && (
-        <Box
-          sx={{
-            display: "grid",
-            placeItems: "center",
-            width: 44,
-            height: 44,
-            borderRadius: "12px",
-            bgcolor: owi.wash,
-            color: owi.faint,
-            mb: 0.5,
-            "& svg": { fontSize: 22 },
-          }}
-        >
+        <Box sx={{ display: "flex", color: owi.muted, mb: 0.25, "& svg": { fontSize: 30 } }}>
           {icon}
         </Box>
       )}

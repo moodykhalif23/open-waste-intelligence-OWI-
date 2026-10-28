@@ -50,7 +50,7 @@ export default function NavSearch() {
       }}
       blurOnSelect
       size="small"
-      sx={{ width: { xs: 180, sm: 300, md: 380 } }}
+      sx={{ width: { xs: 180, sm: 260, md: 300 } }}
       renderInput={(params) => (
         <TextField
           {...params}
@@ -60,7 +60,7 @@ export default function NavSearch() {
             ...params.slotProps,
             input: {
               ...params.slotProps.input,
-              startAdornment: <SearchIcon sx={{ fontSize: 21, color: "primary.main", mx: 0.5 }} />,
+              startAdornment: <SearchIcon sx={{ fontSize: 19, color: "text.secondary", mx: 0.5 }} />,
               endAdornment: (
                 <Box
                   component="kbd"
@@ -68,7 +68,7 @@ export default function NavSearch() {
                     display: { xs: "none", md: "inline-block" },
                     border: "1px solid",
                     borderColor: "divider",
-                    borderRadius: "4px",
+                    borderRadius: "6px",
                     px: 0.6,
                     py: 0.1,
                     fontSize: "0.7rem",
@@ -83,11 +83,9 @@ export default function NavSearch() {
             },
           }}
           sx={{
-            "& .MuiOutlinedInput-root": { bgcolor: "#ffffff", borderRadius: "4px" },
-            "& .MuiOutlinedInput-input": { fontWeight: 560, fontSize: "0.98rem" },
-            "& .MuiOutlinedInput-input::placeholder": { fontWeight: 560, opacity: 0.7 },
-            "& fieldset": { borderColor: "divider", borderWidth: "1.5px" },
-            "&:hover fieldset": { borderColor: "primary.light" },
+            "& .MuiOutlinedInput-root": { bgcolor: "#ffffff" },
+            "& .MuiOutlinedInput-input": { fontWeight: 500, fontSize: "0.92rem" },
+            "& .MuiOutlinedInput-input::placeholder": { fontWeight: 500, color: "#6b6456", opacity: 1 },
           }}
         />
       )}

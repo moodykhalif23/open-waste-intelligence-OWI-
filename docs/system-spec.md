@@ -36,14 +36,14 @@ Python everywhere on the server because OpenCV, ONNX Runtime, and OR-Tools are P
 
 - Python: full type hints; ruff enforces style; mypy runs in CI on `api/`.
 - TypeScript: strict mode; API response types generated from FastAPI's OpenAPI schema (no hand-drift).
-- Every table carries `org_id` (multi-tenant), soft deletes (`deleted_at`), UTC timestamps.
+- Every tenant-owned table carries `org_id` (the organizations table is the tenant root); operational rows use soft deletes (`deleted_at`) and UTC timestamps.
 - **Tests are mandatory for anything that produces a published number** (bin health, cleanliness index, carbon, value estimates) and for ingestion invariants (dedupe, privacy status).
 - Every ML prediction row stores model version + confidence; every analytics output stores method version.
 
 ### Governance in code
 
 - Privacy gate runs at ingestion, before primary storage; originals containing people are quarantined and deleted ≤ 72 h after blur verification.
-- Open API endpoints can only read from aggregate tables — no code path from public routes to raw observations or images.
+- Open API responses must expose aggregates only — never images, bin-level identifiers, raw observations, or precise coordinates. Server-side aggregation may read operational records, but public routes must not return those source records.
 - No feature, field, or log that identifies people or scores workers. PRs violating this are declined regardless of merit.
 
 ## Development environment

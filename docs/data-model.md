@@ -1,5 +1,9 @@
 # Data Model & APIs
 
+This document distinguishes implemented runtime behavior from design targets.
+The entity outline is conceptual; the API tables below list current implemented
+routes and explicitly identify planned routes.
+
 ## Core entities
 
 ```
@@ -25,14 +29,15 @@ Prediction   (ML output, versioned, many per observation)
 
 CollectionEvent
   ├─ bin_id, collector_id, occurred_at, route_stop_id (nullable)
-  ├─ pre_observation_id, post_observation_id (photo before/after)
+  ├─ post_observation_id (nullable)
   └─ estimated_weight_kg (excluded from totals when its route has a measured weight)
 
 Route
   ├─ date, truck_id, status (planned | active | done)
   ├─ stops[] (ordered bin_ids)
   ├─ started_at, completed_at, started_by_user_id
-  └─ planned_km/fuel_l, actual_distance_km, actual_duration, actual_fuel_l, actual_weight_kg
+  └─ planned_km/fuel_l, actual_distance_km, actual_fuel_l, actual_weight_kg
+     (actual duration is derived from started_at and completed_at)
 
 The field app tracks GPS only while a collector explicitly starts a route. GPS fixes are
 used transiently to calculate aggregate distance; raw coordinates are not sent to or
@@ -49,19 +54,24 @@ VolunteerEvent
   ├─ waste_collected (per-material kg, may reference observations)
   └─ organizer, notes
 
-Derived (analytics tables, recomputed nightly)
+Implemented derived tables (recomputed by the analytics refresh)
   ├─ BinHealthDaily (bin_id, date, fill_pct, overflow_risk, days_since_collection, recommendation)
-  ├─ CompositionAggregate (scope: site|ward|org, window, material → share, item_count, kg_est)
-  ├─ CleanlinessIndexDaily (area_id, date, score 0–100, components)
-  └─ CarbonImpact (scope, window, co2e_kg, method_version, inputs)
+  └─ CleanlinessDaily (site_id, date, score 0–100 or insufficient, components)
 ```
 
-Conventions: every table carries `org_id` (multi-tenant from day one); soft deletes; all times UTC with local-time display; images referenced by object-store key, never stored in DB.
+Conventions: every tenant-owned table carries `org_id` (the `organizations`
+table is the tenant root); operational rows use soft deletes and UTC timestamps
+with local-time display; images are referenced by object-store key, never stored
+in the database.
+
+Composition, recycling value, carbon, and public ward-week aggregates are
+computed by API requests from operational records; they are not persisted in
+`CompositionAggregate` or `CarbonImpact` tables.
 
 ## Bin health score (v1 formula — will evolve)
 
 ```
-fill_pct        = model fill band midpoint, overridden by human tap if present
+fill_pct        = human fill-tap band midpoint
 fill_velocity   = regression over last N observations (pct/day)
 days_to_full    = (100 - fill_pct) / max(fill_velocity, ε)
 overflow_risk   = HIGH   if fill_pct ≥ 85 or days_to_full ≤ 1
@@ -82,50 +92,63 @@ Recommendation          Collect today
 
 The staff dashboard also groups registered sites and their bins by the site's
 recorded ward. It flags a ward for human assessment when a registered site has
-no bins, or when at least half of three or more bins with current health data
-have medium/high fill risk. Fewer than three assessed bins is shown as
-insufficient evidence. This does not estimate a required bin count or placement:
-population, service-area size, and coverage targets are not captured.
+no bins, or when at least half of three or more bins with recorded health data
+have medium/high fill risk. The latest health-data date is shown; the records
+may be stale. Fewer than three assessed bins is shown as insufficient evidence.
+This does not estimate a required bin count or placement: population,
+service-area size, and coverage targets are not captured.
 
-## Cleanliness index (v1 components)
+## Cleanliness index (implemented v1)
 
-Score 0–100 per area (estate/ward), weighted sum — weights tuned with Safi during Phase 2:
+Score 0–100 per site, weighted over components with data; at least 10
+observations in the last 30 days are required. The litter component has no
+current detection input and is omitted, with remaining weights renormalized:
 
 | Component | Signal | Weight (initial) |
 |---|---|---|
-| Litter density | detections per street-segment photo, normalized | 35% |
-| Bin overflow rate | % of observations in overflow band | 30% |
-| Illegal dumping | active confirmed sites per km², recency-decayed | 20% |
-| Collection reliability | on-time collection rate for the area's bins | 15% |
+| Litter density | Planned: detections per street-segment photo, normalized; no detector input yet | 35% |
+| Bin overflow | Human fill taps in high/overflow bands over the last 30 days | 30% |
+| Dumping | Distance and recency-decayed penalty from nearby human-confirmed sites | 20% |
+| Collection reliability | Recent collection count among bins currently rated high risk; not an on-time-rate measure | 15% |
 
-Published with methodology version; never compare scores across methodology versions.
+Each score carries methodology version `cleanliness-v1`; insufficient data is
+returned without a score.
 
 ## Carbon estimate (v1)
 
-`co2e_avoided = Σ (kg_material_recycled × factor_material)` using published per-material avoided-emissions factors (e.g., EPA WARM or IPCC-derived; factor table with citations committed to repo as `carbon-factors-v1.csv`). Landfill space via density tables. Always shown with "estimated — methodology v1" label and a link. **Never sold as offsets** — this is reporting, not carbon markets.
+`co2e_avoided = Σ (kg_material_recycled × factor_material)` using the cited per-material avoided-emissions factors in `api/src/owi_api/data/carbon-factors-v1.csv`. Landfill space uses a configured density constant. API results carry method version `carbon-v1` and an uncertainty range. **Never sold as offsets** — this is reporting, not carbon markets.
 
-## Internal API (authenticated, versioned `/api/v1`)
+## Implemented internal API (authenticated, versioned `/api/v1`)
 
-| Area | Endpoints (sketch) |
+These are selected implemented routes, not a complete OpenAPI listing:
+
+| Area | Implemented endpoints |
 |---|---|
-| Sync | `POST /observations/batch` (multipart, resumable), `GET /sync/manifest` |
-| Registry | CRUD `/bins`, `/sites`, `/trucks`, `/users`, `/routes` |
-| Ops | `GET /bins/health?date=`, `GET /bins/coverage` (ward-level assessment signals), `POST /routes/optimize`, `POST /routes/{id}/start`, `POST /routes/{id}/complete`, `POST /routes/stops/{id}/collect` |
-| Review | `GET /predictions?status=unreviewed`, `POST /predictions/{id}/correct` |
-| Analytics | `GET /analytics/composition`, `/cleanliness`, `/carbon`, `/volunteers` with `scope` + `window` params |
-| Reports | `POST /reports` (template, range) → PDF/CSV |
+| Field reports | `POST /observations/batch` (multipart upload; duplicate images are deduplicated; no resumable-upload protocol) |
+| Registry | `GET`/`POST /bins`, `GET`/`POST /sites`, `GET`/`POST /trucks`, `GET`/`POST /users`; individual routes support only their implemented operations |
+| Operations | `GET /bins/health`, `GET /bins/coverage`, `POST /collections`, `GET /routes`, `GET /routes/savings`, `POST /routes/optimize`, `POST /routes/{id}/start`, `POST /routes/{id}/complete`, `POST /routes/stops/{id}/collect` |
+| Review | `GET /predictions?status=unreviewed`, `POST /predictions/{id}/review` |
+| Analytics | `GET /api/v1/analytics/composition`, `/api/v1/cleanliness`, `/api/v1/cleanliness/methodology`, `/api/v1/cleanliness/trend`, `/api/v1/carbon`, `/api/v1/carbon/factors`, `/api/v1/recycling/value`, `/api/v1/volunteers/summary` |
+| Volunteer reports | `GET /api/v1/volunteers/report` returns print-ready HTML |
 
-## Open Data API (public, API-keyed, read-only)
+Planned API sketches, including resumable sync, general-purpose report
+generation, and unimplemented CRUD operations, are not available routes.
 
-Hard rules (from governance doc): aggregates only; no images; no bin-level or dump-site coordinates (ward/area centroids only); suppress any cell aggregating < 3 bins or < 20 observations; 7-day publication delay.
+## Implemented Open Data API (API-keyed, read-only)
+
+The public API is mounted at `/api/v1/public`. Data endpoints return delayed
+ward-week aggregates only: no images, coordinates, or bin identifiers. Cells
+below three bins or 20 observations are withheld; the default publication delay
+is seven days. Data endpoints require an `X-API-Key`; `/meta` is available
+without a key for discovery.
 
 | Endpoint | Returns |
 |---|---|
-| `GET /open/v1/composition?area=&window=` | material shares, item counts, kg estimates |
-| `GET /open/v1/cleanliness?area=&window=` | index + component breakdown + methodology version |
-| `GET /open/v1/collections?area=&window=` | bins served, tonnage estimates, on-time rate |
-| `GET /open/v1/carbon?area=&window=` | CO₂e estimates + methodology link |
-| `GET /open/v1/areas` | available areas (GeoJSON boundaries at ward level) |
-| `GET /open/v1/datasets` | links to published dataset snapshots (Parquet/CSV) |
+| `GET /api/v1/public/meta` | dataset version, license, attribution, delay, suppression policy, and available endpoint names |
+| `GET /api/v1/public/composition?ward=&weeks=&format=` | ward-week observation counts and reviewed/model-derived material shares |
+| `GET /api/v1/public/collections?ward=&weeks=&format=` | ward-week report counts, observed bin counts, and overflow-report share; not collected tonnage or on-time rate |
+| `GET /api/v1/public/cleanliness?ward=&weeks=&format=` | ward-week mean site cleanliness score, subject to the same privacy floor |
 
-All open endpoints CC-BY-4.0; attribution string included in every response.
+The implemented open endpoints return CC-BY-4.0 attribution. Public carbon,
+ward-boundary GeoJSON, and downloadable dataset-snapshot endpoints are not
+implemented. Administrators manage API keys at `/api/v1/admin/api-keys`.

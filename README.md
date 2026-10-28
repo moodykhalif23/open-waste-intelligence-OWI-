@@ -1,6 +1,6 @@
 # OpenWaste Intelligence (OWI)
 
-**An open-source field-reporting and analytics platform for understanding waste generation, collection planning, recycling potential, and environmental health.**
+**A field-reporting and analytics platform for understanding waste generation, collection planning, recycling potential, and environmental health.**
 
 Anchored by a real operating partner — **Safi Cleaners and Recyclers**, a Community-Based Organization (CBO) with active waste collection operations, community members, and access to municipalities, schools, estates, and businesses.
 
@@ -26,7 +26,7 @@ Active ONNX material classifier → human review/correction
       │
 Fill, composition, collection, and location analytics
       │
-Ops dashboard and aggregate open-data API
+Ops dashboard and delayed, privacy-screened ward-week open-data API
 ```
 
 ## Product questions: current coverage and limits
@@ -38,7 +38,7 @@ Ops dashboard and aggregate open-data API
 | How fast is it accumulating? | Fill velocity calculated from human-reported fill taps for registered bins. | No automated fill-level model; estimates need multiple time-separated reports. |
 | How long before overflow? | A v1 estimate and risk recommendation based on recent fill history. | It is unavailable or uncertain with sparse reports and is not a sensor-based forecast. |
 | How efficient are collections? | Route plans and modeled fixed-sweep versus need-driven comparison, alongside GPS aggregate distance, elapsed duration, actual fuel, and weighed tonnage from completed routes. | Measured performance is available only for routes explicitly started and completed in the field app. |
-| Which neighborhoods need more bins? | A ward-level assessment view flags registered sites without bins and wards where at least half of assessed bins have medium/high fill risk. | This is an assessment priority, not an estimate of bin count or placement; population, area, and service-target denominators are not recorded. |
+| Which neighborhoods need more bins? | A ward-level assessment view flags registered sites without bins and wards where at least half of at least three bins with recorded health data have medium/high fill risk; it shows the latest health date. | This is an assessment priority, not an estimate of bin count or placement; population, area, and service-target denominators are not recorded, and health records may be stale. |
 | Which routes waste fuel? | Completed routes expose actual fuel against planned fuel, distance, duration, and weighed tonnage. | Fuel use is manually entered and the comparison is operational, not a causal fuel-efficiency model. |
 | Which recyclables are most common? | Material counts and shares over a selected time window. | These are image-classification estimates, not audited material weights. |
 | Which locations are repeatedly littered? | Staff-reviewed dumping observations are grouped into recurring dumping hotspots. | Hotspots are human-confirmed dumping sites, not automated street-litter detection. |
@@ -63,7 +63,7 @@ progress and validation evidence.
 | 5 | Recycling intelligence | Estimated material value and partner matching from composition and configured prices. |
 | 6 | Community cleanliness | Site-level, data-qualified index; litter-detection component is not yet available. |
 | 7 | Carbon impact | Method-versioned estimates using composition, estimated collected weight, and published factors. |
-| 8 | Volunteer analytics | Event, participant, volunteer-hour, and self-reported collected-weight summaries. |
+| 8 | Volunteer analytics | Manually entered event, participant, volunteer-hour, and self-reported collected-weight summaries; these weights are not independently verified. |
 
 ## Run it
 
@@ -82,4 +82,7 @@ Contributors: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-Intended license: Apache-2.0 (code) + CC-BY-4.0 (open data). To be confirmed before first release.
+The intended licenses are Apache-2.0 for code and CC-BY-4.0 for open data, but
+they have not been confirmed and no license files are present yet. Do not treat
+the repository as formally licensed open-source software or published open
+data until those terms are approved and added.

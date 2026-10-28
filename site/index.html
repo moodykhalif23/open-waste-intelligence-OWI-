@@ -122,17 +122,17 @@
           </div>
           <div class="field-grid problem-grid">
             <div class="field-item">
-              <span class="chip" aria-hidden="true"><i class="fa-solid fa-route"></i></span>
+              <i class="problem-icon fa-solid fa-route" aria-hidden="true"></i>
               <h3>Routes that ignore reality</h3>
               <p>Fixed schedules send vehicles to empty bins and miss the ones already overflowing.</p>
             </div>
             <div class="field-item">
-              <span class="chip" aria-hidden="true"><i class="fa-solid fa-bell"></i></span>
+              <i class="problem-icon fa-solid fa-bell" aria-hidden="true"></i>
               <h3>Overflow found by complaint</h3>
               <p>The first signal is a resident calling, long after the pile started building.</p>
             </div>
             <div class="field-item">
-              <span class="chip" aria-hidden="true"><i class="fa-solid fa-coins"></i></span>
+              <i class="problem-icon fa-solid fa-coins" aria-hidden="true"></i>
               <h3>Value that leaks away</h3>
               <p>Recyclables leave unpriced, so nobody can prove what a day of work was worth.</p>
             </div>
@@ -151,31 +151,33 @@
             A phone in the field, a browser in the office, and the same data underneath
             both.
           </p>
-          <div class="surfaces">
-            <div class="surface">
-              <span class="chip" aria-hidden="true"><i class="fa-solid fa-mobile-screen-button"></i></span>
-              <h3>The field app</h3>
-              <p>For the collector, on the phone they already carry.</p>
-              <ul class="surface-list">
-                <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>Record a photo and a human fill-level tap</span></li>
-                <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>Works with no signal &mdash; reports queue and sync later</span></li>
-                <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>Scan the bin&rsquo;s QR code, or let GPS place it</span></li>
-                <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>English and Kiswahili from the first screen</span></li>
-                <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>Delete any photo you took, no questions asked</span></li>
-              </ul>
-            </div>
-            <div class="surface">
-              <span class="chip" aria-hidden="true"><i class="fa-solid fa-chart-line"></i></span>
-              <h3>The dashboard</h3>
-              <p>For whoever plans the day &mdash; and answers for the month.</p>
-              <ul class="surface-list">
-                <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>Bin health ranked: collect now, schedule soon, leave it</span></li>
-                <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>A route built for what you actually run</span></li>
-                <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>Recovered material priced against a local table</span></li>
-                <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>Site cleanliness scores and estimated emissions</span></li>
-                <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>Reports that export without a spreadsheet rescue</span></li>
-              </ul>
-            </div>
+          <div class="device-showcase">
+            <article class="device-card">
+              <div class="device-copy">
+                <p class="device-kicker">For field teams</p>
+                <h3>The field app</h3>
+                <p>Capture a bin report and keep work moving, even offline.</p>
+              </div>
+              <figure class="device-frame iphone-frame">
+                <span class="iphone-island" aria-hidden="true"></span>
+                <div class="iphone-screen">
+                  <img src="/field-app-screen.png" alt="The OWI field app ready to capture a bin report" loading="lazy" />
+                </div>
+              </figure>
+            </article>
+            <article class="device-card">
+              <div class="device-copy">
+                <p class="device-kicker">For operations teams</p>
+                <h3>The dashboard</h3>
+                <p>See reporting activity and collection signals in one place.</p>
+              </div>
+              <figure class="device-frame macbook-frame">
+                <div class="macbook-screen">
+                  <img src="/operations-dashboard-screen.png" alt="The OWI operations dashboard overview" loading="lazy" />
+                </div>
+                <span class="macbook-base" aria-hidden="true"></span>
+              </figure>
+            </article>
           </div>
         </div>
       </section>

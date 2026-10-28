@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from owi_api.analytics.recycling import match_partners, value_report
@@ -14,6 +14,7 @@ from owi_api.db import get_session
 from owi_api.models.enums import UserRole
 from owi_api.models.operations import CollectionEvent
 from owi_api.models.recycling import MaterialPrice, RecyclingPartner
+from owi_api.models.route import Route, RouteStop
 from owi_api.routers.analytics import _materials
 from owi_api.routers.auth import get_current_user, require_roles
 from owi_api.security import TokenClaims
@@ -161,14 +162,27 @@ def _partner_rows(session: Session, org_id: uuid.UUID) -> list[tuple[str, list[s
 
 
 def _collected_kg(session: Session, org_id: uuid.UUID, start: datetime) -> float:
-    total = session.scalar(
-        select(func.coalesce(func.sum(CollectionEvent.estimated_weight_kg), 0.0)).where(
+    estimated = session.scalar(
+        select(func.coalesce(func.sum(CollectionEvent.estimated_weight_kg), 0.0))
+        .select_from(CollectionEvent)
+        .outerjoin(RouteStop, RouteStop.id == CollectionEvent.route_stop_id)
+        .outerjoin(Route, Route.id == RouteStop.route_id)
+        .where(
             CollectionEvent.org_id == org_id,
             CollectionEvent.deleted_at.is_(None),
             CollectionEvent.occurred_at >= start,
+            or_(Route.id.is_(None), Route.actual_weight_kg.is_(None)),
         )
     )
-    return float(total or 0.0)
+    measured = session.scalar(
+        select(func.coalesce(func.sum(Route.actual_weight_kg), 0.0)).where(
+            Route.org_id == org_id,
+            Route.deleted_at.is_(None),
+            Route.completed_at >= start,
+            Route.actual_weight_kg.is_not(None),
+        )
+    )
+    return float(estimated or 0.0) + float(measured or 0.0)
 
 
 def _value(session: Session, org_id: uuid.UUID, days: int) -> ValueOut:

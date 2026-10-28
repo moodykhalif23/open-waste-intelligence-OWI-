@@ -81,6 +81,11 @@ interface Route {
   planned_fuel_l: number;
   demand_kg: number;
   bins_served: number;
+  status: "planned" | "active" | "done";
+  actual_distance_km: number | null;
+  actual_duration_seconds: number | null;
+  actual_fuel_l: number | null;
+  actual_weight_kg: number | null;
   stops: Stop[];
 }
 
@@ -155,7 +160,7 @@ export default function Routes() {
         setToast(t("routeComplete"));
         return;
       }
-      setRoutes(planned);
+      await reload();
       announce(planned);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -547,6 +552,7 @@ function RouteCard({
   completeLabel: string;
   onBreakdown: () => void;
 }) {
+  const { t } = useI18n();
   const breakdownBtn = (
     <Button
       variant="outlined"
@@ -596,6 +602,23 @@ function RouteCard({
             <Chip size="small" variant="outlined" label={`${Math.round(route.demand_kg)} kg`} />
           </Stack>
           {!hasPendingStops && <Muted>{completeLabel}</Muted>}
+          {route.status === "done" && (
+            <Stack spacing={0.25} sx={{ mt: 1.25 }}>
+              <Typography variant="caption" sx={{ fontWeight: 650 }}>
+                {t("actualOutcomes")}
+              </Typography>
+              <Muted>
+                {t("distanceKm")}: {route.actual_distance_km ?? "—"} / {route.planned_km} km
+                {" · "}
+                {t("actualFuel")}: {route.actual_fuel_l ?? "—"} / {route.planned_fuel_l} L
+                {" · "}
+                {t("weighedWaste")}: {route.actual_weight_kg ?? "—"} kg
+                {route.actual_duration_seconds !== null
+                  ? ` · ${Math.round(route.actual_duration_seconds / 60)} min`
+                  : ""}
+              </Muted>
+            </Stack>
+          )}
         </Box>
         {breakdownBtn}
       </Box>

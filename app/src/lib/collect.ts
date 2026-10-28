@@ -17,11 +17,24 @@ interface RouteStop {
   collected: boolean;
 }
 
+export interface RouteCompletion {
+  actual_distance_km: number | null;
+  actual_fuel_l: number;
+  actual_weight_kg: number;
+}
+
 export interface Route {
   id: string;
   truck_name: string;
   method: string;
+  status: "planned" | "active" | "done";
+  started_by_me: boolean;
   planned_km: number;
+  planned_fuel_l: number;
+  actual_distance_km: number | null;
+  actual_duration_seconds: number | null;
+  actual_fuel_l: number | null;
+  actual_weight_kg: number | null;
   stops: RouteStop[];
 }
 
@@ -43,6 +56,23 @@ export async function fetchRoutes(token: string): Promise<Route[]> {
 
 export async function collectStop(token: string, stopId: string): Promise<void> {
   await authed(`/api/v1/routes/stops/${stopId}/collect`, token, { method: "POST" });
+}
+
+export async function startRoute(token: string, routeId: string): Promise<Route> {
+  return (await authed(`/api/v1/routes/${routeId}/start`, token, { method: "POST" }).then(
+    (r) => r.json(),
+  )) as Route;
+}
+
+export async function completeRoute(
+  token: string,
+  routeId: string,
+  body: RouteCompletion,
+): Promise<Route> {
+  return (await authed(`/api/v1/routes/${routeId}/complete`, token, {
+    method: "POST",
+    body: JSON.stringify(body),
+  }).then((r) => r.json())) as Route;
 }
 
 export async function fetchBinHealth(token: string): Promise<BinHealth[]> {

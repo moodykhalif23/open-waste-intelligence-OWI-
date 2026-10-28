@@ -24,14 +24,20 @@ Prediction   (ML output, versioned, many per observation)
   └─ review_status (unreviewed | confirmed | corrected), corrected_payload
 
 CollectionEvent
-  ├─ bin_id, truck_id, collector_id, occurred_at
+  ├─ bin_id, collector_id, occurred_at, route_stop_id (nullable)
   ├─ pre_observation_id, post_observation_id (photo before/after)
-  └─ estimated_weight_kg, weight_source (estimated | weighed)
+  └─ estimated_weight_kg (excluded from totals when its route has a measured weight)
 
 Route
   ├─ date, truck_id, status (planned | active | done)
-  ├─ stops[] (ordered bin_ids, ETAs)
-  └─ metrics (planned_km, actual_km, fuel_est, bins_served)
+  ├─ stops[] (ordered bin_ids)
+  ├─ started_at, completed_at, started_by_user_id
+  └─ planned_km/fuel_l, actual_distance_km, actual_duration, actual_fuel_l, actual_weight_kg
+
+The field app tracks GPS only while a collector explicitly starts a route. GPS fixes are
+used transiently to calculate aggregate distance; raw coordinates are not sent to or
+stored by the API. Fuel used and weighed waste are entered at route completion. Measured
+route tonnage replaces estimated stop weights in recycling and carbon collection totals.
 
 DumpingSite  (human-confirmed only)
   ├─ geo point (internal precision), first_seen, last_seen
@@ -97,7 +103,7 @@ Published with methodology version; never compare scores across methodology vers
 |---|---|
 | Sync | `POST /observations/batch` (multipart, resumable), `GET /sync/manifest` |
 | Registry | CRUD `/bins`, `/sites`, `/trucks`, `/users`, `/routes` |
-| Ops | `GET /bins/health?date=`, `POST /routes/optimize`, `PATCH /routes/{id}` |
+| Ops | `GET /bins/health?date=`, `POST /routes/optimize`, `POST /routes/{id}/start`, `POST /routes/{id}/complete`, `POST /routes/stops/{id}/collect` |
 | Review | `GET /predictions?status=unreviewed`, `POST /predictions/{id}/correct` |
 | Analytics | `GET /analytics/composition`, `/cleanliness`, `/carbon`, `/volunteers` with `scope` + `window` params |
 | Reports | `POST /reports` (template, range) → PDF/CSV |

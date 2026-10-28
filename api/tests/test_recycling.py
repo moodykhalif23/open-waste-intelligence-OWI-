@@ -1,4 +1,8 @@
+import uuid
+from datetime import UTC, datetime
+
 from owi_api.analytics.recycling import match_partners, value_report
+from owi_api.routers.recycling import _collected_kg
 
 
 def test_value_splits_tonnage_by_share_and_prices() -> None:
@@ -30,3 +34,14 @@ def test_partner_matching_respects_material_and_minimum() -> None:
     assert match_partners("plastic", 800, partners) == ["PET Buyer"]
     assert match_partners("plastic", 2500, partners) == ["PET Buyer", "Big Plastics"]
     assert match_partners("glass", 50, partners) == []
+
+
+def test_collected_kg_uses_measured_route_weight_instead_of_estimates() -> None:
+    class FixedTotalsSession:
+        def __init__(self) -> None:
+            self.values = iter((12.0, 34.0))
+
+        def scalar(self, _statement: object) -> float:
+            return next(self.values)
+
+    assert _collected_kg(FixedTotalsSession(), uuid.uuid4(), datetime.now(UTC)) == 46.0

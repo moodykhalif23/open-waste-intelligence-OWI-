@@ -1,8 +1,8 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from geoalchemy2 import Geometry
-from sqlalchemy import Boolean, Date, Float, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -38,6 +38,14 @@ class Route(OwiRow, Base):
     planned_fuel_l: Mapped[float] = mapped_column(Float)
     demand_kg: Mapped[float] = mapped_column(Float)
     bins_served: Mapped[int] = mapped_column(Integer)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    started_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id")
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    actual_distance_km: Mapped[float | None] = mapped_column(Float)
+    actual_fuel_l: Mapped[float | None] = mapped_column(Float)
+    actual_weight_kg: Mapped[float | None] = mapped_column(Float)
 
 
 class RouteStop(OwiRow, Base):

@@ -1,44 +1,67 @@
 # OpenWaste Intelligence (OWI)
 
-**An open-source computer vision and analytics platform for understanding waste generation, collection efficiency, and environmental health.**
+**An open-source field-reporting and analytics platform for understanding waste generation, collection planning, recycling potential, and environmental health.**
 
 Anchored by a real operating partner — **Safi Cleaners and Recyclers**, a Community-Based Organization (CBO) with active waste collection operations, community members, and access to municipalities, schools, estates, and businesses.
 
 > Not another waste management app. Instead of saying *"there is garbage here,"* OWI answers:
 > How much? What type? How fast is it accumulating? How long before overflow? How efficient are collections? Which neighborhoods need more bins? Which routes waste fuel? Which recyclables are most common? Which locations are repeatedly littered?
 
-## The pipeline
+## What works today
+
+The current operational flow is field-photo reporting, not end-to-end automated
+waste detection or tracking. A collector captures a photo, optionally identifies
+a registered bin with its QR code, and records a human fill-level tap. The PWA
+queues reports offline and syncs them to the API. Ingestion checks image quality
+and applies a person-privacy gate before storage. When a material classifier is
+active, its predictions enter a review queue; analytics use the latest
+prediction and any human correction.
 
 ```
-Camera / Phone
+Field photo + optional bin QR + human fill tap
       │
-   OpenCV
+Offline PWA queue → API image-quality and privacy checks
       │
-Object Detection
+Active ONNX material classifier → human review/correction
       │
-Waste Classification
+Fill, composition, collection, and location analytics
       │
-   Tracking
-      │
-Analytics Engine
-      │
-  Dashboard
-      │
-Open Data API
+Ops dashboard and aggregate open-data API
 ```
+
+## Product questions: current coverage and limits
+
+| Question | Current capability | Important limit |
+|---|---|---|
+| How much waste? | Estimated bin weights plus weighed route totals at route completion; volunteer-reported weights are also supported. | Route totals are manual weigh-ins, not automated scale integration or per-material weights. |
+| What type? | Photo-derived material counts and shares; reviewed corrections can replace model predictions. | The published evaluation is on public datasets, not representative local field photos; small samples are flagged insufficient. |
+| How fast is it accumulating? | Fill velocity calculated from human-reported fill taps for registered bins. | No automated fill-level model; estimates need multiple time-separated reports. |
+| How long before overflow? | A v1 estimate and risk recommendation based on recent fill history. | It is unavailable or uncertain with sparse reports and is not a sensor-based forecast. |
+| How efficient are collections? | Route plans and modeled fixed-sweep versus need-driven comparison, alongside GPS aggregate distance, elapsed duration, actual fuel, and weighed tonnage from completed routes. | Measured performance is available only for routes explicitly started and completed in the field app. |
+| Which neighborhoods need more bins? | Site-level cleanliness and bin-health views can help locate operational concerns. | No neighborhood coverage or bin-placement recommendation model yet. |
+| Which routes waste fuel? | Completed routes expose actual fuel against planned fuel, distance, duration, and weighed tonnage. | Fuel use is manually entered and the comparison is operational, not a causal fuel-efficiency model. |
+| Which recyclables are most common? | Material counts and shares over a selected time window. | These are image-classification estimates, not audited material weights. |
+| Which locations are repeatedly littered? | Staff-reviewed dumping observations are grouped into recurring dumping hotspots. | Hotspots are human-confirmed dumping sites, not automated street-litter detection. |
+
+These are current product boundaries, not a claim that every question is fully
+resolved. In particular, object-level waste detection and tracking, automated
+fill estimation, neighborhood bin-coverage
+recommendations, and automated litter detection remain future work. See
+[the ML evaluation report](ml/reports/classifier-evaluation.md) for the public
+dataset metrics and the local-data limitation.
 
 ## Modules
 
-| # | Module                        | One-line purpose                                                        |
-| - | ----------------------------- | ----------------------------------------------------------------------- |
-| 1 | Waste Classification          | What kinds of waste, in what proportions, where, over time              |
-| 2 | Bin Health Monitoring         | Fill level, overflow risk, and collect-now recommendations per bin      |
-| 3 | Illegal Dumping Detection     | Find *locations* (never people) that need intervention                 |
-| 4 | Collection Route Optimization | "Google Maps for garbage collection" — which bins today, in what order |
-| 5 | Recycling Intelligence        | Material counts, estimated value (KES), and partner matching            |
-| 6 | Community Cleanliness Index   | A comparable score per neighborhood to organize and measure clean-ups   |
-| 7 | Carbon Impact Dashboard       | CO₂ avoided, landfill space saved — with transparent methodology      |
-| 8 | Volunteer Analytics           | Hours, events, waste collected — grant-ready CBO reporting             |
+| # | Module | Current status |
+|---|---|---|
+| 1 | Waste material classification | Active ONNX classifier, review queue, and aggregate composition; requires local field validation. |
+| 2 | Bin health monitoring | Human fill taps, estimated accumulation, overflow risk, and collection recommendations. |
+| 3 | Illegal-dumping hotspots | Staff-reviewed, human-confirmed locations; no automated litter/dumping detector. |
+| 4 | Collection route planning | Optimizes planned stops and estimates fuel; route completion records aggregate GPS distance/duration, manually entered fuel and weighed tonnage. |
+| 5 | Recycling intelligence | Estimated material value and partner matching from composition and configured prices. |
+| 6 | Community cleanliness | Site-level, data-qualified index; litter-detection component is not yet available. |
+| 7 | Carbon impact | Method-versioned estimates using composition, estimated collected weight, and published factors. |
+| 8 | Volunteer analytics | Event, participant, volunteer-hour, and self-reported collected-weight summaries. |
 
 ## Run it
 

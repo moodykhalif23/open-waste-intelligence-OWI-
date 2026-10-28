@@ -257,14 +257,49 @@ def main() -> None:
 
     listed = client.get("/api/v1/routes", headers=device_auth)
     check("driver can read today's routes", listed.status_code == 200)
-    stops = [s for r in listed.json() for s in r["stops"]]
-    if stops:
-        first = stops[0]
-        done = client.post(f"/api/v1/routes/stops/{first['id']}/collect", headers=device_auth)
-        check("driver marks a stop collected", done.status_code == 204)
+    route = next((r for r in listed.json() if r["status"] == "planned" and r["stops"]), None)
+    if route:
+        collected_before_route = client.get(
+            "/api/v1/recycling/value?days=30", headers=admin
+        ).json()["total_kg"]
+        started = client.post(f"/api/v1/routes/{route['id']}/start", headers=device_auth)
+        check("driver starts route tracking", started.status_code == 200)
+        for stop in route["stops"]:
+            done = client.post(f"/api/v1/routes/stops/{stop['id']}/collect", headers=device_auth)
+            check(f"driver collects route stop {stop['seq'] + 1}", done.status_code == 204)
+        completed = client.post(
+            f"/api/v1/routes/{route['id']}/complete",
+            headers=device_auth,
+            json={
+                "actual_distance_km": 2.4,
+                "actual_fuel_l": 1.1,
+                "actual_weight_kg": 50.0,
+            },
+        )
+        check("driver records measured route outcomes", completed.status_code == 200)
+        check(
+            "route exposes actual metrics and duration",
+            completed.status_code == 200
+            and completed.json()["actual_distance_km"] == 2.4
+            and completed.json()["actual_fuel_l"] == 1.1
+            and completed.json()["actual_weight_kg"] == 50.0
+            and completed.json()["actual_duration_seconds"] >= 0,
+        )
         after = client.get("/api/v1/routes", headers=device_auth).json()
-        marked = next((s for r in after for s in r["stops"] if s["id"] == first["id"]), None)
-        check("stop shows collected after marking", marked is not None and marked["collected"])
+        completed_route = next((r for r in after if r["id"] == route["id"]), None)
+        check(
+            "completed route persists status and metrics",
+            completed_route is not None
+            and completed_route["status"] == "done"
+            and completed_route["actual_weight_kg"] == 50.0,
+        )
+        collected_after_route = client.get("/api/v1/recycling/value?days=30", headers=admin).json()[
+            "total_kg"
+        ]
+        check(
+            "measured route weight replaces stop estimates",
+            abs(collected_after_route - collected_before_route - 50.0) <= 0.1,
+        )
 
     savings = client.get("/api/v1/routes/savings", headers=admin)
     check("savings report computes", savings.status_code == 200, savings.text[:150])
